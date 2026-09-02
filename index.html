@@ -63,10 +63,18 @@
 
   <form class="card" id="entryForm">
     <label>Engineer Name *</label>
-    <input type="text" id="engineer" required placeholder="e.g. Mostafa Kamal">
+    <select id="engineer" required>
+      <option value="">— Select Engineer —</option>
+      <option value="__other__">➕ Other (type manually)</option>
+    </select>
+    <input type="text" id="engineerOther" placeholder="Type engineer name" style="display:none;margin-top:8px;">
 
     <label>Driver Name</label>
-    <input type="text" id="driver" placeholder="e.g. Saad Abdelgawad">
+    <select id="driver">
+      <option value="">— Select Driver —</option>
+      <option value="__other__">➕ Other (type manually)</option>
+    </select>
+    <input type="text" id="driverOther" placeholder="Type driver name" style="display:none;margin-top:8px;">
 
     <div class="row2">
       <div>
@@ -150,6 +158,7 @@
     <input type="number" id="rate" step="0.001" value="2.225">
 
     <button class="save-btn" id="saveSettings">Save Settings</button>
+    <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="refreshListBtn">📋 Refresh Engineer/Driver list</button>
     <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="syncNowBtn">🔄 Sync pending now</button>
   </div>
 </div>
@@ -201,6 +210,61 @@ $('date').addEventListener('change', () => { $('day').value = dayName($('date').
 if (settings.defaultEngineer) $('engineer').value = settings.defaultEngineer;
 if (settings.defaultDriver) $('driver').value = settings.defaultDriver;
 if (!settings.scriptUrl) setTimeout(() => { $('settingsModal').style.display='flex'; toast('Set up your Google Sheets sync URL first'); }, 300);
+
+// ---------- engineer/driver dropdown lists ----------
+function getCachedLists(){ try { return JSON.parse(localStorage.getItem('benzine_lists')) || {engineers:[],drivers:[]}; } catch(e){ return {engineers:[],drivers:[]}; } }
+function setCachedLists(l){ localStorage.setItem('benzine_lists', JSON.stringify(l)); }
+
+function populateSelect(selectEl, list, currentValue){
+  const otherOpt = selectEl.querySelector('option[value="__other__"]');
+  selectEl.innerHTML = '';
+  const blank = document.createElement('option'); blank.value=''; blank.textContent='— Select —';
+  selectEl.appendChild(blank);
+  list.forEach(name => {
+    const o = document.createElement('option'); o.value = name; o.textContent = name;
+    selectEl.appendChild(o);
+  });
+  selectEl.appendChild(otherOpt || Object.assign(document.createElement('option'), {value:'__other__', textContent:'➕ Other (type manually)'}));
+  if (currentValue && list.includes(currentValue)) selectEl.value = currentValue;
+}
+
+function wireOtherToggle(selectId, otherId){
+  const sel = $(selectId), other = $(otherId);
+  sel.addEventListener('change', () => {
+    other.style.display = sel.value === '__other__' ? 'block' : 'none';
+    if (sel.value === '__other__') other.focus();
+  });
+}
+wireOtherToggle('engineer','engineerOther');
+wireOtherToggle('driver','driverOther');
+
+function getEngineerValue(){ return $('engineer').value === '__other__' ? $('engineerOther').value.trim() : $('engineer').value; }
+function getDriverValue(){ return $('driver').value === '__other__' ? $('driverOther').value.trim() : $('driver').value; }
+
+async function refreshLists(silent){
+  if (!settings.scriptUrl) return;
+  try {
+    const res = await fetch(settings.scriptUrl + '?action=config');
+    const data = await res.json();
+    if (data.engineers || data.drivers){
+      setCachedLists({ engineers: data.engineers||[], drivers: data.drivers||[] });
+      populateSelect($('engineer'), data.engineers||[], settings.defaultEngineer);
+      populateSelect($('driver'), data.drivers||[], settings.defaultDriver);
+      if (!silent) toast('Engineer/Driver list updated');
+    }
+  } catch (err) {
+    const cached = getCachedLists();
+    populateSelect($('engineer'), cached.engineers, settings.defaultEngineer);
+    populateSelect($('driver'), cached.drivers, settings.defaultDriver);
+    if (!silent) toast('Could not refresh — showing last saved list');
+  }
+}
+$('refreshListBtn').onclick = () => refreshLists(false);
+// show any cached list immediately, then try to refresh from the sheet
+const cachedAtStart = getCachedLists();
+populateSelect($('engineer'), cachedAtStart.engineers, settings.defaultEngineer);
+populateSelect($('driver'), cachedAtStart.drivers, settings.defaultDriver);
+refreshLists(true);
 
 // ---------- computed fields ----------
 function recalc(){
@@ -312,7 +376,8 @@ flushQueue();
 // ---------- submit ----------
 $('entryForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const engineer = $('engineer').value.trim();
+  const engineer = getEngineerValue();
+  const driverName = getDriverValue();
   const start = $('startKm').value;
   const finish = $('finishKm').value;
   if (!engineer) return toast('Engineer name is required');
@@ -321,7 +386,7 @@ $('entryForm').addEventListener('submit', async (e) => {
   if (parseFloat(finish) < parseFloat(start)) return toast('Finish KM must be ≥ Start KM');
 
   const entry = {
-    engineer, driver: $('driver').value.trim(),
+    engineer, driver: driverName,
     date: $('date').value, day: $('day').value,
     area: $('area').value.trim(), task: $('task').value.trim(),
     startKm: parseFloat(start), finishKm: parseFloat(finish),
@@ -349,6 +414,10 @@ $('entryForm').addEventListener('submit', async (e) => {
 function resetForm(){
   $('area').value=''; $('task').value=''; $('startKm').value=''; $('finishKm').value='';
   $('forthBack').value='0'; $('staticKm').value='0';
+  $('engineerOther').value=''; $('engineerOther').style.display='none';
+  $('driverOther').value=''; $('driverOther').style.display='none';
+  if (settings.defaultEngineer && [...$('engineer').options].some(o=>o.value===settings.defaultEngineer)) $('engineer').value = settings.defaultEngineer;
+  if (settings.defaultDriver && [...$('driver').options].some(o=>o.value===settings.defaultDriver)) $('driver').value = settings.defaultDriver;
   photos = {start:null, finish:null};
   ['start','finish'].forEach(which=>{
     const thumb = document.getElementById(which+'Thumb'); if (thumb) thumb.remove();
