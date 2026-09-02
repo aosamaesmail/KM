@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Benzine KM Tracker</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f766e">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root{
+    --teal:#0f766e; --teal-dark:#0b5c55; --bg:#f4f6f5; --card:#ffffff;
+    --text:#1f2937; --muted:#6b7280; --border:#e2e8e7; --danger:#dc2626; --ok:#16a34a; --amber:#d97706;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);}
+  header{background:var(--teal);color:#fff;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5;}
+  header h1{font-size:18px;margin:0;font-weight:700;}
+  header button{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:8px 10px;font-size:16px;}
+  main{max-width:520px;margin:0 auto;padding:16px 16px 100px;}
+  .card{background:var(--card);border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+  label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px;font-weight:600;}
+  input[type=text],input[type=number],input[type=date],select,textarea{
+    width:100%;padding:12px;border:1.5px solid var(--border);border-radius:10px;font-size:16px;background:#fafafa;
+  }
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .photo-block{border:2px dashed var(--border);border-radius:12px;padding:12px;text-align:center;margin-top:6px;}
+  .photo-block img{max-width:100%;max-height:160px;border-radius:8px;display:block;margin:8px auto 0;}
+  .photo-btn{background:var(--teal);color:#fff;border:none;border-radius:10px;padding:12px 14px;font-size:15px;font-weight:600;width:100%;}
+  .photo-btn.retake{background:#fff;color:var(--teal);border:1.5px solid var(--teal);}
+  .photo-missing{color:var(--danger);font-size:12px;margin-top:6px;}
+  .computed{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;}
+  .computed div{background:#f0fdfa;border-radius:10px;padding:10px;text-align:center;}
+  .computed .num{font-size:18px;font-weight:700;color:var(--teal-dark);}
+  .computed .lbl{font-size:11px;color:var(--muted);}
+  .submit-btn{width:100%;padding:16px;background:var(--teal);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:700;margin-top:16px;}
+  .submit-btn:disabled{background:#9ca3af;}
+  .log-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;}
+  .log-item:last-child{border-bottom:none;}
+  .badge{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:700;}
+  .badge.synced{background:#dcfce7;color:var(--ok);}
+  .badge.pending{background:#fef3c7;color:var(--amber);}
+  .badge.error{background:#fee2e2;color:var(--danger);}
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;z-index:20;}
+  .modal{background:#fff;border-radius:16px 16px 0 0;padding:20px;width:100%;max-height:88vh;overflow:auto;}
+  .modal h2{margin-top:0;font-size:17px;}
+  .modal .close{float:right;background:none;border:none;font-size:20px;color:var(--muted);}
+  .hint{font-size:12px;color:var(--muted);margin-top:4px;}
+  .save-btn{width:100%;padding:13px;background:var(--teal);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;margin-top:14px;}
+  .toast{position:fixed;bottom:16px;left:16px;right:16px;max-width:520px;margin:0 auto;background:#111827;color:#fff;padding:12px 16px;border-radius:10px;font-size:14px;text-align:center;z-index:30;}
+  .empty{color:var(--muted);font-size:13px;text-align:center;padding:10px 0;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⛽ Benzine KM Tracker</h1>
+  <button id="settingsBtn">⚙️</button>
+</header>
+
+<main>
+
+  <form class="card" id="entryForm">
+    <label>Engineer Name *</label>
+    <input type="text" id="engineer" required placeholder="e.g. Mostafa Kamal">
+
+    <label>Driver Name</label>
+    <input type="text" id="driver" placeholder="e.g. Saad Abdelgawad">
+
+    <div class="row2">
+      <div>
+        <label>Date *</label>
+        <input type="date" id="date" required>
+      </div>
+      <div>
+        <label>Day</label>
+        <input type="text" id="day" disabled>
+      </div>
+    </div>
+
+    <label>Area</label>
+    <input type="text" id="area" placeholder="e.g. Sharm El-Sheikh">
+
+    <label>Task</label>
+    <input type="text" id="task" placeholder="e.g. Travel to site / complaint">
+
+    <label>Start KM *</label>
+    <input type="number" id="startKm" inputmode="numeric" placeholder="Odometer reading at start" required>
+    <div class="photo-block" id="startPhotoBlock">
+      <button type="button" class="photo-btn" id="startPhotoBtn">📷 Take Start Photo *</button>
+      <input type="file" accept="image/*" capture="environment" id="startPhotoInput" hidden>
+      <div class="photo-missing" id="startPhotoMissing">Required — photo of the dashboard at Start KM</div>
+    </div>
+
+    <label>Finish KM *</label>
+    <input type="number" id="finishKm" inputmode="numeric" placeholder="Odometer reading at finish" required>
+    <div class="photo-block" id="finishPhotoBlock">
+      <button type="button" class="photo-btn" id="finishPhotoBtn">📷 Take Finish Photo *</button>
+      <input type="file" accept="image/*" capture="environment" id="finishPhotoInput" hidden>
+      <div class="photo-missing" id="finishPhotoMissing">Required — photo of the dashboard at Finish KM</div>
+    </div>
+
+    <div class="row2">
+      <div>
+        <label>Forth &amp; Back</label>
+        <input type="number" id="forthBack" inputmode="numeric" value="0">
+      </div>
+      <div>
+        <label>Static</label>
+        <input type="number" id="staticKm" inputmode="numeric" value="0">
+      </div>
+    </div>
+
+    <div class="computed">
+      <div><div class="num" id="tripOut">0</div><div class="lbl">Trip (KM)</div></div>
+      <div><div class="num" id="totalOut">0</div><div class="lbl">Total KM</div></div>
+      <div><div class="num" id="amountOut">0</div><div class="lbl">Amount Spent</div></div>
+      <div><div class="num" id="rateOut">0</div><div class="lbl">Rate / KM</div></div>
+    </div>
+
+    <button type="submit" class="submit-btn" id="submitBtn">Submit Reading</button>
+  </form>
+
+  <div class="card">
+    <strong>Recent submissions</strong>
+    <div id="logList"><div class="empty">Nothing submitted yet.</div></div>
+  </div>
+
+</main>
+
+<div class="modal-bg" id="settingsModal" style="display:none;">
+  <div class="modal">
+    <button class="close" id="closeSettings">✕</button>
+    <h2>Settings</h2>
+    <label>Google Sheet sync URL *</label>
+    <input type="text" id="scriptUrl" placeholder="Apps Script Web App URL">
+    <div class="hint">From your deployed Google Apps Script (see SETUP.md). Required to sync to Google Sheets.</div>
+
+    <label>Sync token</label>
+    <input type="text" id="scriptToken" placeholder="Shared token from Code.gs">
+
+    <label>Default Engineer Name</label>
+    <input type="text" id="defaultEngineer" placeholder="Pre-fills the form">
+
+    <label>Default Driver Name</label>
+    <input type="text" id="defaultDriver" placeholder="Pre-fills the form">
+
+    <label>Rate per KM (EGP)</label>
+    <input type="number" id="rate" step="0.001" value="2.225">
+
+    <button class="save-btn" id="saveSettings">Save Settings</button>
+    <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="syncNowBtn">🔄 Sync pending now</button>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const todayISO = () => new Date().toISOString().slice(0,10);
+const dayName = (iso) => new Date(iso+'T00:00:00').toLocaleDateString('en-US',{weekday:'long'});
+
+// ---------- settings ----------
+function loadSettings(){
+  try { return JSON.parse(localStorage.getItem('benzine_settings')) || {}; }
+  catch(e){ return {}; }
+}
+function saveSettings(s){ localStorage.setItem('benzine_settings', JSON.stringify(s)); }
+let settings = loadSettings();
+
+function fillSettingsForm(){
+  $('scriptUrl').value = settings.scriptUrl || '';
+  $('scriptToken').value = settings.scriptToken || '';
+  $('defaultEngineer').value = settings.defaultEngineer || '';
+  $('defaultDriver').value = settings.defaultDriver || '';
+  $('rate').value = settings.rate ?? 2.225;
+}
+fillSettingsForm();
+
+$('settingsBtn').onclick = () => { $('settingsModal').style.display='flex'; };
+$('closeSettings').onclick = () => { $('settingsModal').style.display='none'; };
+$('saveSettings').onclick = () => {
+  settings = {
+    scriptUrl: $('scriptUrl').value.trim(),
+    scriptToken: $('scriptToken').value.trim(),
+    defaultEngineer: $('defaultEngineer').value.trim(),
+    defaultDriver: $('defaultDriver').value.trim(),
+    rate: parseFloat($('rate').value) || 2.225,
+  };
+  saveSettings(settings);
+  $('engineer').value = settings.defaultEngineer || $('engineer').value;
+  $('driver').value = settings.defaultDriver || $('driver').value;
+  recalc();
+  $('settingsModal').style.display='none';
+  toast('Settings saved');
+};
+
+// ---------- init form ----------
+$('date').value = todayISO();
+$('day').value = dayName($('date').value);
+$('date').addEventListener('change', () => { $('day').value = dayName($('date').value); });
+if (settings.defaultEngineer) $('engineer').value = settings.defaultEngineer;
+if (settings.defaultDriver) $('driver').value = settings.defaultDriver;
+if (!settings.scriptUrl) setTimeout(() => { $('settingsModal').style.display='flex'; toast('Set up your Google Sheets sync URL first'); }, 300);
+
+// ---------- computed fields ----------
+function recalc(){
+  const start = parseFloat($('startKm').value);
+  const finish = parseFloat($('finishKm').value);
+  const fb = parseFloat($('forthBack').value) || 0;
+  const rate = settings.rate ?? 2.225;
+  let trip = 0;
+  if (!isNaN(start) && !isNaN(finish) && finish >= start) trip = finish - start;
+  const total = trip + fb;
+  const amount = total * rate;
+  $('tripOut').textContent = trip;
+  $('totalOut').textContent = total;
+  $('amountOut').textContent = amount.toFixed(2);
+  $('rateOut').textContent = rate;
+}
+['startKm','finishKm','forthBack','staticKm'].forEach(id => $(id).addEventListener('input', recalc));
+recalc();
+
+// ---------- photo capture (compressed to keep uploads small) ----------
+let photos = { start: null, finish: null };
+
+function wirePhoto(which, btnId, inputId, missingId){
+  $(btnId).addEventListener('click', () => $(inputId).click());
+  $(inputId).addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = (ev) => { img.src = ev.target.result; };
+    img.onload = () => {
+      const maxW = 1000;
+      const scale = Math.min(1, maxW / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.55);
+      photos[which] = dataUrl;
+      $(missingId).style.display = 'none';
+      $(btnId).textContent = '✅ Retake ' + (which==='start'?'Start':'Finish') + ' Photo';
+      $(btnId).classList.add('retake');
+      let img2 = document.getElementById(which+'Thumb');
+      if (!img2) {
+        img2 = document.createElement('img');
+        img2.id = which+'Thumb';
+        $(btnId).insertAdjacentElement('afterend', img2);
+      }
+      img2.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+wirePhoto('start','startPhotoBtn','startPhotoInput','startPhotoMissing');
+wirePhoto('finish','finishPhotoBtn','finishPhotoInput','finishPhotoMissing');
+
+// ---------- queue (localStorage) ----------
+function getQueue(){ try { return JSON.parse(localStorage.getItem('benzine_queue')) || []; } catch(e){ return []; } }
+function setQueue(q){ localStorage.setItem('benzine_queue', JSON.stringify(q)); }
+function getLog(){ try { return JSON.parse(localStorage.getItem('benzine_log')) || []; } catch(e){ return []; } }
+function setLog(l){ localStorage.setItem('benzine_log', JSON.stringify(l.slice(0,20))); }
+
+function renderLog(){
+  const q = getQueue();
+  const l = getLog();
+  const items = [...q.map(x=>({...x,status:x.status||'pending'})), ...l].slice(0,20);
+  if (!items.length){ $('logList').innerHTML = '<div class="empty">Nothing submitted yet.</div>'; return; }
+  $('logList').innerHTML = items.map(it => `
+    <div class="log-item">
+      <span>${it.date} · ${it.engineer} · ${it.totalKm} km</span>
+      <span class="badge ${it.status}">${it.status}</span>
+    </div>`).join('');
+}
+renderLog();
+
+async function trySend(entry){
+  if (!settings.scriptUrl) throw new Error('no-url');
+  const res = await fetch(settings.scriptUrl, {
+    method: 'POST',
+    body: JSON.stringify({ token: settings.scriptToken, ...entry })
+  });
+  const text = await res.text();
+  let json; try { json = JSON.parse(text); } catch(e){ throw new Error('bad-response'); }
+  if (!json.ok) throw new Error(json.error || 'server-error');
+  return json;
+}
+
+async function flushQueue(){
+  const q = getQueue();
+  if (!q.length || !settings.scriptUrl) return;
+  const remaining = [];
+  const log = getLog();
+  for (const entry of q) {
+    try {
+      await trySend(entry);
+      log.unshift({ ...entry, status: 'synced' });
+    } catch (e) {
+      remaining.push(entry);
+    }
+  }
+  setQueue(remaining);
+  setLog(log);
+  renderLog();
+}
+$('syncNowBtn').onclick = async () => { toast('Syncing…'); await flushQueue(); toast('Sync attempt finished'); };
+window.addEventListener('online', flushQueue);
+flushQueue();
+
+// ---------- submit ----------
+$('entryForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const engineer = $('engineer').value.trim();
+  const start = $('startKm').value;
+  const finish = $('finishKm').value;
+  if (!engineer) return toast('Engineer name is required');
+  if (!photos.start) { $('startPhotoMissing').style.display='block'; return toast('Start KM photo is required'); }
+  if (!photos.finish) { $('finishPhotoMissing').style.display='block'; return toast('Finish KM photo is required'); }
+  if (parseFloat(finish) < parseFloat(start)) return toast('Finish KM must be ≥ Start KM');
+
+  const entry = {
+    engineer, driver: $('driver').value.trim(),
+    date: $('date').value, day: $('day').value,
+    area: $('area').value.trim(), task: $('task').value.trim(),
+    startKm: parseFloat(start), finishKm: parseFloat(finish),
+    forthBack: parseFloat($('forthBack').value)||0, staticKm: parseFloat($('staticKm').value)||0,
+    trip: parseFloat($('tripOut').textContent), totalKm: parseFloat($('totalOut').textContent),
+    amountSpent: parseFloat($('amountOut').textContent), rate: settings.rate ?? 2.225,
+    startPhoto: photos.start, finishPhoto: photos.finish,
+    submittedAt: new Date().toISOString(),
+  };
+
+  $('submitBtn').disabled = true; $('submitBtn').textContent = 'Submitting…';
+  try {
+    await trySend(entry);
+    const log = getLog(); log.unshift({...entry, status:'synced'}); setLog(log);
+    toast('✅ Synced to Google Sheets');
+  } catch (err) {
+    const q = getQueue(); q.push({...entry, status:'pending'}); setQueue(q);
+    toast('📴 Saved offline — will sync automatically');
+  }
+  renderLog();
+  resetForm();
+  $('submitBtn').disabled = false; $('submitBtn').textContent = 'Submit Reading';
+});
+
+function resetForm(){
+  $('area').value=''; $('task').value=''; $('startKm').value=''; $('finishKm').value='';
+  $('forthBack').value='0'; $('staticKm').value='0';
+  photos = {start:null, finish:null};
+  ['start','finish'].forEach(which=>{
+    const thumb = document.getElementById(which+'Thumb'); if (thumb) thumb.remove();
+    $(which+'PhotoBtn').textContent = '📷 Take ' + (which==='start'?'Start':'Finish') + ' Photo *';
+    $(which+'PhotoBtn').classList.remove('retake');
+  });
+  $('date').value = todayISO(); $('day').value = dayName($('date').value);
+  recalc();
+}
+
+function toast(msg){
+  let t = document.querySelector('.toast');
+  if (t) t.remove();
+  t = document.createElement('div'); t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2800);
+}
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+</script>
+</body>
+</html>
