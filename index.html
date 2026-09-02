@@ -11,7 +11,7 @@
 <style>
   :root{
     --teal:#0f766e; --teal-dark:#0b5c55; --bg:#f4f6f5; --card:#ffffff;
-    --text:#1f2937; --muted:#6b7280; --border:#e2e8e7; --danger:#dc2626; --ok:#16a34a; --amber:#d97706;
+    --text:#1f2937; --muted:#6b7280; --border:#e2e8e7; --danger:#dc2626; --ok:#16a34a; --amber:#d97706; --blue:#1d4ed8;
   }
   *{box-sizing:border-box;}
   body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);}
@@ -36,12 +36,13 @@
   .computed .lbl{font-size:11px;color:var(--muted);}
   .submit-btn{width:100%;padding:16px;background:var(--teal);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:700;margin-top:16px;}
   .submit-btn:disabled{background:#9ca3af;}
-  .log-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;}
+  .log-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;gap:8px;}
   .log-item:last-child{border-bottom:none;}
-  .badge{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:700;}
+  .badge{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:700;white-space:nowrap;}
   .badge.synced{background:#dcfce7;color:var(--ok);}
   .badge.pending{background:#fef3c7;color:var(--amber);}
   .badge.error{background:#fee2e2;color:var(--danger);}
+  .badge.awaiting{background:#dbeafe;color:var(--blue);}
   .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;z-index:20;}
   .modal{background:#fff;border-radius:16px 16px 0 0;padding:20px;width:100%;max-height:88vh;overflow:auto;}
   .modal h2{margin-top:0;font-size:17px;}
@@ -50,6 +51,18 @@
   .save-btn{width:100%;padding:13px;background:var(--teal);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;margin-top:14px;}
   .toast{position:fixed;bottom:16px;left:16px;right:16px;max-width:520px;margin:0 auto;background:#111827;color:#fff;padding:12px 16px;border-radius:10px;font-size:14px;text-align:center;z-index:30;}
   .empty{color:var(--muted);font-size:13px;text-align:center;padding:10px 0;}
+  .tabs{display:flex;gap:8px;margin-bottom:14px;}
+  .tab-btn{flex:1;padding:13px;border-radius:12px;border:1.5px solid var(--border);background:#fff;color:var(--muted);font-weight:700;font-size:14px;}
+  .tab-btn.active{background:var(--teal);color:#fff;border-color:var(--teal);}
+  .section{display:none;}
+  .section.active{display:block;}
+  .trip-summary{background:#f0fdfa;border-radius:10px;padding:10px 12px;font-size:13px;color:var(--teal-dark);margin-top:6px;}
+  .banner{background:#fef3c7;border:1.5px solid #fde68a;border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+  .banner .msg{font-size:13px;color:#92400e;font-weight:600;flex:1;min-width:180px;}
+  .banner-actions{display:flex;gap:8px;}
+  .banner-actions button{border:none;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;}
+  #bannerGoFinish{background:var(--amber);color:#fff;}
+  #bannerDismiss{background:transparent;color:#92400e;padding:8px;}
 </style>
 </head>
 <body>
@@ -61,78 +74,108 @@
 
 <main>
 
-  <form class="card" id="entryForm">
-    <label>Engineer Name *</label>
-    <select id="engineer" required>
-      <option value="">— Select Engineer —</option>
-      <option value="__other__">➕ Other (type manually)</option>
-    </select>
-    <input type="text" id="engineerOther" placeholder="Type engineer name" style="display:none;margin-top:8px;">
+  <div class="banner" id="overdueBanner" style="display:none;">
+    <span class="msg"></span>
+    <div class="banner-actions">
+      <button type="button" id="bannerGoFinish">Finish now</button>
+      <button type="button" id="bannerDismiss">✕</button>
+    </div>
+  </div>
 
-    <label>Driver Name</label>
-    <select id="driver">
-      <option value="">— Select Driver —</option>
-      <option value="__other__">➕ Other (type manually)</option>
-    </select>
-    <input type="text" id="driverOther" placeholder="Type driver name" style="display:none;margin-top:8px;">
+  <div class="tabs">
+    <button class="tab-btn active" id="tabStartBtn">▶ Start Trip</button>
+    <button class="tab-btn" id="tabFinishBtn">⏹ Finish Trip</button>
+  </div>
 
-    <div class="row2">
-      <div>
-        <label>Date *</label>
-        <input type="date" id="date" required>
+  <!-- START SECTION -->
+  <section class="section active" id="startSection">
+    <form class="card" id="startForm">
+      <label>Engineer Name *</label>
+      <select id="engineer" required>
+        <option value="">— Select Engineer —</option>
+        <option value="__other__">➕ Other (type manually)</option>
+      </select>
+      <input type="text" id="engineerOther" placeholder="Type engineer name" style="display:none;margin-top:8px;">
+
+      <label>Driver Name</label>
+      <select id="driver">
+        <option value="">— Select Driver —</option>
+        <option value="__other__">➕ Other (type manually)</option>
+      </select>
+      <input type="text" id="driverOther" placeholder="Type driver name" style="display:none;margin-top:8px;">
+
+      <div class="row2">
+        <div>
+          <label>Date *</label>
+          <input type="date" id="date" required>
+        </div>
+        <div>
+          <label>Day</label>
+          <input type="text" id="day" disabled>
+        </div>
       </div>
-      <div>
-        <label>Day</label>
-        <input type="text" id="day" disabled>
+
+      <label>Area</label>
+      <input type="text" id="area" placeholder="e.g. Sharm El-Sheikh">
+
+      <label>Task</label>
+      <input type="text" id="task" placeholder="e.g. Travel to site / complaint">
+
+      <label>Start KM *</label>
+      <input type="number" id="startKm" inputmode="numeric" placeholder="Odometer reading now" required>
+      <div class="photo-block" id="startPhotoBlock">
+        <button type="button" class="photo-btn" id="startPhotoBtn">📷 Take Start Photo *</button>
+        <input type="file" accept="image/*" capture="environment" id="startPhotoInput" hidden>
+        <div class="photo-missing" id="startPhotoMissing">Required — photo of the dashboard right now</div>
       </div>
-    </div>
 
-    <label>Area</label>
-    <input type="text" id="area" placeholder="e.g. Sharm El-Sheikh">
+      <button type="submit" class="submit-btn" id="startSubmitBtn">▶ Submit Start</button>
+    </form>
+  </section>
 
-    <label>Task</label>
-    <input type="text" id="task" placeholder="e.g. Travel to site / complaint">
+  <!-- FINISH SECTION -->
+  <section class="section" id="finishSection">
+    <form class="card" id="finishForm">
+      <label>Which trip are you finishing? *</label>
+      <select id="openTripSelect" required>
+        <option value="">— Select an open trip —</option>
+      </select>
+      <div class="empty" id="noOpenTrips" style="display:none;">No open trips on this phone. Start a trip first.</div>
+      <div class="trip-summary" id="tripSummary" style="display:none;"></div>
 
-    <label>Start KM *</label>
-    <input type="number" id="startKm" inputmode="numeric" placeholder="Odometer reading at start" required>
-    <div class="photo-block" id="startPhotoBlock">
-      <button type="button" class="photo-btn" id="startPhotoBtn">📷 Take Start Photo *</button>
-      <input type="file" accept="image/*" capture="environment" id="startPhotoInput" hidden>
-      <div class="photo-missing" id="startPhotoMissing">Required — photo of the dashboard at Start KM</div>
-    </div>
-
-    <label>Finish KM *</label>
-    <input type="number" id="finishKm" inputmode="numeric" placeholder="Odometer reading at finish" required>
-    <div class="photo-block" id="finishPhotoBlock">
-      <button type="button" class="photo-btn" id="finishPhotoBtn">📷 Take Finish Photo *</button>
-      <input type="file" accept="image/*" capture="environment" id="finishPhotoInput" hidden>
-      <div class="photo-missing" id="finishPhotoMissing">Required — photo of the dashboard at Finish KM</div>
-    </div>
-
-    <div class="row2">
-      <div>
-        <label>Forth &amp; Back</label>
-        <input type="number" id="forthBack" inputmode="numeric" value="0">
+      <label>Finish KM *</label>
+      <input type="number" id="finishKm" inputmode="numeric" placeholder="Odometer reading now" required>
+      <div class="photo-block" id="finishPhotoBlock">
+        <button type="button" class="photo-btn" id="finishPhotoBtn">📷 Take Finish Photo *</button>
+        <input type="file" accept="image/*" capture="environment" id="finishPhotoInput" hidden>
+        <div class="photo-missing" id="finishPhotoMissing">Required — photo of the dashboard right now</div>
       </div>
-      <div>
-        <label>Static</label>
-        <input type="number" id="staticKm" inputmode="numeric" value="0">
+
+      <div class="row2">
+        <div>
+          <label>Forth &amp; Back</label>
+          <input type="number" id="forthBack" inputmode="numeric" value="0">
+        </div>
+        <div>
+          <label>Static</label>
+          <input type="number" id="staticKm" inputmode="numeric" value="0">
+        </div>
       </div>
-    </div>
 
-    <div class="computed">
-      <div><div class="num" id="tripOut">0</div><div class="lbl">Trip (KM)</div></div>
-      <div><div class="num" id="totalOut">0</div><div class="lbl">Total KM</div></div>
-      <div><div class="num" id="amountOut">0</div><div class="lbl">Amount Spent</div></div>
-      <div><div class="num" id="rateOut">0</div><div class="lbl">Rate / KM</div></div>
-    </div>
+      <div class="computed">
+        <div><div class="num" id="tripOut">0</div><div class="lbl">Trip (KM)</div></div>
+        <div><div class="num" id="totalOut">0</div><div class="lbl">Total KM</div></div>
+        <div><div class="num" id="amountOut">0</div><div class="lbl">Amount Spent</div></div>
+        <div><div class="num" id="rateOut">0</div><div class="lbl">Rate / KM</div></div>
+      </div>
 
-    <button type="submit" class="submit-btn" id="submitBtn">Submit Reading</button>
-  </form>
+      <button type="submit" class="submit-btn" id="finishSubmitBtn">⏹ Submit Finish</button>
+    </form>
+  </section>
 
   <div class="card">
-    <strong>Recent submissions</strong>
-    <div id="logList"><div class="empty">Nothing submitted yet.</div></div>
+    <strong>Recent activity</strong>
+    <div id="logList"><div class="empty">Nothing yet.</div></div>
   </div>
 
 </main>
@@ -158,6 +201,8 @@
     <input type="number" id="rate" step="0.001" value="2.225">
 
     <button class="save-btn" id="saveSettings">Save Settings</button>
+    <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="enableRemindersBtn">🔔 Enable Finish Reminders</button>
+    <div class="hint" id="reminderStatus"></div>
     <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="refreshListBtn">📋 Refresh Engineer/Driver list</button>
     <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="syncNowBtn">🔄 Sync pending now</button>
   </div>
@@ -167,13 +212,11 @@
 const $ = (id) => document.getElementById(id);
 const todayISO = () => new Date().toISOString().slice(0,10);
 const dayName = (iso) => new Date(iso+'T00:00:00').toLocaleDateString('en-US',{weekday:'long'});
+const genId = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-'+Date.now()+'-'+Math.random().toString(16).slice(2));
 
 // ---------- settings ----------
-function loadSettings(){
-  try { return JSON.parse(localStorage.getItem('benzine_settings')) || {}; }
-  catch(e){ return {}; }
-}
-function saveSettings(s){ localStorage.setItem('benzine_settings', JSON.stringify(s)); }
+function loadSettings(){ try { return JSON.parse(localStorage.getItem('benzine_settings')) || {}; } catch(e){ return {}; } }
+function saveSettingsToStorage(s){ localStorage.setItem('benzine_settings', JSON.stringify(s)); }
 let settings = loadSettings();
 
 function fillSettingsForm(){
@@ -187,6 +230,21 @@ fillSettingsForm();
 
 $('settingsBtn').onclick = () => { $('settingsModal').style.display='flex'; };
 $('closeSettings').onclick = () => { $('settingsModal').style.display='none'; };
+
+function updateReminderStatus(){
+  const supported = 'Notification' in window;
+  if (!supported){ $('reminderStatus').textContent = 'Notifications are not supported in this browser.'; return; }
+  if (Notification.permission === 'granted') $('reminderStatus').textContent = '✅ Reminders enabled — you\'ll get a notification if a trip stays open past 10 hours (while the app is installed/open).';
+  else if (Notification.permission === 'denied') $('reminderStatus').textContent = '🚫 Notifications blocked in phone settings. You\'ll still see a banner in the app itself.';
+  else $('reminderStatus').textContent = 'Not enabled yet — you\'ll still see a banner in the app when a trip is overdue.';
+}
+updateReminderStatus();
+$('enableRemindersBtn').onclick = async () => {
+  if (!('Notification' in window)) return toast('Notifications not supported on this browser');
+  const perm = await Notification.requestPermission();
+  updateReminderStatus();
+  if (perm === 'granted') toast('Reminders enabled');
+};
 $('saveSettings').onclick = () => {
   settings = {
     scriptUrl: $('scriptUrl').value.trim(),
@@ -195,20 +253,29 @@ $('saveSettings').onclick = () => {
     defaultDriver: $('defaultDriver').value.trim(),
     rate: parseFloat($('rate').value) || 2.225,
   };
-  saveSettings(settings);
-  $('engineer').value = settings.defaultEngineer || $('engineer').value;
-  $('driver').value = settings.defaultDriver || $('driver').value;
-  recalc();
+  saveSettingsToStorage(settings);
+  if (settings.defaultEngineer && [...$('engineer').options].some(o=>o.value===settings.defaultEngineer)) $('engineer').value = settings.defaultEngineer;
+  if (settings.defaultDriver && [...$('driver').options].some(o=>o.value===settings.defaultDriver)) $('driver').value = settings.defaultDriver;
+  recalcFinish();
   $('settingsModal').style.display='none';
   toast('Settings saved');
 };
 
-// ---------- init form ----------
+// ---------- tabs ----------
+function showTab(which){
+  $('tabStartBtn').classList.toggle('active', which==='start');
+  $('tabFinishBtn').classList.toggle('active', which==='finish');
+  $('startSection').classList.toggle('active', which==='start');
+  $('finishSection').classList.toggle('active', which==='finish');
+  if (which==='finish') renderOpenTrips();
+}
+$('tabStartBtn').onclick = () => showTab('start');
+$('tabFinishBtn').onclick = () => showTab('finish');
+
+// ---------- init start form ----------
 $('date').value = todayISO();
 $('day').value = dayName($('date').value);
 $('date').addEventListener('change', () => { $('day').value = dayName($('date').value); });
-if (settings.defaultEngineer) $('engineer').value = settings.defaultEngineer;
-if (settings.defaultDriver) $('driver').value = settings.defaultDriver;
 if (!settings.scriptUrl) setTimeout(() => { $('settingsModal').style.display='flex'; toast('Set up your Google Sheets sync URL first'); }, 300);
 
 // ---------- engineer/driver dropdown lists ----------
@@ -260,34 +327,16 @@ async function refreshLists(silent){
   }
 }
 $('refreshListBtn').onclick = () => refreshLists(false);
-// show any cached list immediately, then try to refresh from the sheet
 const cachedAtStart = getCachedLists();
 populateSelect($('engineer'), cachedAtStart.engineers, settings.defaultEngineer);
 populateSelect($('driver'), cachedAtStart.drivers, settings.defaultDriver);
 refreshLists(true);
 
-// ---------- computed fields ----------
-function recalc(){
-  const start = parseFloat($('startKm').value);
-  const finish = parseFloat($('finishKm').value);
-  const fb = parseFloat($('forthBack').value) || 0;
-  const rate = settings.rate ?? 2.225;
-  let trip = 0;
-  if (!isNaN(start) && !isNaN(finish) && finish >= start) trip = finish - start;
-  const total = trip + fb;
-  const amount = total * rate;
-  $('tripOut').textContent = trip;
-  $('totalOut').textContent = total;
-  $('amountOut').textContent = amount.toFixed(2);
-  $('rateOut').textContent = rate;
-}
-['startKm','finishKm','forthBack','staticKm'].forEach(id => $(id).addEventListener('input', recalc));
-recalc();
+// ---------- photo capture (compressed) ----------
+let startPhoto = null;
+let finishPhoto = null;
 
-// ---------- photo capture (compressed to keep uploads small) ----------
-let photos = { start: null, finish: null };
-
-function wirePhoto(which, btnId, inputId, missingId){
+function wirePhoto(which, btnId, inputId, missingId, setter){
   $(btnId).addEventListener('click', () => $(inputId).click());
   $(inputId).addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -303,9 +352,10 @@ function wirePhoto(which, btnId, inputId, missingId){
       canvas.height = img.height * scale;
       canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL('image/jpeg', 0.55);
-      photos[which] = dataUrl;
+      setter(dataUrl);
       $(missingId).style.display = 'none';
-      $(btnId).textContent = '✅ Retake ' + (which==='start'?'Start':'Finish') + ' Photo';
+      const label = which==='start' ? 'Start' : 'Finish';
+      $(btnId).textContent = '✅ Retake ' + label + ' Photo';
       $(btnId).classList.add('retake');
       let img2 = document.getElementById(which+'Thumb');
       if (!img2) {
@@ -318,10 +368,108 @@ function wirePhoto(which, btnId, inputId, missingId){
     reader.readAsDataURL(file);
   });
 }
-wirePhoto('start','startPhotoBtn','startPhotoInput','startPhotoMissing');
-wirePhoto('finish','finishPhotoBtn','finishPhotoInput','finishPhotoMissing');
+wirePhoto('start','startPhotoBtn','startPhotoInput','startPhotoMissing', (d)=>startPhoto=d);
+wirePhoto('finish','finishPhotoBtn','finishPhotoInput','finishPhotoMissing', (d)=>finishPhoto=d);
 
-// ---------- queue (localStorage) ----------
+// ---------- open trips (started, not yet finished) ----------
+function getOpenTrips(){ try { return JSON.parse(localStorage.getItem('benzine_open_trips')) || []; } catch(e){ return []; } }
+function setOpenTrips(l){ localStorage.setItem('benzine_open_trips', JSON.stringify(l)); }
+
+function renderOpenTrips(){
+  const trips = getOpenTrips();
+  const sel = $('openTripSelect');
+  sel.innerHTML = '<option value="">— Select an open trip —</option>';
+  trips.forEach(t => {
+    const o = document.createElement('option');
+    o.value = t.tripId;
+    o.textContent = `${t.engineer} · ${t.area||'—'} · ${t.date} (Start KM: ${t.startKm})`;
+    sel.appendChild(o);
+  });
+  $('noOpenTrips').style.display = trips.length ? 'none' : 'block';
+  $('tripSummary').style.display = 'none';
+}
+
+// ---------- overdue trip reminders (10 hours) ----------
+const OVERDUE_HOURS = 10;
+const RENOTIFY_AFTER_HOURS = 2; // once flagged overdue, nudge again every 2h if still open
+
+function checkOverdueTrips(){
+  const trips = getOpenTrips();
+  let changed = false;
+  const overdue = [];
+  trips.forEach(t => {
+    const hoursOpen = (Date.now() - new Date(t.startedAt).getTime()) / 3600000;
+    if (hoursOpen >= OVERDUE_HOURS){
+      overdue.push({ trip: t, hoursOpen });
+      const lastNotified = t.remindedAt ? new Date(t.remindedAt).getTime() : 0;
+      const hoursSinceNotify = (Date.now() - lastNotified) / 3600000;
+      if (!t.remindedAt || hoursSinceNotify >= RENOTIFY_AFTER_HOURS){
+        fireOverdueNotification(t, hoursOpen);
+        t.remindedAt = new Date().toISOString();
+        changed = true;
+      }
+    }
+  });
+  if (changed) setOpenTrips(trips);
+  renderOverdueBanner(overdue);
+}
+
+function fireOverdueNotification(trip, hoursOpen){
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.ready.then(reg => {
+    reg.showNotification('⏰ Finish trip reminder', {
+      body: `${trip.engineer}'s trip (${trip.area||'no area'}, started ${trip.date}) has been open ${Math.floor(hoursOpen)}h. Submit Finish when done.`,
+      icon: 'icon-192.png',
+      tag: 'benzine-trip-' + trip.tripId,
+    });
+  }).catch(()=>{});
+}
+
+function renderOverdueBanner(list){
+  const el = $('overdueBanner');
+  if (!list.length){ el.style.display='none'; return; }
+  el.style.display='flex';
+  el.querySelector('.msg').textContent = list.length===1
+    ? `⏰ ${list[0].trip.engineer}'s trip has been open ${Math.floor(list[0].hoursOpen)}h — remember to submit Finish.`
+    : `⏰ ${list.length} trips have been open over 10 hours — remember to submit Finish.`;
+}
+$('bannerGoFinish').onclick = () => showTab('finish');
+$('bannerDismiss').onclick = () => { $('overdueBanner').style.display='none'; };
+
+checkOverdueTrips();
+setInterval(checkOverdueTrips, 5 * 60 * 1000); // re-check every 5 min while app is open
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkOverdueTrips(); });
+$('openTripSelect').addEventListener('change', () => {
+  const trip = getOpenTrips().find(t => t.tripId === $('openTripSelect').value);
+  if (trip){
+    $('tripSummary').style.display='block';
+    $('tripSummary').textContent = `Started ${trip.startedAt ? new Date(trip.startedAt).toLocaleString() : ''} · Driver: ${trip.driver||'—'} · Task: ${trip.task||'—'}`;
+  } else {
+    $('tripSummary').style.display='none';
+  }
+  recalcFinish();
+});
+
+// ---------- computed fields (finish) ----------
+function recalcFinish(){
+  const trip = getOpenTrips().find(t => t.tripId === $('openTripSelect').value);
+  const start = trip ? parseFloat(trip.startKm) : NaN;
+  const finish = parseFloat($('finishKm').value);
+  const fb = parseFloat($('forthBack').value) || 0;
+  const rate = settings.rate ?? 2.225;
+  let tripKm = 0;
+  if (!isNaN(start) && !isNaN(finish) && finish >= start) tripKm = finish - start;
+  const total = tripKm + fb;
+  const amount = total * rate;
+  $('tripOut').textContent = tripKm;
+  $('totalOut').textContent = total;
+  $('amountOut').textContent = amount.toFixed(2);
+  $('rateOut').textContent = rate;
+}
+['finishKm','forthBack','staticKm'].forEach(id => $(id).addEventListener('input', recalcFinish));
+
+// ---------- queue + log ----------
 function getQueue(){ try { return JSON.parse(localStorage.getItem('benzine_queue')) || []; } catch(e){ return []; } }
 function setQueue(q){ localStorage.setItem('benzine_queue', JSON.stringify(q)); }
 function getLog(){ try { return JSON.parse(localStorage.getItem('benzine_log')) || []; } catch(e){ return []; } }
@@ -330,21 +478,21 @@ function setLog(l){ localStorage.setItem('benzine_log', JSON.stringify(l.slice(0
 function renderLog(){
   const q = getQueue();
   const l = getLog();
-  const items = [...q.map(x=>({...x,status:x.status||'pending'})), ...l].slice(0,20);
-  if (!items.length){ $('logList').innerHTML = '<div class="empty">Nothing submitted yet.</div>'; return; }
+  const items = [...q.map(x=>({...x, status:'pending'})), ...l].slice(0,20);
+  if (!items.length){ $('logList').innerHTML = '<div class="empty">Nothing yet.</div>'; return; }
   $('logList').innerHTML = items.map(it => `
     <div class="log-item">
-      <span>${it.date} · ${it.engineer} · ${it.totalKm} km</span>
+      <span>${it.display}</span>
       <span class="badge ${it.status}">${it.status}</span>
     </div>`).join('');
 }
 renderLog();
 
-async function trySend(entry){
+async function trySend(payload){
   if (!settings.scriptUrl) throw new Error('no-url');
   const res = await fetch(settings.scriptUrl, {
     method: 'POST',
-    body: JSON.stringify({ token: settings.scriptToken, ...entry })
+    body: JSON.stringify({ token: settings.scriptToken, ...payload })
   });
   const text = await res.text();
   let json; try { json = JSON.parse(text); } catch(e){ throw new Error('bad-response'); }
@@ -357,12 +505,12 @@ async function flushQueue(){
   if (!q.length || !settings.scriptUrl) return;
   const remaining = [];
   const log = getLog();
-  for (const entry of q) {
+  for (const item of q) {
     try {
-      await trySend(entry);
-      log.unshift({ ...entry, status: 'synced' });
+      await trySend(item.payload);
+      log.unshift({ display: item.display, status: 'synced' });
     } catch (e) {
-      remaining.push(entry);
+      remaining.push(item);
     }
   }
   setQueue(remaining);
@@ -373,59 +521,104 @@ $('syncNowBtn').onclick = async () => { toast('Syncing…'); await flushQueue();
 window.addEventListener('online', flushQueue);
 flushQueue();
 
-// ---------- submit ----------
-$('entryForm').addEventListener('submit', async (e) => {
+// ---------- START submit ----------
+$('startForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const engineer = getEngineerValue();
-  const driverName = getDriverValue();
   const start = $('startKm').value;
-  const finish = $('finishKm').value;
   if (!engineer) return toast('Engineer name is required');
-  if (!photos.start) { $('startPhotoMissing').style.display='block'; return toast('Start KM photo is required'); }
-  if (!photos.finish) { $('finishPhotoMissing').style.display='block'; return toast('Finish KM photo is required'); }
-  if (parseFloat(finish) < parseFloat(start)) return toast('Finish KM must be ≥ Start KM');
+  if (!start) return toast('Start KM is required');
+  if (!startPhoto) { $('startPhotoMissing').style.display='block'; return toast('Start KM photo is required'); }
 
-  const entry = {
-    engineer, driver: driverName,
+  const tripId = genId();
+  const trip = {
+    tripId, engineer, driver: getDriverValue(),
     date: $('date').value, day: $('day').value,
     area: $('area').value.trim(), task: $('task').value.trim(),
-    startKm: parseFloat(start), finishKm: parseFloat(finish),
-    forthBack: parseFloat($('forthBack').value)||0, staticKm: parseFloat($('staticKm').value)||0,
-    trip: parseFloat($('tripOut').textContent), totalKm: parseFloat($('totalOut').textContent),
-    amountSpent: parseFloat($('amountOut').textContent), rate: settings.rate ?? 2.225,
-    startPhoto: photos.start, finishPhoto: photos.finish,
-    submittedAt: new Date().toISOString(),
+    startKm: parseFloat(start), startedAt: new Date().toISOString(),
   };
+  const payload = { action: 'start', ...trip, startPhoto };
+  const display = `${trip.engineer} · ${trip.area||'—'} · Start ${trip.startKm}km`;
 
-  $('submitBtn').disabled = true; $('submitBtn').textContent = 'Submitting…';
+  const trips = getOpenTrips(); trips.push(trip); setOpenTrips(trips);
+
+  $('startSubmitBtn').disabled = true; $('startSubmitBtn').textContent = 'Submitting…';
   try {
-    await trySend(entry);
-    const log = getLog(); log.unshift({...entry, status:'synced'}); setLog(log);
+    await trySend(payload);
+    const log = getLog(); log.unshift({display, status:'awaiting'}); setLog(log);
+    toast('✅ Trip started — submit Finish later today');
+  } catch (err) {
+    const q = getQueue(); q.push({payload, display}); setQueue(q);
+    toast('📴 Saved offline — will sync automatically');
+    const log = getLog(); log.unshift({display, status:'awaiting'}); setLog(log);
+  }
+  renderLog();
+  resetStartForm();
+  $('startSubmitBtn').disabled = false; $('startSubmitBtn').textContent = '▶ Submit Start';
+});
+
+function resetStartForm(){
+  $('area').value=''; $('task').value=''; $('startKm').value='';
+  $('engineerOther').value=''; $('engineerOther').style.display='none';
+  $('driverOther').value=''; $('driverOther').style.display='none';
+  startPhoto = null;
+  const thumb = document.getElementById('startThumb'); if (thumb) thumb.remove();
+  $('startPhotoBtn').textContent = '📷 Take Start Photo *';
+  $('startPhotoBtn').classList.remove('retake');
+  if (settings.defaultEngineer && [...$('engineer').options].some(o=>o.value===settings.defaultEngineer)) $('engineer').value = settings.defaultEngineer;
+  if (settings.defaultDriver && [...$('driver').options].some(o=>o.value===settings.defaultDriver)) $('driver').value = settings.defaultDriver;
+  $('date').value = todayISO(); $('day').value = dayName($('date').value);
+}
+
+// ---------- FINISH submit ----------
+$('finishForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const tripId = $('openTripSelect').value;
+  const trip = getOpenTrips().find(t => t.tripId === tripId);
+  if (!trip) return toast('Select which trip you are finishing');
+  const finish = $('finishKm').value;
+  if (!finish) return toast('Finish KM is required');
+  if (!finishPhoto) { $('finishPhotoMissing').style.display='block'; return toast('Finish KM photo is required'); }
+  if (parseFloat(finish) < parseFloat(trip.startKm)) return toast('Finish KM must be ≥ Start KM (' + trip.startKm + ')');
+
+  const payload = {
+    action: 'finish', tripId,
+    finishKm: parseFloat(finish),
+    trip: parseFloat($('tripOut').textContent),
+    totalKm: parseFloat($('totalOut').textContent),
+    amountSpent: parseFloat($('amountOut').textContent),
+    forthBack: parseFloat($('forthBack').value)||0,
+    staticKm: parseFloat($('staticKm').value)||0,
+    finishPhoto, finishedAt: new Date().toISOString(),
+  };
+  const display = `${trip.engineer} · ${trip.area||'—'} · ${$('totalOut').textContent}km total`;
+
+  // remove from open list — engineer is done with it regardless of sync outcome
+  setOpenTrips(getOpenTrips().filter(t => t.tripId !== tripId));
+
+  $('finishSubmitBtn').disabled = true; $('finishSubmitBtn').textContent = 'Submitting…';
+  try {
+    await trySend(payload);
+    const log = getLog(); log.unshift({display, status:'synced'}); setLog(log);
     toast('✅ Synced to Google Sheets');
   } catch (err) {
-    const q = getQueue(); q.push({...entry, status:'pending'}); setQueue(q);
+    const q = getQueue(); q.push({payload, display}); setQueue(q);
     toast('📴 Saved offline — will sync automatically');
   }
   renderLog();
-  resetForm();
-  $('submitBtn').disabled = false; $('submitBtn').textContent = 'Submit Reading';
+  resetFinishForm();
+  renderOpenTrips();
+  checkOverdueTrips();
+  $('finishSubmitBtn').disabled = false; $('finishSubmitBtn').textContent = '⏹ Submit Finish';
 });
 
-function resetForm(){
-  $('area').value=''; $('task').value=''; $('startKm').value=''; $('finishKm').value='';
-  $('forthBack').value='0'; $('staticKm').value='0';
-  $('engineerOther').value=''; $('engineerOther').style.display='none';
-  $('driverOther').value=''; $('driverOther').style.display='none';
-  if (settings.defaultEngineer && [...$('engineer').options].some(o=>o.value===settings.defaultEngineer)) $('engineer').value = settings.defaultEngineer;
-  if (settings.defaultDriver && [...$('driver').options].some(o=>o.value===settings.defaultDriver)) $('driver').value = settings.defaultDriver;
-  photos = {start:null, finish:null};
-  ['start','finish'].forEach(which=>{
-    const thumb = document.getElementById(which+'Thumb'); if (thumb) thumb.remove();
-    $(which+'PhotoBtn').textContent = '📷 Take ' + (which==='start'?'Start':'Finish') + ' Photo *';
-    $(which+'PhotoBtn').classList.remove('retake');
-  });
-  $('date').value = todayISO(); $('day').value = dayName($('date').value);
-  recalc();
+function resetFinishForm(){
+  $('finishKm').value=''; $('forthBack').value='0'; $('staticKm').value='0';
+  finishPhoto = null;
+  const thumb = document.getElementById('finishThumb'); if (thumb) thumb.remove();
+  $('finishPhotoBtn').textContent = '📷 Take Finish Photo *';
+  $('finishPhotoBtn').classList.remove('retake');
+  recalcFinish();
 }
 
 function toast(msg){
