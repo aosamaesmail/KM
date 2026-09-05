@@ -54,6 +54,9 @@
   .tabs{display:flex;gap:8px;margin-bottom:14px;}
   .tab-btn{flex:1;padding:13px;border-radius:12px;border:1.5px solid var(--border);background:#fff;color:var(--muted);font-weight:700;font-size:14px;}
   .tab-btn.active{background:var(--teal);color:#fff;border-color:var(--teal);}
+  .tab-btn:disabled{background:#f3f4f6;color:#c1c7cd;border-color:var(--border);cursor:not-allowed;}
+  .lock-note{font-size:12px;color:var(--muted);text-align:center;margin:-8px 0 14px;}
+  .tab-btn:disabled{opacity:.45;cursor:not-allowed;}
   .section{display:none;}
   .section.active{display:block;}
   .trip-summary{background:#f0fdfa;border-radius:10px;padding:10px 12px;font-size:13px;color:var(--teal-dark);margin-top:6px;}
@@ -85,6 +88,10 @@
   <div class="tabs">
     <button class="tab-btn active" id="tabStartBtn">▶ Start Trip</button>
     <button class="tab-btn" id="tabFinishBtn">⏹ Finish Trip</button>
+  </div>
+  <div class="lock-note" id="lockNote" style="display:none;"></div>
+  <div class="hint" id="lockedHint" style="display:none;margin:-8px 0 14px;color:var(--amber);font-weight:600;">
+    ⚠️ You have a trip in progress — finish it before starting a new one.
   </div>
 
   <!-- START SECTION -->
@@ -263,19 +270,38 @@ $('saveSettings').onclick = () => {
 
 // ---------- tabs ----------
 function showTab(which){
+  if (which==='start' && $('tabStartBtn').disabled) which = 'finish';
+  if (which==='finish' && $('tabFinishBtn').disabled) which = 'start';
   $('tabStartBtn').classList.toggle('active', which==='start');
   $('tabFinishBtn').classList.toggle('active', which==='finish');
   $('startSection').classList.toggle('active', which==='start');
   $('finishSection').classList.toggle('active', which==='finish');
   if (which==='finish') renderOpenTrips();
 }
-$('tabStartBtn').onclick = () => showTab('start');
-$('tabFinishBtn').onclick = () => showTab('finish');
+$('tabStartBtn').onclick = () => { if (!$('tabStartBtn').disabled) showTab('start'); };
+$('tabFinishBtn').onclick = () => { if (!$('tabFinishBtn').disabled) showTab('finish'); };
+
+// One trip open at a time per device: Start is locked while a trip is open, Finish is locked when none is.
+function updateLockState(){
+  const hasOpen = getOpenTrips().length > 0;
+  $('tabStartBtn').disabled = hasOpen;
+  $('tabFinishBtn').disabled = !hasOpen;
+  if (hasOpen && $('startSection').classList.contains('active')) showTab('finish');
+  if (!hasOpen && $('finishSection').classList.contains('active')) showTab('start');
+  $('lockNote').style.display = hasOpen ? 'block' : 'none';
+  $('lockNote').textContent = hasOpen
+    ? '🔒 You have a trip in progress — submit Finish before starting a new one.'
+    : '';
+}
 
 // ---------- init start form ----------
+$('date').min = todayISO();
 $('date').value = todayISO();
 $('day').value = dayName($('date').value);
-$('date').addEventListener('change', () => { $('day').value = dayName($('date').value); });
+$('date').addEventListener('change', () => {
+  if ($('date').value < todayISO()) { $('date').value = todayISO(); toast('Past dates aren\'t allowed — reset to today'); }
+  $('day').value = dayName($('date').value);
+});
 if (!settings.scriptUrl) setTimeout(() => { $('settingsModal').style.display='flex'; toast('Set up your Google Sheets sync URL first'); }, 300);
 
 // ---------- engineer/driver dropdown lists ----------
@@ -440,6 +466,7 @@ $('bannerDismiss').onclick = () => { $('overdueBanner').style.display='none'; };
 checkOverdueTrips();
 setInterval(checkOverdueTrips, 5 * 60 * 1000); // re-check every 5 min while app is open
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkOverdueTrips(); });
+updateLockState();
 $('openTripSelect').addEventListener('change', () => {
   const trip = getOpenTrips().find(t => t.tripId === $('openTripSelect').value);
   if (trip){
@@ -527,6 +554,7 @@ $('startForm').addEventListener('submit', async (e) => {
   const engineer = getEngineerValue();
   const start = $('startKm').value;
   if (!engineer) return toast('Engineer name is required');
+  if ($('date').value < todayISO()) return toast('Date cannot be before today');
   if (!start) return toast('Start KM is required');
   if (!startPhoto) { $('startPhotoMissing').style.display='block'; return toast('Start KM photo is required'); }
 
@@ -540,7 +568,7 @@ $('startForm').addEventListener('submit', async (e) => {
   const payload = { action: 'start', ...trip, startPhoto };
   const display = `${trip.engineer} · ${trip.area||'—'} · Start ${trip.startKm}km`;
 
-  const trips = getOpenTrips(); trips.push(trip); setOpenTrips(trips);
+  const trips = getOpenTrips(); trips.push(trip); setOpenTrips(trips); updateLockState();
 
   $('startSubmitBtn').disabled = true; $('startSubmitBtn').textContent = 'Submitting…';
   try {
@@ -567,7 +595,7 @@ function resetStartForm(){
   $('startPhotoBtn').classList.remove('retake');
   if (settings.defaultEngineer && [...$('engineer').options].some(o=>o.value===settings.defaultEngineer)) $('engineer').value = settings.defaultEngineer;
   if (settings.defaultDriver && [...$('driver').options].some(o=>o.value===settings.defaultDriver)) $('driver').value = settings.defaultDriver;
-  $('date').value = todayISO(); $('day').value = dayName($('date').value);
+  $('date').min = todayISO(); $('date').value = todayISO(); $('day').value = dayName($('date').value);
 }
 
 // ---------- FINISH submit ----------
@@ -594,7 +622,7 @@ $('finishForm').addEventListener('submit', async (e) => {
   const display = `${trip.engineer} · ${trip.area||'—'} · ${$('totalOut').textContent}km total`;
 
   // remove from open list — engineer is done with it regardless of sync outcome
-  setOpenTrips(getOpenTrips().filter(t => t.tripId !== tripId));
+  setOpenTrips(getOpenTrips().filter(t => t.tripId !== tripId)); updateLockState();
 
   $('finishSubmitBtn').disabled = true; $('finishSubmitBtn').textContent = 'Submitting…';
   try {
