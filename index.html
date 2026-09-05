@@ -78,6 +78,11 @@
   .history-item .sub-row{color:var(--muted);font-size:12px;margin-top:2px;}
   .history-item .amount{font-weight:700;color:var(--teal-dark);}
   .locked-field{width:100%;padding:12px;border:1.5px solid var(--border);border-radius:10px;font-size:16px;background:#eef2f1;color:var(--text);font-weight:600;}
+  .result-modal{border-radius:16px;max-width:360px;margin:auto;}
+  #resultModal{align-items:center;}
+  .result-icon{font-size:44px;text-align:center;margin-bottom:6px;}
+  #resultTitle.success{color:var(--ok);}
+  #resultTitle.failure{color:var(--danger);}
 </style>
 </head>
 <body>
@@ -282,6 +287,15 @@
       <div id="adminEngineerList" style="margin-top:14px;"></div>
       <button type="button" class="save-btn" style="background:#374151;" id="adminRefreshBtn">🔄 Refresh</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="resultModal" style="display:none;">
+  <div class="modal result-modal">
+    <div class="result-icon" id="resultIcon">✅</div>
+    <h2 id="resultTitle" style="text-align:center;">Success</h2>
+    <p id="resultMessage" style="text-align:center;color:var(--muted);"></p>
+    <button type="button" class="save-btn" id="resultOkBtn">OK</button>
   </div>
 </div>
 
@@ -826,14 +840,17 @@ $('startForm').addEventListener('submit', async (e) => {
     await trySend(payload);
     upsertLogEntry(tripId, { engineer, display, status: 'awaiting' });
     toast('✅ Trip started — submit Finish later today');
+    showResultDialog(true, `Start recorded and synced to Google Sheets (${trip.area}, ${trip.startKm} km).`);
   } catch (err) {
     if (err.message === 'invalid-pin') {
       upsertLogEntry(tripId, { engineer, display, status: 'error' });
       toast('🔒 Login invalid — log in again in Settings');
+      showResultDialog(false, 'Your login is invalid. Please log in again in Settings, then try again.');
     } else {
       const q = getQueue(); q.push({ tripId, action: 'start', payload, display, engineer }); setQueue(q);
       upsertLogEntry(tripId, { engineer, display, status: 'pending' });
       toast('📴 Saved offline — will sync automatically');
+      showResultDialog(false, 'Could not reach the server. Saved on this phone and will sync automatically once you\'re back online.');
     }
   }
   renderLog();
@@ -885,14 +902,17 @@ $('finishForm').addEventListener('submit', async (e) => {
     await trySend(payload);
     upsertLogEntry(tripId, { engineer: engineerForLog, display, status: 'synced' });
     toast('✅ Synced to Google Sheets');
+    showResultDialog(true, `Finish recorded and synced to Google Sheets (${$('totalOut').textContent} km, ${$('amountOut').textContent} EGP).`);
   } catch (err) {
     if (err.message === 'invalid-pin') {
       upsertLogEntry(tripId, { engineer: engineerForLog, display, status: 'error' });
       toast('🔒 Login invalid — log in again in Settings');
+      showResultDialog(false, 'Your login is invalid. Please log in again in Settings, then try again.');
     } else {
       const q = getQueue(); q.push({ tripId, action: 'finish', payload, display, engineer: engineerForLog }); setQueue(q);
       upsertLogEntry(tripId, { engineer: engineerForLog, display, status: 'pending' });
       toast('📴 Saved offline — will sync automatically');
+      showResultDialog(false, 'Could not reach the server. Saved on this phone and will sync automatically once you\'re back online.');
     }
   }
   renderLog();
@@ -964,6 +984,15 @@ function renderHistory(data){
       </div>`;
   }).join('');
 }
+
+function showResultDialog(success, message){
+  $('resultIcon').textContent = success ? '✅' : '❌';
+  $('resultTitle').textContent = success ? 'Upload Succeeded' : 'Upload Failed';
+  $('resultTitle').className = success ? 'success' : 'failure';
+  $('resultMessage').textContent = message;
+  $('resultModal').style.display = 'flex';
+}
+$('resultOkBtn').onclick = () => { $('resultModal').style.display = 'none'; };
 
 function toast(msg){
   let t = document.querySelector('.toast');
