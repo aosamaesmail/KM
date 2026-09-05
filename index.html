@@ -81,8 +81,11 @@
   .result-modal{border-radius:16px;max-width:360px;margin:auto;}
   #resultModal{align-items:center;}
   .result-icon{font-size:44px;text-align:center;margin-bottom:6px;}
+  .result-icon.spin{animation:spin 1s linear infinite;}
+  @keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
   #resultTitle.success{color:var(--ok);}
   #resultTitle.failure{color:var(--danger);}
+  #resultTitle.offline{color:var(--amber);}
 </style>
 </head>
 <body>
@@ -836,21 +839,23 @@ $('startForm').addEventListener('submit', async (e) => {
   const trips = getOpenTrips(); trips.push(trip); setOpenTrips(trips); updateLockState();
 
   $('startSubmitBtn').disabled = true; $('startSubmitBtn').textContent = 'Submitting…';
+  showResultDialog('loading', 'Uploading start reading…');
   try {
     await trySend(payload);
     upsertLogEntry(tripId, { engineer, display, status: 'awaiting' });
     toast('✅ Trip started — submit Finish later today');
-    showResultDialog(true, `Start recorded and synced to Google Sheets (${trip.area}, ${trip.startKm} km).`);
+    showResultDialog('success', `Start recorded and synced to Google Sheets (${trip.area}, ${trip.startKm} km).`);
   } catch (err) {
-    if (err.message === 'invalid-pin') {
+    const classified = classifySendError(err);
+    if (classified.kind === 'invalid-pin') {
       upsertLogEntry(tripId, { engineer, display, status: 'error' });
       toast('🔒 Login invalid — log in again in Settings');
-      showResultDialog(false, 'Your login is invalid. Please log in again in Settings, then try again.');
+      showResultDialog('failure', classified.text);
     } else {
       const q = getQueue(); q.push({ tripId, action: 'start', payload, display, engineer }); setQueue(q);
       upsertLogEntry(tripId, { engineer, display, status: 'pending' });
-      toast('📴 Saved offline — will sync automatically');
-      showResultDialog(false, 'Could not reach the server. Saved on this phone and will sync automatically once you\'re back online.');
+      toast(classified.kind === 'offline' ? '📴 No internet — will sync automatically' : '⚠️ Upload failed — will retry automatically');
+      showResultDialog(classified.kind === 'offline' ? 'offline' : 'failure', classified.text);
     }
   }
   renderLog();
@@ -898,21 +903,23 @@ $('finishForm').addEventListener('submit', async (e) => {
   setOpenTrips(getOpenTrips().filter(t => t.tripId !== tripId)); updateLockState();
 
   $('finishSubmitBtn').disabled = true; $('finishSubmitBtn').textContent = 'Submitting…';
+  showResultDialog('loading', 'Uploading finish reading…');
   try {
     await trySend(payload);
     upsertLogEntry(tripId, { engineer: engineerForLog, display, status: 'synced' });
     toast('✅ Synced to Google Sheets');
-    showResultDialog(true, `Finish recorded and synced to Google Sheets (${$('totalOut').textContent} km, ${$('amountOut').textContent} EGP).`);
+    showResultDialog('success', `Finish recorded and synced to Google Sheets (${$('totalOut').textContent} km, ${$('amountOut').textContent} EGP).`);
   } catch (err) {
-    if (err.message === 'invalid-pin') {
+    const classified = classifySendError(err);
+    if (classified.kind === 'invalid-pin') {
       upsertLogEntry(tripId, { engineer: engineerForLog, display, status: 'error' });
       toast('🔒 Login invalid — log in again in Settings');
-      showResultDialog(false, 'Your login is invalid. Please log in again in Settings, then try again.');
+      showResultDialog('failure', classified.text);
     } else {
       const q = getQueue(); q.push({ tripId, action: 'finish', payload, display, engineer: engineerForLog }); setQueue(q);
       upsertLogEntry(tripId, { engineer: engineerForLog, display, status: 'pending' });
-      toast('📴 Saved offline — will sync automatically');
-      showResultDialog(false, 'Could not reach the server. Saved on this phone and will sync automatically once you\'re back online.');
+      toast(classified.kind === 'offline' ? '📴 No internet — will sync automatically' : '⚠️ Upload failed — will retry automatically');
+      showResultDialog(classified.kind === 'offline' ? 'offline' : 'failure', classified.text);
     }
   }
   renderLog();
@@ -985,13 +992,32 @@ function renderHistory(data){
   }).join('');
 }
 
-function showResultDialog(success, message){
-  $('resultIcon').textContent = success ? '✅' : '❌';
-  $('resultTitle').textContent = success ? 'Upload Succeeded' : 'Upload Failed';
-  $('resultTitle').className = success ? 'success' : 'failure';
-  $('resultMessage').textContent = message;
+function showResultDialog(state, message){
+  const icons = { loading: '⏳', success: '✅', offline: '📴', failure: '❌' };
+  const titles = { loading: 'Uploading…', success: 'Upload Succeeded', offline: 'No Internet Connection', failure: 'Upload Failed' };
+  $('resultIcon').textContent = icons[state] || '';
+  $('resultIcon').classList.toggle('spin', state === 'loading');
+  $('resultTitle').textContent = titles[state] || '';
+  $('resultTitle').className = (state === 'success' || state === 'failure' || state === 'offline') ? state : '';
+  $('resultMessage').textContent = message || '';
+  $('resultOkBtn').style.display = state === 'loading' ? 'none' : 'block';
   $('resultModal').style.display = 'flex';
 }
+
+// Classifies a trySend() failure so the dialog can tell "no internet" apart from a real error.
+// Our own thrown errors are always plain Error objects with a known message (invalid-pin,
+// trip-not-found, etc.); a TypeError bubbling up from fetch() itself almost always means the
+// request never left the phone — i.e. no connection.
+function classifySendError(err){
+  if (err && err.message === 'invalid-pin') {
+    return { kind: 'invalid-pin', text: 'Your login is invalid. Please log in again in Settings, then try again.' };
+  }
+  if (!navigator.onLine || err instanceof TypeError) {
+    return { kind: 'offline', text: 'No internet connection — this upload will be saved and sent automatically once you\'re back online.' };
+  }
+  return { kind: 'error', text: 'Something went wrong uploading this. It has been saved on this phone and will retry automatically.' };
+}
+
 $('resultOkBtn').onclick = () => { $('resultModal').style.display = 'none'; };
 
 function toast(msg){
