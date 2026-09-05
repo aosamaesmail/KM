@@ -129,11 +129,11 @@
         </div>
       </div>
 
-      <label>Area</label>
-      <input type="text" id="area" placeholder="e.g. Sharm El-Sheikh">
+      <label>Area *</label>
+      <input type="text" id="area" placeholder="e.g. Sharm El-Sheikh" required>
 
-      <label>Task</label>
-      <input type="text" id="task" placeholder="e.g. Travel to site / complaint">
+      <label>Task *</label>
+      <input type="text" id="task" placeholder="e.g. Travel to site / complaint" required>
 
       <label>Start KM *</label>
       <input type="number" id="startKm" inputmode="numeric" placeholder="Odometer reading now" required>
@@ -247,7 +247,9 @@
     <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="logoutBtn">Log out</button>
 
     <label style="margin-top:18px;">Default Driver Name</label>
-    <input type="text" id="defaultDriver" placeholder="Pre-fills the form">
+    <select id="defaultDriver">
+      <option value="">— None (optional) —</option>
+    </select>
 
     <label>Rate per KM (EGP)</label>
     <input type="number" id="rate" step="0.001" value="2.225">
@@ -335,6 +337,7 @@ $('loginBtn').onclick = async () => {
       $('loginPin').value = '';
       updateLoginStatus();
       updateLockState();
+      renderLog();
       toast('✅ Logged in as ' + name);
     } else {
       toast('❌ Wrong PIN for ' + name);
@@ -349,6 +352,8 @@ $('logoutBtn').onclick = () => {
   saveSettingsToStorage(settings);
   $('loginPin').value = '';
   updateLoginStatus();
+  updateLockState();
+  renderLog();
   toast('Logged out');
 };
 
@@ -388,7 +393,7 @@ function showTab(which){
   $('startSection').classList.toggle('active', which==='start');
   $('finishSection').classList.toggle('active', which==='finish');
   $('historySection').classList.toggle('active', which==='history');
-  if (which==='finish') renderOpenTrips();
+  if (which==='finish') loadOpenTripsForFinish();
   if (which==='history') loadHistory();
 }
 $('tabStartBtn').onclick = () => { if (!$('tabStartBtn').disabled) showTab('start'); };
@@ -454,10 +459,10 @@ wireOtherToggle('driver','driverOther');
 
 function getDriverValue(){ return $('driver').value === '__other__' ? $('driverOther').value.trim() : $('driver').value; }
 
-function populateSimpleSelect(selectEl, list, currentValue){
+function populateSimpleSelect(selectEl, list, currentValue, placeholder){
   const prev = selectEl.value;
   selectEl.innerHTML = '';
-  const blank = document.createElement('option'); blank.value=''; blank.textContent='— Select Engineer —';
+  const blank = document.createElement('option'); blank.value=''; blank.textContent = placeholder || '— Select —';
   selectEl.appendChild(blank);
   list.forEach(name => {
     const o = document.createElement('option'); o.value = name; o.textContent = name;
@@ -475,20 +480,23 @@ async function refreshLists(silent){
     if (data.engineers || data.drivers){
       setCachedLists({ engineers: data.engineers||[], drivers: data.drivers||[] });
       populateSelect($('driver'), data.drivers||[], settings.defaultDriver);
-      populateSimpleSelect($('loginEngineerSelect'), data.engineers||[], settings.engineer);
+      populateSimpleSelect($('loginEngineerSelect'), data.engineers||[], settings.engineer, '— Select Engineer —');
+      populateSimpleSelect($('defaultDriver'), data.drivers||[], settings.defaultDriver, '— None (optional) —');
       if (!silent) toast('Engineer/Driver list updated');
     }
   } catch (err) {
     const cached = getCachedLists();
     populateSelect($('driver'), cached.drivers, settings.defaultDriver);
-    populateSimpleSelect($('loginEngineerSelect'), cached.engineers, settings.engineer);
+    populateSimpleSelect($('loginEngineerSelect'), cached.engineers, settings.engineer, '— Select Engineer —');
+    populateSimpleSelect($('defaultDriver'), cached.drivers, settings.defaultDriver, '— None (optional) —');
     if (!silent) toast('Could not refresh — showing last saved list');
   }
 }
 $('refreshListBtn').onclick = () => refreshLists(false);
 const cachedAtStart = getCachedLists();
 populateSelect($('driver'), cachedAtStart.drivers, settings.defaultDriver);
-populateSimpleSelect($('loginEngineerSelect'), cachedAtStart.engineers, settings.engineer);
+populateSimpleSelect($('loginEngineerSelect'), cachedAtStart.engineers, settings.engineer, '— Select Engineer —');
+populateSimpleSelect($('defaultDriver'), cachedAtStart.drivers, settings.defaultDriver, '— None (optional) —');
 refreshLists(true);
 
 // ---------- photo capture (compressed) ----------
@@ -534,18 +542,55 @@ wirePhoto('finish','finishPhotoBtn','finishPhotoInput','finishPhotoMissing', (d)
 function getOpenTrips(){ try { return JSON.parse(localStorage.getItem('benzine_open_trips')) || []; } catch(e){ return []; } }
 function setOpenTrips(l){ localStorage.setItem('benzine_open_trips', JSON.stringify(l)); }
 
-function renderOpenTrips(){
-  const trips = getOpenTrips();
+// In-memory cache of whatever the Finish dropdown currently shows (server list, merged with
+// any not-yet-synced local trips so offline-started trips still show up here too).
+let openTripsCache = [];
+
+async function loadOpenTripsForFinish(){
   const sel = $('openTripSelect');
+  $('tripSummary').style.display = 'none';
+  if (!settings.engineer || !settings.pin){
+    sel.innerHTML = '<option value="">— Select an open trip —</option>';
+    openTripsCache = [];
+    $('noOpenTrips').style.display = 'block';
+    $('noOpenTrips').textContent = 'Please log in first.';
+    return;
+  }
+
+  let serverTrips = [];
+  let serverOk = false;
+  try {
+    const data = await trySend({ action: 'openTrips' });
+    serverTrips = data.trips || [];
+    serverOk = true;
+  } catch (err) {
+    if (err.message === 'invalid-pin') {
+      $('noOpenTrips').style.display = 'block';
+      $('noOpenTrips').textContent = '🔒 Login invalid — please log in again in Settings.';
+      sel.innerHTML = '<option value="">— Select an open trip —</option>';
+      openTripsCache = [];
+      return;
+    }
+    // offline/unreachable — fall back to whatever this device knows locally
+  }
+
+  // Merge in any locally-started trips not yet reflected on the server (e.g. Start is still
+  // queued offline), so the engineer can still pick them to finish even without a connection.
+  const local = getOpenTrips();
+  const merged = [...serverTrips];
+  local.forEach(lt => { if (!merged.some(st => st.tripId === lt.tripId)) merged.push(lt); });
+  openTripsCache = merged;
+
   sel.innerHTML = '<option value="">— Select an open trip —</option>';
-  trips.forEach(t => {
+  merged.forEach(t => {
     const o = document.createElement('option');
     o.value = t.tripId;
-    o.textContent = `${t.engineer} · ${t.area||'—'} · ${t.date} (Start KM: ${t.startKm})`;
+    o.textContent = `${t.area||'—'} · ${t.date} (Start KM: ${t.startKm})`;
     sel.appendChild(o);
   });
-  $('noOpenTrips').style.display = trips.length ? 'none' : 'block';
-  $('tripSummary').style.display = 'none';
+  $('noOpenTrips').style.display = merged.length ? 'none' : 'block';
+  $('noOpenTrips').textContent = merged.length ? '' : 'No open trips found. Start a trip first.';
+  if (!serverOk && merged.length) toast('Showing locally saved trips — could not refresh from the Sheet');
 }
 
 // ---------- overdue trip reminders (10 hours) ----------
@@ -601,7 +646,7 @@ setInterval(checkOverdueTrips, 5 * 60 * 1000); // re-check every 5 min while app
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkOverdueTrips(); });
 updateLockState();
 $('openTripSelect').addEventListener('change', () => {
-  const trip = getOpenTrips().find(t => t.tripId === $('openTripSelect').value);
+  const trip = openTripsCache.find(t => t.tripId === $('openTripSelect').value);
   if (trip){
     $('tripSummary').style.display='block';
     $('tripSummary').textContent = `Started ${trip.startedAt ? new Date(trip.startedAt).toLocaleString() : ''} · Driver: ${trip.driver||'—'} · Task: ${trip.task||'—'}`;
@@ -613,7 +658,7 @@ $('openTripSelect').addEventListener('change', () => {
 
 // ---------- computed fields (finish) ----------
 function recalcFinish(){
-  const trip = getOpenTrips().find(t => t.tripId === $('openTripSelect').value);
+  const trip = openTripsCache.find(t => t.tripId === $('openTripSelect').value);
   const start = trip ? parseFloat(trip.startKm) : NaN;
   const finish = parseFloat($('finishKm').value);
   const fb = parseFloat($('forthBack').value) || 0;
@@ -633,12 +678,24 @@ function recalcFinish(){
 function getQueue(){ try { return JSON.parse(localStorage.getItem('benzine_queue')) || []; } catch(e){ return []; } }
 function setQueue(q){ localStorage.setItem('benzine_queue', JSON.stringify(q)); }
 function getLog(){ try { return JSON.parse(localStorage.getItem('benzine_log')) || []; } catch(e){ return []; } }
-function setLog(l){ localStorage.setItem('benzine_log', JSON.stringify(l.slice(0,20))); }
+function setLog(l){ localStorage.setItem('benzine_log', JSON.stringify(l.slice(0,30))); }
+
+// One entry per trip, keyed by tripId — updating it (e.g. start -> finish) replaces the
+// same entry instead of adding a new one, so "awaiting" clears once the trip is actually synced.
+function upsertLogEntry(tripId, patch){
+  const log = getLog();
+  const idx = log.findIndex(it => it.tripId === tripId);
+  let entry;
+  if (idx >= 0) { entry = Object.assign({}, log[idx], patch); log.splice(idx, 1); }
+  else { entry = Object.assign({ tripId }, patch); }
+  log.unshift(entry);
+  setLog(log);
+}
 
 function renderLog(){
-  const q = getQueue();
-  const l = getLog();
-  const items = [...q.map(x=>({...x, status:'pending'})), ...l].slice(0,20);
+  const log = getLog();
+  const mine = (settings.engineer || '').trim().toLowerCase();
+  const items = log.filter(it => (it.engineer || '').trim().toLowerCase() === mine).slice(0, 20);
   if (!items.length){ $('logList').innerHTML = '<div class="empty">Nothing yet.</div>'; return; }
   $('logList').innerHTML = items.map(it => `
     <div class="log-item">
@@ -664,17 +721,18 @@ async function flushQueue(){
   const q = getQueue();
   if (!q.length || !settings.scriptUrl) return;
   const remaining = [];
-  const log = getLog();
   for (const item of q) {
     try {
       await trySend(item.payload);
-      log.unshift({ display: item.display, status: 'synced' });
+      upsertLogEntry(item.tripId, { engineer: item.engineer, display: item.display, status: item.action === 'finish' ? 'synced' : 'awaiting' });
     } catch (e) {
       remaining.push(item);
+      if (e.message === 'invalid-pin') {
+        upsertLogEntry(item.tripId, { engineer: item.engineer, display: item.display, status: 'error' });
+      }
     }
   }
   setQueue(remaining);
-  setLog(log);
   renderLog();
 }
 $('syncNowBtn').onclick = async () => { toast('Syncing…'); await flushQueue(); toast('Sync attempt finished'); };
@@ -746,6 +804,8 @@ $('startForm').addEventListener('submit', async (e) => {
   const engineer = settings.engineer;
   const start = $('startKm').value;
   if ($('date').value < todayISO()) return toast('Date cannot be before today');
+  if (!$('area').value.trim()) return toast('Area is required');
+  if (!$('task').value.trim()) return toast('Task is required');
   if (!start) return toast('Start KM is required');
   if (!startPhoto) { $('startPhotoMissing').style.display='block'; return toast('Start KM photo is required'); }
 
@@ -764,12 +824,17 @@ $('startForm').addEventListener('submit', async (e) => {
   $('startSubmitBtn').disabled = true; $('startSubmitBtn').textContent = 'Submitting…';
   try {
     await trySend(payload);
-    const log = getLog(); log.unshift({display, status:'awaiting'}); setLog(log);
+    upsertLogEntry(tripId, { engineer, display, status: 'awaiting' });
     toast('✅ Trip started — submit Finish later today');
   } catch (err) {
-    const q = getQueue(); q.push({payload, display}); setQueue(q);
-    toast(err.message === 'invalid-pin' ? '🔒 Login invalid — log in again in Settings' : '📴 Saved offline — will sync automatically');
-    const log = getLog(); log.unshift({display, status:'awaiting'}); setLog(log);
+    if (err.message === 'invalid-pin') {
+      upsertLogEntry(tripId, { engineer, display, status: 'error' });
+      toast('🔒 Login invalid — log in again in Settings');
+    } else {
+      const q = getQueue(); q.push({ tripId, action: 'start', payload, display, engineer }); setQueue(q);
+      upsertLogEntry(tripId, { engineer, display, status: 'pending' });
+      toast('📴 Saved offline — will sync automatically');
+    }
   }
   renderLog();
   resetStartForm();
@@ -792,7 +857,7 @@ $('finishForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!settings.engineer || !settings.pin) return toast('Please log in first (⚙️ Settings)');
   const tripId = $('openTripSelect').value;
-  const trip = getOpenTrips().find(t => t.tripId === tripId);
+  const trip = openTripsCache.find(t => t.tripId === tripId);
   if (!trip) return toast('Select which trip you are finishing');
   const finish = $('finishKm').value;
   if (!finish) return toast('Finish KM is required');
@@ -810,6 +875,7 @@ $('finishForm').addEventListener('submit', async (e) => {
     finishPhoto, finishedAt: new Date().toISOString(),
   };
   const display = `${trip.engineer} · ${trip.area||'—'} · ${$('totalOut').textContent}km total`;
+  const engineerForLog = trip.engineer || settings.engineer;
 
   // remove from open list — engineer is done with it regardless of sync outcome
   setOpenTrips(getOpenTrips().filter(t => t.tripId !== tripId)); updateLockState();
@@ -817,15 +883,21 @@ $('finishForm').addEventListener('submit', async (e) => {
   $('finishSubmitBtn').disabled = true; $('finishSubmitBtn').textContent = 'Submitting…';
   try {
     await trySend(payload);
-    const log = getLog(); log.unshift({display, status:'synced'}); setLog(log);
+    upsertLogEntry(tripId, { engineer: engineerForLog, display, status: 'synced' });
     toast('✅ Synced to Google Sheets');
   } catch (err) {
-    const q = getQueue(); q.push({payload, display}); setQueue(q);
-    toast(err.message === 'invalid-pin' ? '🔒 Login invalid — log in again in Settings' : '📴 Saved offline — will sync automatically');
+    if (err.message === 'invalid-pin') {
+      upsertLogEntry(tripId, { engineer: engineerForLog, display, status: 'error' });
+      toast('🔒 Login invalid — log in again in Settings');
+    } else {
+      const q = getQueue(); q.push({ tripId, action: 'finish', payload, display, engineer: engineerForLog }); setQueue(q);
+      upsertLogEntry(tripId, { engineer: engineerForLog, display, status: 'pending' });
+      toast('📴 Saved offline — will sync automatically');
+    }
   }
   renderLog();
   resetFinishForm();
-  renderOpenTrips();
+  loadOpenTripsForFinish();
   checkOverdueTrips();
   $('finishSubmitBtn').disabled = false; $('finishSubmitBtn').textContent = '⏹ Submit Finish';
 });
