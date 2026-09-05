@@ -77,6 +77,7 @@
   .history-item .top-row{display:flex;justify-content:space-between;align-items:center;gap:8px;}
   .history-item .sub-row{color:var(--muted);font-size:12px;margin-top:2px;}
   .history-item .amount{font-weight:700;color:var(--teal-dark);}
+  .locked-field{width:100%;padding:12px;border:1.5px solid var(--border);border-radius:10px;font-size:16px;background:#eef2f1;color:var(--text);font-weight:600;}
 </style>
 </head>
 <body>
@@ -102,19 +103,13 @@
     <button class="tab-btn" id="tabHistoryBtn">📊 History</button>
   </div>
   <div class="lock-note" id="lockNote" style="display:none;"></div>
-  <div class="hint" id="lockedHint" style="display:none;margin:-8px 0 14px;color:var(--amber);font-weight:600;">
-    ⚠️ You have a trip in progress — finish it before starting a new one.
-  </div>
 
   <!-- START SECTION -->
   <section class="section active" id="startSection">
     <form class="card" id="startForm">
-      <label>Engineer Name *</label>
-      <select id="engineer" required>
-        <option value="">— Select Engineer —</option>
-        <option value="__other__">➕ Other (type manually)</option>
-      </select>
-      <input type="text" id="engineerOther" placeholder="Type engineer name" style="display:none;margin-top:8px;">
+      <label>Engineer</label>
+      <div class="locked-field" id="startEngineerDisplay">— not logged in —</div>
+      <div class="hint">This is locked to your login. Not you? Switch in ⚙️ Settings.</div>
 
       <label>Driver Name</label>
       <select id="driver">
@@ -195,10 +190,7 @@
   <!-- HISTORY SECTION -->
   <section class="section" id="historySection">
     <div class="card">
-      <label>Viewing history for</label>
-      <select id="historyEngineerSelect">
-        <option value="">— Select Engineer —</option>
-      </select>
+      <div class="hint" id="historyWhoami"></div>
 
       <div class="balance-grid" id="balanceGrid" style="display:none;">
         <div class="balance-box">
@@ -214,7 +206,7 @@
           <div class="balance-num" id="balBalance">0</div>
         </div>
       </div>
-      <div class="hint" id="historyHint">Select an engineer to view their trip history and balance.</div>
+      <div class="hint" id="historyHint">Log in from ⚙️ Settings to view your history and balance.</div>
     </div>
 
     <div class="card">
@@ -241,10 +233,20 @@
     <label>Sync token</label>
     <input type="text" id="scriptToken" placeholder="Shared token from Code.gs">
 
-    <label>Default Engineer Name</label>
-    <input type="text" id="defaultEngineer" placeholder="Pre-fills the form">
+    <h2 style="font-size:15px;margin-top:22px;">🔐 Engineer Login</h2>
+    <div class="hint">Each engineer logs in with their own name + private PIN. This keeps your
+      submissions and balance private — only you can see or add to your own history.</div>
+    <label>My Name</label>
+    <select id="loginEngineerSelect">
+      <option value="">— Select Engineer —</option>
+    </select>
+    <label>My PIN</label>
+    <input type="password" inputmode="numeric" id="loginPin" placeholder="PIN given to you by your admin">
+    <button type="button" class="save-btn" id="loginBtn">🔐 Login</button>
+    <div class="hint" id="loginStatus">Not logged in yet.</div>
+    <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="logoutBtn">Log out</button>
 
-    <label>Default Driver Name</label>
+    <label style="margin-top:18px;">Default Driver Name</label>
     <input type="text" id="defaultDriver" placeholder="Pre-fills the form">
 
     <label>Rate per KM (EGP)</label>
@@ -255,6 +257,29 @@
     <div class="hint" id="reminderStatus"></div>
     <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="refreshListBtn">📋 Refresh Engineer/Driver list</button>
     <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="syncNowBtn">🔄 Sync pending now</button>
+    <button type="button" class="save-btn" style="background:#0b5c55;margin-top:18px;" id="openAdminBtn">🛡 Admin Panel</button>
+  </div>
+</div>
+
+<div class="modal-bg" id="adminModal" style="display:none;">
+  <div class="modal">
+    <button class="close" id="closeAdmin">✕</button>
+    <h2>🛡 Admin Panel</h2>
+    <div id="adminLoginBlock">
+      <div class="hint">Uses a separate Admin PIN (set in Code.gs) — not any engineer's personal PIN.</div>
+      <label>Admin PIN</label>
+      <input type="password" inputmode="numeric" id="adminPinInput" placeholder="Admin PIN">
+      <button type="button" class="save-btn" id="adminViewBtn">View All Balances</button>
+    </div>
+    <div id="adminSummaryBlock" style="display:none;">
+      <div class="balance-grid">
+        <div class="balance-box"><div class="balance-lbl">Total Received</div><div class="balance-num" id="adminTotalReceived">0</div></div>
+        <div class="balance-box"><div class="balance-lbl">Total Spent</div><div class="balance-num" id="adminTotalSpent">0</div></div>
+        <div class="balance-box wide"><div class="balance-lbl">Total Balance</div><div class="balance-num" id="adminTotalBalance">0</div></div>
+      </div>
+      <div id="adminEngineerList" style="margin-top:14px;"></div>
+      <button type="button" class="save-btn" style="background:#374151;" id="adminRefreshBtn">🔄 Refresh</button>
+    </div>
   </div>
 </div>
 
@@ -272,7 +297,6 @@ let settings = loadSettings();
 function fillSettingsForm(){
   $('scriptUrl').value = settings.scriptUrl || '';
   $('scriptToken').value = settings.scriptToken || '';
-  $('defaultEngineer').value = settings.defaultEngineer || '';
   $('defaultDriver').value = settings.defaultDriver || '';
   $('rate').value = settings.rate ?? 2.225;
 }
@@ -280,6 +304,53 @@ fillSettingsForm();
 
 $('settingsBtn').onclick = () => { $('settingsModal').style.display='flex'; };
 $('closeSettings').onclick = () => { $('settingsModal').style.display='none'; };
+
+function updateLoginStatus(){
+  const loggedIn = !!(settings.engineer && settings.pin);
+  $('loginStatus').textContent = loggedIn ? ('✅ Logged in as ' + settings.engineer) : 'Not logged in yet.';
+  $('startEngineerDisplay').textContent = loggedIn ? settings.engineer : '— not logged in —';
+  $('historyWhoami').textContent = loggedIn ? ('Showing history for: ' + settings.engineer) : '';
+  if (loggedIn && [...$('loginEngineerSelect').options].some(o=>o.value===settings.engineer)) {
+    $('loginEngineerSelect').value = settings.engineer;
+  }
+}
+updateLoginStatus();
+
+$('loginBtn').onclick = async () => {
+  const name = $('loginEngineerSelect').value;
+  const pin = $('loginPin').value.trim();
+  const scriptUrl = $('scriptUrl').value.trim();
+  const scriptToken = $('scriptToken').value.trim();
+  if (!scriptUrl) return toast('Set the Google Sheet sync URL first');
+  if (!name) return toast('Select your name');
+  if (!pin) return toast('Enter your PIN');
+  $('loginBtn').disabled = true; $('loginBtn').textContent = 'Checking…';
+  try {
+    const res = await fetch(scriptUrl, { method:'POST', body: JSON.stringify({ token: scriptToken, action:'verifyLogin', engineer:name, pin }) });
+    const data = JSON.parse(await res.text());
+    if (data.ok){
+      settings.scriptUrl = scriptUrl; settings.scriptToken = scriptToken;
+      settings.engineer = name; settings.pin = pin;
+      saveSettingsToStorage(settings);
+      $('loginPin').value = '';
+      updateLoginStatus();
+      updateLockState();
+      toast('✅ Logged in as ' + name);
+    } else {
+      toast('❌ Wrong PIN for ' + name);
+    }
+  } catch (err) {
+    toast('Could not verify — check your connection and Sync URL');
+  }
+  $('loginBtn').disabled = false; $('loginBtn').textContent = '🔐 Login';
+};
+$('logoutBtn').onclick = () => {
+  delete settings.engineer; delete settings.pin;
+  saveSettingsToStorage(settings);
+  $('loginPin').value = '';
+  updateLoginStatus();
+  toast('Logged out');
+};
 
 function updateReminderStatus(){
   const supported = 'Notification' in window;
@@ -296,15 +367,11 @@ $('enableRemindersBtn').onclick = async () => {
   if (perm === 'granted') toast('Reminders enabled');
 };
 $('saveSettings').onclick = () => {
-  settings = {
-    scriptUrl: $('scriptUrl').value.trim(),
-    scriptToken: $('scriptToken').value.trim(),
-    defaultEngineer: $('defaultEngineer').value.trim(),
-    defaultDriver: $('defaultDriver').value.trim(),
-    rate: parseFloat($('rate').value) || 2.225,
-  };
+  settings.scriptUrl = $('scriptUrl').value.trim();
+  settings.scriptToken = $('scriptToken').value.trim();
+  settings.defaultDriver = $('defaultDriver').value.trim();
+  settings.rate = parseFloat($('rate').value) || 2.225;
   saveSettingsToStorage(settings);
-  if (settings.defaultEngineer && [...$('engineer').options].some(o=>o.value===settings.defaultEngineer)) $('engineer').value = settings.defaultEngineer;
   if (settings.defaultDriver && [...$('driver').options].some(o=>o.value===settings.defaultDriver)) $('driver').value = settings.defaultDriver;
   recalcFinish();
   $('settingsModal').style.display='none';
@@ -329,10 +396,17 @@ $('tabFinishBtn').onclick = () => { if (!$('tabFinishBtn').disabled) showTab('fi
 $('tabHistoryBtn').onclick = () => showTab('history');
 
 // One trip open at a time per device: Start is locked while a trip is open, Finish is locked when none is.
+// Both are locked entirely until the engineer logs in.
 function updateLockState(){
+  const loggedIn = !!(settings.engineer && settings.pin);
   const hasOpen = getOpenTrips().length > 0;
-  $('tabStartBtn').disabled = hasOpen;
-  $('tabFinishBtn').disabled = !hasOpen;
+  $('tabStartBtn').disabled = !loggedIn || hasOpen;
+  $('tabFinishBtn').disabled = !loggedIn || !hasOpen;
+  if (!loggedIn) {
+    $('lockNote').style.display = 'block';
+    $('lockNote').textContent = '🔒 Log in from ⚙️ Settings to start or finish a trip.';
+    return;
+  }
   if (hasOpen && $('startSection').classList.contains('active')) showTab('finish');
   if (!hasOpen && $('finishSection').classList.contains('active')) showTab('start');
   $('lockNote').style.display = hasOpen ? 'block' : 'none';
@@ -350,6 +424,7 @@ $('date').addEventListener('change', () => {
   $('day').value = dayName($('date').value);
 });
 if (!settings.scriptUrl) setTimeout(() => { $('settingsModal').style.display='flex'; toast('Set up your Google Sheets sync URL first'); }, 300);
+else if (!settings.engineer || !settings.pin) setTimeout(() => { $('settingsModal').style.display='flex'; toast('Log in with your name and PIN first'); }, 300);
 
 // ---------- engineer/driver dropdown lists ----------
 function getCachedLists(){ try { return JSON.parse(localStorage.getItem('benzine_lists')) || {engineers:[],drivers:[]}; } catch(e){ return {engineers:[],drivers:[]}; } }
@@ -375,10 +450,8 @@ function wireOtherToggle(selectId, otherId){
     if (sel.value === '__other__') other.focus();
   });
 }
-wireOtherToggle('engineer','engineerOther');
 wireOtherToggle('driver','driverOther');
 
-function getEngineerValue(){ return $('engineer').value === '__other__' ? $('engineerOther').value.trim() : $('engineer').value; }
 function getDriverValue(){ return $('driver').value === '__other__' ? $('driverOther').value.trim() : $('driver').value; }
 
 function populateSimpleSelect(selectEl, list, currentValue){
@@ -401,24 +474,21 @@ async function refreshLists(silent){
     const data = await res.json();
     if (data.engineers || data.drivers){
       setCachedLists({ engineers: data.engineers||[], drivers: data.drivers||[] });
-      populateSelect($('engineer'), data.engineers||[], settings.defaultEngineer);
       populateSelect($('driver'), data.drivers||[], settings.defaultDriver);
-      populateSimpleSelect($('historyEngineerSelect'), data.engineers||[], settings.defaultEngineer);
+      populateSimpleSelect($('loginEngineerSelect'), data.engineers||[], settings.engineer);
       if (!silent) toast('Engineer/Driver list updated');
     }
   } catch (err) {
     const cached = getCachedLists();
-    populateSelect($('engineer'), cached.engineers, settings.defaultEngineer);
     populateSelect($('driver'), cached.drivers, settings.defaultDriver);
-    populateSimpleSelect($('historyEngineerSelect'), cached.engineers, settings.defaultEngineer);
+    populateSimpleSelect($('loginEngineerSelect'), cached.engineers, settings.engineer);
     if (!silent) toast('Could not refresh — showing last saved list');
   }
 }
 $('refreshListBtn').onclick = () => refreshLists(false);
 const cachedAtStart = getCachedLists();
-populateSelect($('engineer'), cachedAtStart.engineers, settings.defaultEngineer);
 populateSelect($('driver'), cachedAtStart.drivers, settings.defaultDriver);
-populateSimpleSelect($('historyEngineerSelect'), cachedAtStart.engineers, settings.defaultEngineer);
+populateSimpleSelect($('loginEngineerSelect'), cachedAtStart.engineers, settings.engineer);
 refreshLists(true);
 
 // ---------- photo capture (compressed) ----------
@@ -582,7 +652,7 @@ async function trySend(payload){
   if (!settings.scriptUrl) throw new Error('no-url');
   const res = await fetch(settings.scriptUrl, {
     method: 'POST',
-    body: JSON.stringify({ token: settings.scriptToken, ...payload })
+    body: JSON.stringify({ token: settings.scriptToken, engineer: settings.engineer, pin: settings.pin, ...payload })
   });
   const text = await res.text();
   let json; try { json = JSON.parse(text); } catch(e){ throw new Error('bad-response'); }
@@ -608,15 +678,73 @@ async function flushQueue(){
   renderLog();
 }
 $('syncNowBtn').onclick = async () => { toast('Syncing…'); await flushQueue(); toast('Sync attempt finished'); };
+
+// ---------- admin panel ----------
+$('openAdminBtn').onclick = () => { $('settingsModal').style.display='none'; $('adminModal').style.display='flex'; };
+$('closeAdmin').onclick = () => {
+  $('adminModal').style.display='none';
+  $('adminPinInput').value='';
+  $('adminLoginBlock').style.display='block';
+  $('adminSummaryBlock').style.display='none';
+};
+
+async function adminFetch(action){
+  if (!settings.scriptUrl) { toast('Set the Google Sheet sync URL first'); throw new Error('no-url'); }
+  const res = await fetch(settings.scriptUrl, {
+    method: 'POST',
+    body: JSON.stringify({ token: settings.scriptToken, action, adminPin: $('adminPinInput').value.trim() })
+  });
+  const text = await res.text();
+  const data = JSON.parse(text);
+  if (!data.ok) throw new Error(data.error || 'server-error');
+  return data;
+}
+
+$('adminViewBtn').onclick = async () => {
+  if (!$('adminPinInput').value.trim()) return toast('Enter the admin PIN');
+  $('adminViewBtn').disabled = true; $('adminViewBtn').textContent = 'Loading…';
+  try {
+    const data = await adminFetch('adminSummary');
+    renderAdminSummary(data);
+    $('adminLoginBlock').style.display='none';
+    $('adminSummaryBlock').style.display='block';
+  } catch (err) {
+    toast(err.message === 'invalid-admin-pin' ? '❌ Wrong admin PIN' : 'Could not load — check connection');
+  }
+  $('adminViewBtn').disabled = false; $('adminViewBtn').textContent = 'View All Balances';
+};
+$('adminRefreshBtn').onclick = async () => {
+  try { renderAdminSummary(await adminFetch('adminSummary')); toast('Refreshed'); }
+  catch (err) { toast('Could not refresh'); }
+};
+
+function renderAdminSummary(data){
+  const totals = data.totals || { totalSolfa:0, totalSpent:0, balance:0 };
+  $('adminTotalReceived').textContent = (totals.totalSolfa||0).toFixed(2);
+  $('adminTotalSpent').textContent = (totals.totalSpent||0).toFixed(2);
+  $('adminTotalBalance').textContent = (totals.balance||0).toFixed(2);
+  $('adminTotalBalance').classList.toggle('negative', (totals.balance||0) < 0);
+
+  const list = data.engineers || [];
+  if (!list.length){ $('adminEngineerList').innerHTML = '<div class="empty">No trip data yet.</div>'; return; }
+  $('adminEngineerList').innerHTML = list.map(e => `
+    <div class="history-item">
+      <div class="top-row">
+        <span><strong>${e.name}</strong></span>
+        <span class="badge ${e.balance<0?'error':'synced'}">${e.balance.toFixed(2)} EGP</span>
+      </div>
+      <div class="sub-row">Received ${e.totalSolfa.toFixed(2)} · Spent ${e.totalSpent.toFixed(2)} · ${e.tripCount} trip${e.tripCount===1?'':'s'}${e.openCount?' · '+e.openCount+' open':''}</div>
+    </div>`).join('');
+}
 window.addEventListener('online', flushQueue);
 flushQueue();
 
 // ---------- START submit ----------
 $('startForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const engineer = getEngineerValue();
+  if (!settings.engineer || !settings.pin) return toast('Please log in first (⚙️ Settings)');
+  const engineer = settings.engineer;
   const start = $('startKm').value;
-  if (!engineer) return toast('Engineer name is required');
   if ($('date').value < todayISO()) return toast('Date cannot be before today');
   if (!start) return toast('Start KM is required');
   if (!startPhoto) { $('startPhotoMissing').style.display='block'; return toast('Start KM photo is required'); }
@@ -640,7 +768,7 @@ $('startForm').addEventListener('submit', async (e) => {
     toast('✅ Trip started — submit Finish later today');
   } catch (err) {
     const q = getQueue(); q.push({payload, display}); setQueue(q);
-    toast('📴 Saved offline — will sync automatically');
+    toast(err.message === 'invalid-pin' ? '🔒 Login invalid — log in again in Settings' : '📴 Saved offline — will sync automatically');
     const log = getLog(); log.unshift({display, status:'awaiting'}); setLog(log);
   }
   renderLog();
@@ -650,13 +778,11 @@ $('startForm').addEventListener('submit', async (e) => {
 
 function resetStartForm(){
   $('area').value=''; $('task').value=''; $('startKm').value='';
-  $('engineerOther').value=''; $('engineerOther').style.display='none';
   $('driverOther').value=''; $('driverOther').style.display='none';
   startPhoto = null;
   const thumb = document.getElementById('startThumb'); if (thumb) thumb.remove();
   $('startPhotoBtn').textContent = '📷 Take Start Photo *';
   $('startPhotoBtn').classList.remove('retake');
-  if (settings.defaultEngineer && [...$('engineer').options].some(o=>o.value===settings.defaultEngineer)) $('engineer').value = settings.defaultEngineer;
   if (settings.defaultDriver && [...$('driver').options].some(o=>o.value===settings.defaultDriver)) $('driver').value = settings.defaultDriver;
   $('date').min = todayISO(); $('date').value = todayISO(); $('day').value = dayName($('date').value);
 }
@@ -664,6 +790,7 @@ function resetStartForm(){
 // ---------- FINISH submit ----------
 $('finishForm').addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (!settings.engineer || !settings.pin) return toast('Please log in first (⚙️ Settings)');
   const tripId = $('openTripSelect').value;
   const trip = getOpenTrips().find(t => t.tripId === tripId);
   if (!trip) return toast('Select which trip you are finishing');
@@ -694,7 +821,7 @@ $('finishForm').addEventListener('submit', async (e) => {
     toast('✅ Synced to Google Sheets');
   } catch (err) {
     const q = getQueue(); q.push({payload, display}); setQueue(q);
-    toast('📴 Saved offline — will sync automatically');
+    toast(err.message === 'invalid-pin' ? '🔒 Login invalid — log in again in Settings' : '📴 Saved offline — will sync automatically');
   }
   renderLog();
   resetFinishForm();
@@ -713,26 +840,26 @@ function resetFinishForm(){
 }
 
 // ---------- history / balance ----------
-$('historyEngineerSelect').addEventListener('change', loadHistory);
-
 async function loadHistory(){
-  const engineer = $('historyEngineerSelect').value;
-  if (!engineer){
+  if (!settings.engineer || !settings.pin){
     $('balanceGrid').style.display='none';
     $('historyHint').style.display='block';
-    $('historyHint').textContent='Select an engineer to view their trip history and balance.';
-    $('historyList').innerHTML = '<div class="empty">No history loaded yet.</div>';
+    $('historyHint').textContent='Log in from ⚙️ Settings to view your history and balance.';
+    $('historyList').innerHTML = '<div class="empty">Not logged in.</div>';
     return;
   }
   if (!settings.scriptUrl){ toast('Set up your Google Sheets sync URL first'); return; }
   $('historyHint').style.display='block';
   $('historyHint').textContent='Loading…';
   try {
-    const res = await fetch(settings.scriptUrl + '?action=history&engineer=' + encodeURIComponent(engineer));
-    const data = await res.json();
+    const data = await trySend({ action: 'history' });
     renderHistory(data);
   } catch (err) {
-    $('historyHint').textContent = 'Could not load history — check your connection and try again.';
+    if (err.message === 'invalid-pin'){
+      $('historyHint').textContent = '🔒 Login invalid — please log in again in Settings.';
+    } else {
+      $('historyHint').textContent = 'Could not load history — check your connection and try again.';
+    }
     $('balanceGrid').style.display='none';
   }
 }
