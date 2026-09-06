@@ -52,7 +52,7 @@
   .toast{position:fixed;bottom:16px;left:16px;right:16px;max-width:520px;margin:0 auto;background:#111827;color:#fff;padding:12px 16px;border-radius:10px;font-size:14px;text-align:center;z-index:30;}
   .empty{color:var(--muted);font-size:13px;text-align:center;padding:10px 0;}
   .tabs{display:flex;gap:8px;margin-bottom:14px;}
-  .tab-btn{flex:1;padding:12px 4px;border-radius:12px;border:1.5px solid var(--border);background:#fff;color:var(--muted);font-weight:700;font-size:13px;}
+  .tab-btn{flex:1;padding:10px 2px;border-radius:10px;border:1.5px solid var(--border);background:#fff;color:var(--muted);font-weight:700;font-size:11px;}
   .tab-btn.active{background:var(--teal);color:#fff;border-color:var(--teal);}
   .tab-btn:disabled{background:#f3f4f6;color:#c1c7cd;border-color:var(--border);cursor:not-allowed;}
   .lock-note{font-size:12px;color:var(--muted);text-align:center;margin:-8px 0 14px;}
@@ -77,6 +77,14 @@
   .history-item .top-row{display:flex;justify-content:space-between;align-items:center;gap:8px;}
   .history-item .sub-row{color:var(--muted);font-size:12px;margin-top:2px;}
   .history-item .amount{font-weight:700;color:var(--teal-dark);}
+  .admin-date-header{background:var(--teal);color:#fff;padding:8px 12px;border-radius:8px;font-weight:700;font-size:13px;margin:14px 0 6px;}
+  .admin-date-header:first-child{margin-top:0;}
+  .admin-engineer-header{font-weight:700;font-size:13px;color:var(--teal-dark);margin:10px 0 6px;padding-left:2px;}
+  .admin-trip-card{background:#fafafa;border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px;}
+  .audit-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;}
+  .audit-col{text-align:center;}
+  .audit-lbl{font-size:12px;color:var(--muted);margin-bottom:4px;}
+  .audit-thumb{max-width:100%;max-height:110px;border-radius:6px;border:1px solid var(--border);}
   .locked-field{width:100%;padding:12px;border:1.5px solid var(--border);border-radius:10px;font-size:16px;background:#eef2f1;color:var(--text);font-weight:600;}
   .result-modal{border-radius:16px;max-width:360px;margin:auto;}
   #resultModal{align-items:center;}
@@ -109,6 +117,7 @@
     <button class="tab-btn active" id="tabStartBtn">▶ Start</button>
     <button class="tab-btn" id="tabFinishBtn">⏹ Finish</button>
     <button class="tab-btn" id="tabHistoryBtn">📊 History</button>
+    <button class="tab-btn" id="tabAdminBtn">🛡 Admin</button>
   </div>
   <div class="lock-note" id="lockNote" style="display:none;"></div>
 
@@ -223,6 +232,48 @@
     </div>
   </section>
 
+  <!-- ADMIN SECTION -->
+  <section class="section" id="adminSection">
+    <div class="card" id="adminLoginCard">
+      <div class="hint">Uses a separate Admin PIN (set in Code.gs) — not any engineer's personal PIN. Not saved on this phone, so you log in again each visit.</div>
+      <label>Admin PIN</label>
+      <input type="password" inputmode="numeric" id="adminPinInputTab" placeholder="Admin PIN">
+      <button type="button" class="save-btn" id="adminLoginTabBtn">🔐 Login as Admin</button>
+    </div>
+
+    <div id="adminDashboard" style="display:none;">
+      <div class="card">
+        <strong>Balances</strong>
+        <div class="balance-grid">
+          <div class="balance-box"><div class="balance-lbl">Total Received</div><div class="balance-num" id="adminTotalReceived">0</div></div>
+          <div class="balance-box"><div class="balance-lbl">Total Spent</div><div class="balance-num" id="adminTotalSpent">0</div></div>
+          <div class="balance-box wide"><div class="balance-lbl">Total Balance</div><div class="balance-num" id="adminTotalBalance">0</div></div>
+        </div>
+        <div id="adminEngineerList" style="margin-top:14px;"></div>
+      </div>
+
+      <div class="card">
+        <strong>📷 Photo Audit</strong>
+        <div class="hint">Compare each odometer photo against the KM the engineer entered, grouped by day and engineer.</div>
+        <label>Filter by Engineer</label>
+        <select id="adminFilterEngineer"><option value="">— All Engineers —</option></select>
+        <label>Filter by Date</label>
+        <input type="date" id="adminFilterDate">
+        <div class="row2" style="margin-top:10px;">
+          <button type="button" class="save-btn" id="adminApplyFiltersBtn">Apply Filters</button>
+          <button type="button" class="save-btn" style="background:#374151;" id="adminClearFiltersBtn">Clear</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div id="adminTripsList"><div class="empty">No trips loaded yet.</div></div>
+      </div>
+
+      <button type="button" class="save-btn" style="background:#374151;" id="adminRefreshTabBtn">🔄 Refresh</button>
+      <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="adminLogoutBtn">Log out of Admin</button>
+    </div>
+  </section>
+
   <div class="card">
     <strong>Recent activity</strong>
     <div id="logList"><div class="empty">Nothing yet.</div></div>
@@ -268,28 +319,6 @@
     <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="refreshListBtn">📋 Refresh Engineer/Driver list</button>
     <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="syncNowBtn">🔄 Sync pending now</button>
     <button type="button" class="save-btn" style="background:#0b5c55;margin-top:18px;" id="openAdminBtn">🛡 Admin Panel</button>
-  </div>
-</div>
-
-<div class="modal-bg" id="adminModal" style="display:none;">
-  <div class="modal">
-    <button class="close" id="closeAdmin">✕</button>
-    <h2>🛡 Admin Panel</h2>
-    <div id="adminLoginBlock">
-      <div class="hint">Uses a separate Admin PIN (set in Code.gs) — not any engineer's personal PIN.</div>
-      <label>Admin PIN</label>
-      <input type="password" inputmode="numeric" id="adminPinInput" placeholder="Admin PIN">
-      <button type="button" class="save-btn" id="adminViewBtn">View All Balances</button>
-    </div>
-    <div id="adminSummaryBlock" style="display:none;">
-      <div class="balance-grid">
-        <div class="balance-box"><div class="balance-lbl">Total Received</div><div class="balance-num" id="adminTotalReceived">0</div></div>
-        <div class="balance-box"><div class="balance-lbl">Total Spent</div><div class="balance-num" id="adminTotalSpent">0</div></div>
-        <div class="balance-box wide"><div class="balance-lbl">Total Balance</div><div class="balance-num" id="adminTotalBalance">0</div></div>
-      </div>
-      <div id="adminEngineerList" style="margin-top:14px;"></div>
-      <button type="button" class="save-btn" style="background:#374151;" id="adminRefreshBtn">🔄 Refresh</button>
-    </div>
   </div>
 </div>
 
@@ -407,15 +436,18 @@ function showTab(which){
   $('tabStartBtn').classList.toggle('active', which==='start');
   $('tabFinishBtn').classList.toggle('active', which==='finish');
   $('tabHistoryBtn').classList.toggle('active', which==='history');
+  $('tabAdminBtn').classList.toggle('active', which==='admin');
   $('startSection').classList.toggle('active', which==='start');
   $('finishSection').classList.toggle('active', which==='finish');
   $('historySection').classList.toggle('active', which==='history');
+  $('adminSection').classList.toggle('active', which==='admin');
   if (which==='finish') loadOpenTripsForFinish();
   if (which==='history') loadHistory();
 }
 $('tabStartBtn').onclick = () => { if (!$('tabStartBtn').disabled) showTab('start'); };
 $('tabFinishBtn').onclick = () => { if (!$('tabFinishBtn').disabled) showTab('finish'); };
 $('tabHistoryBtn').onclick = () => showTab('history');
+$('tabAdminBtn').onclick = () => showTab('admin');
 
 // One trip open at a time per device: Start is locked while a trip is open, Finish is locked when none is.
 // Both are locked entirely until the engineer logs in.
@@ -754,20 +786,18 @@ async function flushQueue(){
 }
 $('syncNowBtn').onclick = async () => { toast('Syncing…'); await flushQueue(); toast('Sync attempt finished'); };
 
-// ---------- admin panel ----------
-$('openAdminBtn').onclick = () => { $('settingsModal').style.display='none'; $('adminModal').style.display='flex'; };
-$('closeAdmin').onclick = () => {
-  $('adminModal').style.display='none';
-  $('adminPinInput').value='';
-  $('adminLoginBlock').style.display='block';
-  $('adminSummaryBlock').style.display='none';
-};
+// ---------- admin tab ----------
+$('openAdminBtn').onclick = () => { $('settingsModal').style.display='none'; showTab('admin'); };
 
-async function adminFetch(action){
-  if (!settings.scriptUrl) { toast('Set the Google Sheet sync URL first'); throw new Error('no-url'); }
+let adminAuthed = false;
+let adminPinValue = '';
+let adminTripsCache = [];
+
+async function adminFetch(action, extra){
+  if (!settings.scriptUrl) { toast('Set the Google Sheet sync URL first (⚙️ Settings)'); throw new Error('no-url'); }
   const res = await fetch(settings.scriptUrl, {
     method: 'POST',
-    body: JSON.stringify({ token: settings.scriptToken, action, adminPin: $('adminPinInput').value.trim() })
+    body: JSON.stringify({ token: settings.scriptToken, action, adminPin: adminPinValue, ...(extra||{}) })
   });
   const text = await res.text();
   const data = JSON.parse(text);
@@ -775,22 +805,41 @@ async function adminFetch(action){
   return data;
 }
 
-$('adminViewBtn').onclick = async () => {
-  if (!$('adminPinInput').value.trim()) return toast('Enter the admin PIN');
-  $('adminViewBtn').disabled = true; $('adminViewBtn').textContent = 'Loading…';
+$('adminLoginTabBtn').onclick = async () => {
+  const pin = $('adminPinInputTab').value.trim();
+  if (!pin) return toast('Enter the admin PIN');
+  adminPinValue = pin;
+  $('adminLoginTabBtn').disabled = true; $('adminLoginTabBtn').textContent = 'Checking…';
   try {
     const data = await adminFetch('adminSummary');
+    adminAuthed = true;
     renderAdminSummary(data);
-    $('adminLoginBlock').style.display='none';
-    $('adminSummaryBlock').style.display='block';
+    populateAdminEngineerFilter();
+    $('adminLoginCard').style.display = 'none';
+    $('adminDashboard').style.display = 'block';
+    loadAdminTrips();
   } catch (err) {
-    toast(err.message === 'invalid-admin-pin' ? '❌ Wrong admin PIN' : 'Could not load — check connection');
+    adminPinValue = '';
+    toast(err.message === 'invalid-admin-pin' ? '❌ Wrong admin PIN' : 'Could not verify — check connection');
   }
-  $('adminViewBtn').disabled = false; $('adminViewBtn').textContent = 'View All Balances';
+  $('adminLoginTabBtn').disabled = false; $('adminLoginTabBtn').textContent = '🔐 Login as Admin';
 };
-$('adminRefreshBtn').onclick = async () => {
-  try { renderAdminSummary(await adminFetch('adminSummary')); toast('Refreshed'); }
-  catch (err) { toast('Could not refresh'); }
+
+$('adminLogoutBtn').onclick = () => {
+  adminAuthed = false; adminPinValue = '';
+  $('adminPinInputTab').value = '';
+  $('adminLoginCard').style.display = 'block';
+  $('adminDashboard').style.display = 'none';
+};
+
+$('adminRefreshTabBtn').onclick = async () => {
+  try {
+    renderAdminSummary(await adminFetch('adminSummary'));
+    await loadAdminTrips();
+    toast('Refreshed');
+  } catch (err) {
+    toast('Could not refresh — check connection');
+  }
 };
 
 function renderAdminSummary(data){
@@ -811,6 +860,85 @@ function renderAdminSummary(data){
       <div class="sub-row">Received ${e.totalSolfa.toFixed(2)} · Spent ${e.totalSpent.toFixed(2)} · ${e.tripCount} trip${e.tripCount===1?'':'s'}${e.openCount?' · '+e.openCount+' open':''}</div>
     </div>`).join('');
 }
+
+function populateAdminEngineerFilter(){
+  const cached = getCachedLists();
+  populateSimpleSelect($('adminFilterEngineer'), cached.engineers||[], '', '— All Engineers —');
+}
+
+$('adminApplyFiltersBtn').onclick = () => loadAdminTrips();
+$('adminClearFiltersBtn').onclick = () => {
+  $('adminFilterEngineer').value = '';
+  $('adminFilterDate').value = '';
+  loadAdminTrips();
+};
+
+async function loadAdminTrips(){
+  if (!adminAuthed) return;
+  $('adminTripsList').innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const data = await adminFetch('adminTrips', {
+      filterEngineer: $('adminFilterEngineer').value,
+      filterDate: $('adminFilterDate').value,
+    });
+    adminTripsCache = data.trips || [];
+    renderAdminTrips(adminTripsCache);
+  } catch (err) {
+    $('adminTripsList').innerHTML = '<div class="empty">Could not load trips — check connection.</div>';
+  }
+}
+
+function renderAdminTrips(trips){
+  if (!trips.length){ $('adminTripsList').innerHTML = '<div class="empty">No trips match these filters.</div>'; return; }
+  // Group by date (newest first), then by engineer within each date
+  const byDate = {};
+  trips.forEach(t => {
+    const d = t.date || 'Unknown date';
+    if (!byDate[d]) byDate[d] = {};
+    const eng = t.engineer || 'Unknown';
+    if (!byDate[d][eng]) byDate[d][eng] = [];
+    byDate[d][eng].push(t);
+  });
+  const dates = Object.keys(byDate).sort((a,b) => a < b ? 1 : a > b ? -1 : 0);
+  let html = '';
+  dates.forEach(d => {
+    html += `<div class="admin-date-header">${d}</div>`;
+    Object.keys(byDate[d]).sort().forEach(eng => {
+      html += `<div class="admin-engineer-header">${eng}</div>`;
+      byDate[d][eng].forEach(t => { html += renderAdminTripCard(t); });
+    });
+  });
+  $('adminTripsList').innerHTML = html;
+}
+
+function renderAdminTripCard(t){
+  const statusBadge = t.status === 'Completed' ? 'synced' : 'awaiting';
+  const startThumb = t.startPhotoThumb
+    ? `<a href="${t.startPhoto}" target="_blank" rel="noopener"><img class="audit-thumb" src="${t.startPhotoThumb}" alt="start odometer photo" loading="lazy"></a>`
+    : '<span class="hint">No start photo</span>';
+  const finishThumb = t.finishPhotoThumb
+    ? `<a href="${t.finishPhoto}" target="_blank" rel="noopener"><img class="audit-thumb" src="${t.finishPhotoThumb}" alt="finish odometer photo" loading="lazy"></a>`
+    : '<span class="hint">No finish photo</span>';
+  return `
+    <div class="admin-trip-card">
+      <div class="top-row">
+        <span>${t.area||'—'} · ${t.task||'—'}</span>
+        <span class="badge ${statusBadge}">${t.status||'—'}</span>
+      </div>
+      <div class="audit-row">
+        <div class="audit-col">
+          <div class="audit-lbl">Start KM: <strong>${t.startKm||'—'}</strong></div>
+          ${startThumb}
+        </div>
+        <div class="audit-col">
+          <div class="audit-lbl">Finish KM: <strong>${t.finishKm||'—'}</strong></div>
+          ${finishThumb}
+        </div>
+      </div>
+      <div class="sub-row">${t.totalKm||0} km · ${Number(t.amountSpent||0).toFixed(2)} EGP</div>
+    </div>`;
+}
+
 window.addEventListener('online', flushQueue);
 flushQueue();
 
