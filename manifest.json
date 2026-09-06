@@ -1,10 +1,10 @@
 {
-  "name": "Benzine KM Tracker",
-  "short_name": "Benzine KM",
+  "name": "Telecomax KM Tracker",
+  "short_name": "Telecomax KM",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#0f766e",
-  "theme_color": "#0f766e",
+  "background_color": "#0E0E10",
+  "theme_color": "#0E0E10",
   "orientation": "portrait",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
