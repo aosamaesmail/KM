@@ -81,10 +81,15 @@
   .admin-date-header:first-child{margin-top:0;}
   .admin-engineer-header{font-weight:700;font-size:13px;color:var(--teal-dark);margin:10px 0 6px;padding-left:2px;}
   .admin-trip-card{background:#fafafa;border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px;}
-  .audit-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;}
+  .audit-row{display:flex;flex-direction:column;gap:14px;margin-top:8px;}
   .audit-col{text-align:center;}
-  .audit-lbl{font-size:12px;color:var(--muted);margin-bottom:4px;}
-  .audit-thumb{max-width:100%;max-height:110px;border-radius:6px;border:1px solid var(--border);}
+  .audit-lbl{font-size:13px;color:var(--muted);margin-bottom:6px;}
+  .audit-thumb{width:100%;max-height:320px;object-fit:contain;background:#111;border-radius:8px;border:1px solid var(--border);cursor:zoom-in;}
+  #photoLightbox{align-items:center;justify-content:center;}
+  .lightbox-content{background:transparent;position:relative;max-width:96vw;max-height:92vh;display:flex;flex-direction:column;align-items:center;}
+  .lightbox-content img{max-width:96vw;max-height:78vh;border-radius:10px;background:#000;}
+  .lightbox-close{position:absolute;top:-42px;right:0;background:rgba(255,255,255,.95);border:none;border-radius:50%;width:38px;height:38px;font-size:18px;color:#111;}
+  .lightbox-link{color:#fff;margin-top:12px;font-weight:700;text-decoration:underline;font-size:14px;}
   .locked-field{width:100%;padding:12px;border:1.5px solid var(--border);border-radius:10px;font-size:16px;background:#eef2f1;color:var(--text);font-weight:600;}
   .result-modal{border-radius:16px;max-width:360px;margin:auto;}
   #resultModal{align-items:center;}
@@ -328,6 +333,14 @@
     <h2 id="resultTitle" style="text-align:center;">Success</h2>
     <p id="resultMessage" style="text-align:center;color:var(--muted);"></p>
     <button type="button" class="save-btn" id="resultOkBtn">OK</button>
+  </div>
+</div>
+
+<div class="modal-bg" id="photoLightbox" style="display:none;">
+  <div class="lightbox-content">
+    <button type="button" class="lightbox-close" id="closeLightbox">✕</button>
+    <img id="lightboxImg" src="" alt="odometer photo">
+    <a id="lightboxOpenOriginal" href="#" target="_blank" rel="noopener" class="lightbox-link">Open full resolution in Drive ↗</a>
   </div>
 </div>
 
@@ -888,6 +901,22 @@ async function loadAdminTrips(){
   }
 }
 
+// ---------- photo lightbox ----------
+function openLightbox(thumbSrc, fullUrl){
+  $('lightboxImg').src = thumbSrc;
+  $('lightboxOpenOriginal').href = fullUrl || thumbSrc;
+  $('photoLightbox').style.display = 'flex';
+}
+$('closeLightbox').onclick = () => { $('photoLightbox').style.display = 'none'; $('lightboxImg').src = ''; };
+$('photoLightbox').addEventListener('click', (e) => {
+  if (e.target.id === 'photoLightbox') { $('photoLightbox').style.display = 'none'; $('lightboxImg').src = ''; }
+});
+$('adminTripsList').addEventListener('click', (e) => {
+  const img = e.target.closest('.audit-thumb');
+  if (!img) return;
+  openLightbox(img.src, img.dataset.full);
+});
+
 function renderAdminTrips(trips){
   if (!trips.length){ $('adminTripsList').innerHTML = '<div class="empty">No trips match these filters.</div>'; return; }
   // Group by date (newest first), then by engineer within each date
@@ -914,10 +943,10 @@ function renderAdminTrips(trips){
 function renderAdminTripCard(t){
   const statusBadge = t.status === 'Completed' ? 'synced' : 'awaiting';
   const startThumb = t.startPhotoThumb
-    ? `<a href="${t.startPhoto}" target="_blank" rel="noopener"><img class="audit-thumb" src="${t.startPhotoThumb}" alt="start odometer photo" loading="lazy"></a>`
+    ? `<img class="audit-thumb" src="${t.startPhotoThumb}" data-full="${t.startPhoto}" alt="start odometer photo" loading="lazy">`
     : '<span class="hint">No start photo</span>';
   const finishThumb = t.finishPhotoThumb
-    ? `<a href="${t.finishPhoto}" target="_blank" rel="noopener"><img class="audit-thumb" src="${t.finishPhotoThumb}" alt="finish odometer photo" loading="lazy"></a>`
+    ? `<img class="audit-thumb" src="${t.finishPhotoThumb}" data-full="${t.finishPhoto}" alt="finish odometer photo" loading="lazy">`
     : '<span class="hint">No finish photo</span>';
   return `
     <div class="admin-trip-card">
