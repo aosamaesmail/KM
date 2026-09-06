@@ -464,9 +464,17 @@ $('tabAdminBtn').onclick = () => showTab('admin');
 
 // One trip open at a time per device: Start is locked while a trip is open, Finish is locked when none is.
 // Both are locked entirely until the engineer logs in.
+// NOTE: local device storage can hold open trips from a PREVIOUS login on a shared phone —
+// always filter to the currently logged-in engineer before using it for lock state or display.
+function localOpenTripsForCurrentUser(){
+  const mine = (settings.engineer || '').trim().toLowerCase();
+  if (!mine) return [];
+  return getOpenTrips().filter(t => (t.engineer || '').trim().toLowerCase() === mine);
+}
+
 function updateLockState(){
   const loggedIn = !!(settings.engineer && settings.pin);
-  const hasOpen = getOpenTrips().length > 0;
+  const hasOpen = localOpenTripsForCurrentUser().length > 0;
   $('tabStartBtn').disabled = !loggedIn || hasOpen;
   $('tabFinishBtn').disabled = !loggedIn || !hasOpen;
   if (!loggedIn) {
@@ -638,7 +646,8 @@ async function loadOpenTripsForFinish(){
 
   // Merge in any locally-started trips not yet reflected on the server (e.g. Start is still
   // queued offline), so the engineer can still pick them to finish even without a connection.
-  const local = getOpenTrips();
+  // Filtered to the current login — a shared phone must never surface another engineer's trip here.
+  const local = localOpenTripsForCurrentUser();
   const merged = [...serverTrips];
   local.forEach(lt => { if (!merged.some(st => st.tripId === lt.tripId)) merged.push(lt); });
   openTripsCache = merged;
@@ -660,9 +669,10 @@ const OVERDUE_HOURS = 10;
 const RENOTIFY_AFTER_HOURS = 2; // once flagged overdue, nudge again every 2h if still open
 
 function checkOverdueTrips(){
-  const trips = getOpenTrips();
+  const trips = localOpenTripsForCurrentUser();
   let changed = false;
   const overdue = [];
+  const all = getOpenTrips(); // full list, for the setOpenTrips() write-back below
   trips.forEach(t => {
     const hoursOpen = (Date.now() - new Date(t.startedAt).getTime()) / 3600000;
     if (hoursOpen >= OVERDUE_HOURS){
@@ -673,10 +683,12 @@ function checkOverdueTrips(){
         fireOverdueNotification(t, hoursOpen);
         t.remindedAt = new Date().toISOString();
         changed = true;
+        const idx = all.findIndex(a => a.tripId === t.tripId);
+        if (idx >= 0) all[idx] = t;
       }
     }
   });
-  if (changed) setOpenTrips(trips);
+  if (changed) setOpenTrips(all);
   renderOverdueBanner(overdue);
 }
 
