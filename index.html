@@ -114,6 +114,60 @@
   #resultTitle.success{color:var(--ok);}
   #resultTitle.failure{color:var(--danger);}
   #resultTitle.offline{color:var(--amber);}
+
+  /* ---------- side toolbar menu ---------- */
+  .menu-btn{
+    width:42px;height:38px;padding:0!important;border:1px solid var(--border-soft)!important;
+    background:var(--card-alt)!important;color:#fff;border-radius:10px!important;
+    font-size:22px!important;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;transition:background .2s,transform .2s;
+  }
+  .menu-btn:active{transform:scale(.96);}
+  .side-menu-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:30;
+    opacity:0;visibility:hidden;transition:opacity .22s ease,visibility .22s ease;
+    backdrop-filter:blur(2px);
+  }
+  .side-menu-overlay.open{opacity:1;visibility:visible;}
+  .side-menu{
+    position:fixed;top:0;left:0;bottom:0;width:min(310px,86vw);
+    background:var(--card);border-right:1px solid var(--border);
+    z-index:31;transform:translateX(-105%);transition:transform .25s ease;
+    display:flex;flex-direction:column;box-shadow:12px 0 35px rgba(0,0,0,.35);
+  }
+  .side-menu.open{transform:translateX(0);}
+  .side-menu-header{
+    min-height:76px;padding:18px 16px;display:flex;align-items:center;justify-content:space-between;
+    border-bottom:1px solid var(--border-soft);
+  }
+  .side-menu-title{font-size:14px;font-weight:800;letter-spacing:.7px;}
+  .side-menu-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+  .side-menu-close{
+    width:36px;height:36px;border:1px solid var(--border-soft);border-radius:9px;
+    background:var(--card-alt);color:#fff;font-size:17px;cursor:pointer;
+  }
+  .side-menu-user{
+    margin:14px 12px 8px;padding:12px;border-radius:12px;background:var(--card-alt);
+    display:flex;align-items:center;gap:10px;font-size:13px;
+  }
+  .side-menu-role{font-size:11px;color:var(--muted);margin-top:2px;}
+  .side-menu-nav{padding:8px 10px;}
+  .side-menu-item{
+    width:100%;display:flex;align-items:center;gap:12px;padding:13px 12px;
+    border:0;border-radius:10px;background:transparent;color:var(--text);
+    font-size:14px;text-align:left;cursor:pointer;margin-bottom:4px;
+  }
+  .side-menu-item:hover,.side-menu-item.active{background:rgba(207,54,145,.13);color:var(--teal-dark);}
+  .side-menu-icon{width:24px;text-align:center;font-size:17px;}
+  .side-menu-divider{height:1px;background:var(--border-soft);margin:10px 4px;}
+  .side-menu-footer{margin-top:auto;padding:16px;color:var(--muted);font-size:10px;text-align:center;border-top:1px solid var(--border-soft);}
+  .page-header{margin:2px 0 14px;padding:14px 2px 12px;border-bottom:2px solid var(--teal);display:flex;align-items:center;gap:10px;}
+  .page-header-icon{font-size:20px;}
+  .page-header-title{font-size:20px;font-weight:800;letter-spacing:.2px;}
+  .filter-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;}
+  .filter-row .save-btn{margin-top:0;}
+  .month-input{color-scheme:dark;}
+
 </style>
 </head>
 <body>
@@ -124,8 +178,50 @@
     <span class="brand-name">TELECOMAX</span>
     <span class="brand-sub">KM Tracker</span>
   </div>
-  <button id="settingsBtn">⚙️</button>
+  <button id="menuBtn" class="menu-btn" aria-label="Open menu" aria-expanded="false">☰</button>
 </header>
+
+<!-- SIDE MENU -->
+<div class="side-menu-overlay" id="sideMenuOverlay"></div>
+<aside class="side-menu" id="sideMenu" aria-hidden="true">
+  <div class="side-menu-header">
+    <div>
+      <div class="side-menu-title">TELECOMAX</div>
+      <div class="side-menu-sub">KM Tracker</div>
+    </div>
+    <button type="button" class="side-menu-close" id="closeSideMenu" aria-label="Close menu">✕</button>
+  </div>
+
+  <div class="side-menu-user">
+    <div class="user-avatar">👤</div>
+    <div>
+      <div id="sideMenuUserName">Not logged in</div>
+      <div class="side-menu-role">Engineer</div>
+    </div>
+  </div>
+
+  <nav class="side-menu-nav">
+    <button type="button" class="side-menu-item" id="menuHomeBtn">
+      <span class="side-menu-icon">🏠</span>
+      <span>Home</span>
+    </button>
+    <button type="button" class="side-menu-item" id="menuHistoryBtn">
+      <span class="side-menu-icon">📊</span>
+      <span>History</span>
+    </button>
+    <button type="button" class="side-menu-item" id="menuAdminBtn">
+      <span class="side-menu-icon">🛡</span>
+      <span>Admin</span>
+    </button>
+    <div class="side-menu-divider"></div>
+    <button type="button" class="side-menu-item" id="menuSettingsBtn">
+      <span class="side-menu-icon">⚙️</span>
+      <span>Settings</span>
+    </button>
+  </nav>
+
+  <div class="side-menu-footer">Telecomax KM Tracker</div>
+</aside>
 
 <div class="user-row">
   <div class="user-row-left">
@@ -145,11 +241,9 @@
     </div>
   </div>
 
-  <div class="tabs">
+  <div class="tabs" id="tabs">
     <button class="tab-btn active" id="tabStartBtn">▶ Start</button>
     <button class="tab-btn" id="tabFinishBtn">⏹ Finish</button>
-    <button class="tab-btn" id="tabHistoryBtn">📊 History</button>
-    <button class="tab-btn" id="tabAdminBtn">🛡 Admin</button>
   </div>
   <div class="lock-note" id="lockNote" style="display:none;"></div>
 
@@ -158,14 +252,12 @@
     <form class="card" id="startForm">
       <label>Engineer</label>
       <div class="locked-field" id="startEngineerDisplay">— not logged in —</div>
-      <div class="hint">This is locked to your login. Not you? Switch in ⚙️ Settings.</div>
+      <div class="hint">This is locked to your login. Not you? Switch in ☰ Menu → Settings.</div>
 
       <label>Driver Name</label>
-      <select id="driver">
-        <option value="">— Select Driver —</option>
-        <option value="__other__">➕ Other (type manually)</option>
-      </select>
-      <input type="text" id="driverOther" placeholder="Type driver name" style="display:none;margin-top:8px;">
+      <input type="text" id="driver" list="driverList" placeholder="Search or select driver" autocomplete="off">
+      <datalist id="driverList"></datalist>
+      <div class="hint">Start typing to search registered drivers.</div>
 
       <div class="row2">
         <div>
@@ -242,8 +334,15 @@
 
   <!-- HISTORY SECTION -->
   <section class="section" id="historySection">
+    <div class="page-header"><span class="page-header-icon">📊</span><span class="page-header-title">History</span></div>
     <div class="card">
       <div class="hint" id="historyWhoami"></div>
+      <label>Filter by Month</label>
+      <div class="filter-row">
+        <input type="month" id="historyMonth" class="month-input">
+        <button type="button" class="save-btn" id="historyClearMonthBtn" style="background:#374151;">Clear</button>
+      </div>
+      <div class="hint">Received, spent and remaining balance are calculated for the selected month only.</div>
 
       <div class="balance-grid" id="balanceGrid" style="display:none;">
         <div class="balance-box">
@@ -259,7 +358,7 @@
           <div class="balance-num" id="balBalance">0</div>
         </div>
       </div>
-      <div class="hint" id="historyHint">Log in from ⚙️ Settings to view your history and balance.</div>
+      <div class="hint" id="historyHint">Log in from ☰ Menu → Settings to view your history and balance.</div>
     </div>
 
     <div class="card">
@@ -270,6 +369,7 @@
 
   <!-- ADMIN SECTION -->
   <section class="section" id="adminSection">
+    <div class="page-header"><span class="page-header-icon">🛡</span><span class="page-header-title">Admin</span></div>
     <div class="card" id="adminLoginCard">
       <div class="hint">Uses a separate Admin PIN (set in Code.gs) — not any engineer's personal PIN. Not saved on this phone, so you log in again each visit.</div>
       <label>Admin PIN</label>
@@ -280,6 +380,12 @@
     <div id="adminDashboard" style="display:none;">
       <div class="card">
         <strong>Balances</strong>
+        <label>Filter Balances by Month</label>
+        <div class="filter-row">
+          <input type="month" id="adminBalanceMonth" class="month-input">
+          <button type="button" class="save-btn" id="adminClearBalanceMonthBtn" style="background:#374151;">Clear</button>
+        </div>
+        <div class="hint">Totals below reflect the selected month only.</div>
         <div class="balance-grid">
           <div class="balance-box"><div class="balance-lbl">Total Received</div><div class="balance-num" id="adminTotalReceived">0</div></div>
           <div class="balance-box"><div class="balance-lbl">Total Spent</div><div class="balance-num" id="adminTotalSpent">0</div></div>
@@ -293,8 +399,8 @@
         <div class="hint">Compare each odometer photo against the KM the engineer entered, grouped by day and engineer.</div>
         <label>Filter by Engineer</label>
         <select id="adminFilterEngineer"><option value="">— All Engineers —</option></select>
-        <label>Filter by Date</label>
-        <input type="date" id="adminFilterDate">
+        <label>Filter by Month</label>
+        <input type="month" id="adminFilterMonth" class="month-input">
         <div class="row2" style="margin-top:10px;">
           <button type="button" class="save-btn" id="adminApplyFiltersBtn">Apply Filters</button>
           <button type="button" class="save-btn" style="background:#374151;" id="adminClearFiltersBtn">Clear</button>
@@ -321,7 +427,7 @@
   <div class="modal">
     <button class="close" id="closeSettings">✕</button>
     <h2>Settings</h2>
-    <label>Google Sheet sync URL *</label>
+    <label>Sync URL *</label>
     <input type="text" id="scriptUrl" placeholder="Apps Script Web App URL">
     <div class="hint">From your deployed Google Apps Script (see SETUP.md). Required to sync to Google Sheets.</div>
 
@@ -332,9 +438,9 @@
     <div class="hint">Each engineer logs in with their own name + private PIN. This keeps your
       submissions and balance private — only you can see or add to your own history.</div>
     <label>My Name</label>
-    <select id="loginEngineerSelect">
-      <option value="">— Select Engineer —</option>
-    </select>
+    <input type="text" id="loginEngineerSelect" list="engineerList" placeholder="Search or select engineer" autocomplete="off">
+    <datalist id="engineerList"></datalist>
+    <div class="hint">Start typing to search registered engineers.</div>
     <label>My PIN</label>
     <input type="password" inputmode="numeric" id="loginPin" placeholder="PIN given to you by your admin">
     <button type="button" class="save-btn" id="loginBtn">🔐 Login</button>
@@ -342,9 +448,8 @@
     <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="logoutBtn">Log out</button>
 
     <label style="margin-top:18px;">Default Driver Name</label>
-    <select id="defaultDriver">
-      <option value="">— None (optional) —</option>
-    </select>
+    <input type="text" id="defaultDriver" list="driverListSettings" placeholder="Search or select driver" autocomplete="off">
+    <datalist id="driverListSettings"></datalist>
 
     <label>Rate per KM (EGP)</label>
     <input type="number" id="rate" step="0.001" value="2.225">
@@ -354,7 +459,6 @@
     <div class="hint" id="reminderStatus"></div>
     <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="refreshListBtn">📋 Refresh Engineer/Driver list</button>
     <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="syncNowBtn">🔄 Sync pending now</button>
-    <button type="button" class="save-btn" style="background:#0b5c55;margin-top:18px;" id="openAdminBtn">🛡 Admin Panel</button>
   </div>
 </div>
 
@@ -381,6 +485,35 @@ const todayISO = () => new Date().toISOString().slice(0,10);
 const dayName = (iso) => new Date(iso+'T00:00:00').toLocaleDateString('en-US',{weekday:'long'});
 const genId = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-'+Date.now()+'-'+Math.random().toString(16).slice(2));
 
+// ---------- side menu ----------
+const sideMenu = $('sideMenu');
+const sideMenuOverlay = $('sideMenuOverlay');
+
+function openSideMenu(){
+  sideMenu.classList.add('open');
+  sideMenuOverlay.classList.add('open');
+  sideMenu.setAttribute('aria-hidden','false');
+  $('menuBtn').setAttribute('aria-expanded','true');
+}
+function closeSideMenu(){
+  sideMenu.classList.remove('open');
+  sideMenuOverlay.classList.remove('open');
+  sideMenu.setAttribute('aria-hidden','true');
+  $('menuBtn').setAttribute('aria-expanded','false');
+}
+$('menuBtn').onclick = openSideMenu;
+$('closeSideMenu').onclick = closeSideMenu;
+sideMenuOverlay.onclick = closeSideMenu;
+
+$('menuHomeBtn').onclick = () => { closeSideMenu(); showTab('start'); };
+$('menuHistoryBtn').onclick = () => { closeSideMenu(); showTab('history'); };
+$('menuAdminBtn').onclick = () => { closeSideMenu(); showTab('admin'); };
+$('menuSettingsBtn').onclick = () => { closeSideMenu(); $('settingsModal').style.display='flex'; };
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && sideMenu.classList.contains('open')) closeSideMenu();
+});
+
 // ---------- settings ----------
 function loadSettings(){ try { return JSON.parse(localStorage.getItem('benzine_settings')) || {}; } catch(e){ return {}; } }
 function saveSettingsToStorage(s){ localStorage.setItem('benzine_settings', JSON.stringify(s)); }
@@ -394,7 +527,6 @@ function fillSettingsForm(){
 }
 fillSettingsForm();
 
-$('settingsBtn').onclick = () => { $('settingsModal').style.display='flex'; };
 $('closeSettings').onclick = () => { $('settingsModal').style.display='none'; };
 
 function updateLoginStatus(){
@@ -403,9 +535,8 @@ function updateLoginStatus(){
   $('startEngineerDisplay').textContent = loggedIn ? settings.engineer : '— not logged in —';
   $('historyWhoami').textContent = loggedIn ? ('Showing history for: ' + settings.engineer) : '';
   $('userRowText').textContent = loggedIn ? (settings.engineer + ' · Engineer') : 'Not logged in';
-  if (loggedIn && [...$('loginEngineerSelect').options].some(o=>o.value===settings.engineer)) {
-    $('loginEngineerSelect').value = settings.engineer;
-  }
+  if ($('sideMenuUserName')) $('sideMenuUserName').textContent = loggedIn ? settings.engineer : 'Not logged in';
+  if (loggedIn) $('loginEngineerSelect').value = settings.engineer;
 }
 updateLoginStatus();
 $('switchUserBtn').onclick = () => { $('settingsModal').style.display='flex'; };
@@ -430,6 +561,7 @@ $('loginBtn').onclick = async () => {
       updateLoginStatus();
       updateLockState();
       renderLog();
+      $('settingsModal').style.display='none';
       toast('✅ Logged in as ' + name);
     } else {
       toast('❌ Wrong PIN for ' + name);
@@ -469,7 +601,7 @@ $('saveSettings').onclick = () => {
   settings.defaultDriver = $('defaultDriver').value.trim();
   settings.rate = parseFloat($('rate').value) || 2.225;
   saveSettingsToStorage(settings);
-  if (settings.defaultDriver && [...$('driver').options].some(o=>o.value===settings.defaultDriver)) $('driver').value = settings.defaultDriver;
+  if (settings.defaultDriver) $('driver').value = settings.defaultDriver;
   recalcFinish();
   $('settingsModal').style.display='none';
   toast('Settings saved');
@@ -479,21 +611,29 @@ $('saveSettings').onclick = () => {
 function showTab(which){
   if (which==='start' && $('tabStartBtn').disabled) which = 'finish';
   if (which==='finish' && $('tabFinishBtn').disabled) which = 'start';
+  const mainWorkflow = which==='start' || which==='finish';
+  $('tabs').style.display = mainWorkflow ? 'flex' : 'none';
+  $('lockNote').style.display = mainWorkflow ? ($('lockNote').textContent ? 'block' : 'none') : 'none';
   $('tabStartBtn').classList.toggle('active', which==='start');
   $('tabFinishBtn').classList.toggle('active', which==='finish');
-  $('tabHistoryBtn').classList.toggle('active', which==='history');
-  $('tabAdminBtn').classList.toggle('active', which==='admin');
   $('startSection').classList.toggle('active', which==='start');
   $('finishSection').classList.toggle('active', which==='finish');
   $('historySection').classList.toggle('active', which==='history');
   $('adminSection').classList.toggle('active', which==='admin');
+
+  if ($('menuHomeBtn')) $('menuHomeBtn').classList.toggle('active', which==='start' || which==='finish');
+  if ($('menuHistoryBtn')) $('menuHistoryBtn').classList.toggle('active', which==='history');
+  if ($('menuAdminBtn')) $('menuAdminBtn').classList.toggle('active', which==='admin');
+
   if (which==='finish') loadOpenTripsForFinish();
   if (which==='history') loadHistory();
 }
+
 $('tabStartBtn').onclick = () => { if (!$('tabStartBtn').disabled) showTab('start'); };
 $('tabFinishBtn').onclick = () => { if (!$('tabFinishBtn').disabled) showTab('finish'); };
-$('tabHistoryBtn').onclick = () => showTab('history');
-$('tabAdminBtn').onclick = () => showTab('admin');
+$('historyMonth').value = new Date().toISOString().slice(0,7);
+$('historyMonth').addEventListener('change', () => loadHistory());
+$('historyClearMonthBtn').onclick = () => { $('historyMonth').value=''; loadHistory(); };
 
 // One trip open at a time per device: Start is locked while a trip is open, Finish is locked when none is.
 // Both are locked entirely until the engineer logs in.
@@ -512,7 +652,7 @@ function updateLockState(){
   $('tabFinishBtn').disabled = !loggedIn || !hasOpen;
   if (!loggedIn) {
     $('lockNote').style.display = 'block';
-    $('lockNote').textContent = '🔒 Log in from ⚙️ Settings to start or finish a trip.';
+    $('lockNote').textContent = '🔒 Log in from ☰ Menu → Settings to start or finish a trip.';
     return;
   }
   if (hasOpen && $('startSection').classList.contains('active')) showTab('finish');
@@ -538,41 +678,39 @@ else if (!settings.engineer || !settings.pin) setTimeout(() => { $('settingsModa
 function getCachedLists(){ try { return JSON.parse(localStorage.getItem('benzine_lists')) || {engineers:[],drivers:[]}; } catch(e){ return {engineers:[],drivers:[]}; } }
 function setCachedLists(l){ localStorage.setItem('benzine_lists', JSON.stringify(l)); }
 
-function populateSelect(selectEl, list, currentValue){
-  const otherOpt = selectEl.querySelector('option[value="__other__"]');
-  selectEl.innerHTML = '';
-  const blank = document.createElement('option'); blank.value=''; blank.textContent='— Select —';
-  selectEl.appendChild(blank);
-  list.forEach(name => {
-    const o = document.createElement('option'); o.value = name; o.textContent = name;
-    selectEl.appendChild(o);
+function populateDatalist(inputEl, datalistEl, list, currentValue){
+  datalistEl.innerHTML = '';
+  (list || []).forEach(name => {
+    const o = document.createElement('option');
+    o.value = name;
+    datalistEl.appendChild(o);
   });
-  selectEl.appendChild(otherOpt || Object.assign(document.createElement('option'), {value:'__other__', textContent:'➕ Other (type manually)'}));
-  if (currentValue && list.includes(currentValue)) selectEl.value = currentValue;
+  if (currentValue !== undefined && currentValue !== null) inputEl.value = currentValue || '';
 }
 
-function wireOtherToggle(selectId, otherId){
-  const sel = $(selectId), other = $(otherId);
-  sel.addEventListener('change', () => {
-    other.style.display = sel.value === '__other__' ? 'block' : 'none';
-    if (sel.value === '__other__') other.focus();
-  });
-}
-wireOtherToggle('driver','driverOther');
+function getDriverValue(){ return $('driver').value.trim(); }
 
-function getDriverValue(){ return $('driver').value === '__other__' ? $('driverOther').value.trim() : $('driver').value; }
+function populateDriverList(list, currentValue){
+  populateDatalist($('driver'), $('driverList'), list, currentValue);
+}
+function populateEngineerList(list, currentValue){
+  populateDatalist($('loginEngineerSelect'), $('engineerList'), list, currentValue);
+}
+function populateDefaultDriverList(list, currentValue){
+  populateDatalist($('defaultDriver'), $('driverListSettings'), list, currentValue);
+}
 
 function populateSimpleSelect(selectEl, list, currentValue, placeholder){
   const prev = selectEl.value;
   selectEl.innerHTML = '';
   const blank = document.createElement('option'); blank.value=''; blank.textContent = placeholder || '— Select —';
   selectEl.appendChild(blank);
-  list.forEach(name => {
+  (list || []).forEach(name => {
     const o = document.createElement('option'); o.value = name; o.textContent = name;
     selectEl.appendChild(o);
   });
   const want = currentValue || prev;
-  if (want && list.includes(want)) selectEl.value = want;
+  if (want && (list || []).includes(want)) selectEl.value = want;
 }
 
 async function refreshLists(silent){
@@ -582,24 +720,24 @@ async function refreshLists(silent){
     const data = await res.json();
     if (data.engineers || data.drivers){
       setCachedLists({ engineers: data.engineers||[], drivers: data.drivers||[] });
-      populateSelect($('driver'), data.drivers||[], settings.defaultDriver);
-      populateSimpleSelect($('loginEngineerSelect'), data.engineers||[], settings.engineer, '— Select Engineer —');
-      populateSimpleSelect($('defaultDriver'), data.drivers||[], settings.defaultDriver, '— None (optional) —');
+      populateDriverList(data.drivers||[], settings.defaultDriver);
+      populateEngineerList(data.engineers||[], settings.engineer);
+      populateDefaultDriverList(data.drivers||[], settings.defaultDriver);
       if (!silent) toast('Engineer/Driver list updated');
     }
   } catch (err) {
     const cached = getCachedLists();
-    populateSelect($('driver'), cached.drivers, settings.defaultDriver);
-    populateSimpleSelect($('loginEngineerSelect'), cached.engineers, settings.engineer, '— Select Engineer —');
-    populateSimpleSelect($('defaultDriver'), cached.drivers, settings.defaultDriver, '— None (optional) —');
+    populateDriverList(cached.drivers, settings.defaultDriver);
+    populateEngineerList(cached.engineers, settings.engineer);
+    populateDefaultDriverList(cached.drivers, settings.defaultDriver);
     if (!silent) toast('Could not refresh — showing last saved list');
   }
 }
 $('refreshListBtn').onclick = () => refreshLists(false);
 const cachedAtStart = getCachedLists();
-populateSelect($('driver'), cachedAtStart.drivers, settings.defaultDriver);
-populateSimpleSelect($('loginEngineerSelect'), cachedAtStart.engineers, settings.engineer, '— Select Engineer —');
-populateSimpleSelect($('defaultDriver'), cachedAtStart.drivers, settings.defaultDriver, '— None (optional) —');
+populateDriverList(cachedAtStart.drivers, settings.defaultDriver);
+populateEngineerList(cachedAtStart.engineers, settings.engineer);
+populateDefaultDriverList(cachedAtStart.drivers, settings.defaultDriver);
 refreshLists(true);
 
 // ---------- photo capture (compressed) ----------
@@ -845,14 +983,12 @@ async function flushQueue(){
 $('syncNowBtn').onclick = async () => { toast('Syncing…'); await flushQueue(); toast('Sync attempt finished'); };
 
 // ---------- admin tab ----------
-$('openAdminBtn').onclick = () => { $('settingsModal').style.display='none'; showTab('admin'); };
-
 let adminAuthed = false;
 let adminPinValue = '';
 let adminTripsCache = [];
 
 async function adminFetch(action, extra){
-  if (!settings.scriptUrl) { toast('Set the Google Sheet sync URL first (⚙️ Settings)'); throw new Error('no-url'); }
+  if (!settings.scriptUrl) { toast('Set the Google Sheet sync URL first (☰ Menu → Settings)'); throw new Error('no-url'); }
   const res = await fetch(settings.scriptUrl, {
     method: 'POST',
     body: JSON.stringify({ token: settings.scriptToken, action, adminPin: adminPinValue, ...(extra||{}) })
@@ -869,7 +1005,7 @@ $('adminLoginTabBtn').onclick = async () => {
   adminPinValue = pin;
   $('adminLoginTabBtn').disabled = true; $('adminLoginTabBtn').textContent = 'Checking…';
   try {
-    const data = await adminFetch('adminSummary');
+    const data = await adminFetch('adminSummary', { filterMonth: $('adminBalanceMonth').value });
     adminAuthed = true;
     renderAdminSummary(data);
     populateAdminEngineerFilter();
@@ -890,9 +1026,14 @@ $('adminLogoutBtn').onclick = () => {
   $('adminDashboard').style.display = 'none';
 };
 
+async function loadAdminSummary(){
+  if (!adminAuthed) return;
+  try { renderAdminSummary(await adminFetch('adminSummary', { filterMonth: $('adminBalanceMonth').value })); }
+  catch (err) { toast('Could not load balances — check connection'); }
+}
 $('adminRefreshTabBtn').onclick = async () => {
   try {
-    renderAdminSummary(await adminFetch('adminSummary'));
+    await loadAdminSummary();
     await loadAdminTrips();
     toast('Refreshed');
   } catch (err) {
@@ -924,10 +1065,14 @@ function populateAdminEngineerFilter(){
   populateSimpleSelect($('adminFilterEngineer'), cached.engineers||[], '', '— All Engineers —');
 }
 
+$('adminBalanceMonth').value = new Date().toISOString().slice(0,7);
+$('adminFilterMonth').value = new Date().toISOString().slice(0,7);
+$('adminBalanceMonth').addEventListener('change', () => loadAdminSummary());
+$('adminClearBalanceMonthBtn').onclick = () => { $('adminBalanceMonth').value=''; loadAdminSummary(); };
 $('adminApplyFiltersBtn').onclick = () => loadAdminTrips();
 $('adminClearFiltersBtn').onclick = () => {
   $('adminFilterEngineer').value = '';
-  $('adminFilterDate').value = '';
+  $('adminFilterMonth').value = '';
   loadAdminTrips();
 };
 
@@ -937,7 +1082,7 @@ async function loadAdminTrips(){
   try {
     const data = await adminFetch('adminTrips', {
       filterEngineer: $('adminFilterEngineer').value,
-      filterDate: $('adminFilterDate').value,
+      filterMonth: $('adminFilterMonth').value,
     });
     adminTripsCache = data.trips || [];
     renderAdminTrips(adminTripsCache);
@@ -958,6 +1103,11 @@ $('photoLightbox').addEventListener('click', (e) => {
 });
 $('adminTripsList').addEventListener('click', (e) => {
   const img = e.target.closest('.audit-thumb');
+  if (!img) return;
+  openLightbox(img.src, img.dataset.full);
+});
+$('historyList').addEventListener('click', (e) => {
+  const img = e.target.closest('.history-audit-thumb');
   if (!img) return;
   openLightbox(img.src, img.dataset.full);
 });
@@ -1019,7 +1169,7 @@ flushQueue();
 // ---------- START submit ----------
 $('startForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  if (!settings.engineer || !settings.pin) return toast('Please log in first (⚙️ Settings)');
+  if (!settings.engineer || !settings.pin) return toast('Please log in first (☰ Menu → Settings)');
   const engineer = settings.engineer;
   const start = $('startKm').value;
   if ($('date').value < todayISO()) return toast('Date cannot be before today');
@@ -1067,19 +1217,18 @@ $('startForm').addEventListener('submit', async (e) => {
 
 function resetStartForm(){
   $('area').value=''; $('task').value=''; $('startKm').value='';
-  $('driverOther').value=''; $('driverOther').style.display='none';
   startPhoto = null;
   const thumb = document.getElementById('startThumb'); if (thumb) thumb.remove();
   $('startPhotoBtn').textContent = 'Take photo';
   $('startPhotoBtn').classList.remove('retake');
-  if (settings.defaultDriver && [...$('driver').options].some(o=>o.value===settings.defaultDriver)) $('driver').value = settings.defaultDriver;
+  if (settings.defaultDriver) $('driver').value = settings.defaultDriver;
   $('date').min = todayISO(); $('date').value = todayISO(); $('day').value = dayName($('date').value);
 }
 
 // ---------- FINISH submit ----------
 $('finishForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  if (!settings.engineer || !settings.pin) return toast('Please log in first (⚙️ Settings)');
+  if (!settings.engineer || !settings.pin) return toast('Please log in first (☰ Menu → Settings)');
   const tripId = $('openTripSelect').value;
   const trip = openTripsCache.find(t => t.tripId === tripId);
   if (!trip) return toast('Select which trip you are finishing');
@@ -1145,7 +1294,7 @@ async function loadHistory(){
   if (!settings.engineer || !settings.pin){
     $('balanceGrid').style.display='none';
     $('historyHint').style.display='block';
-    $('historyHint').textContent='Log in from ⚙️ Settings to view your history and balance.';
+    $('historyHint').textContent='Log in from ☰ Menu → Settings to view your history and balance.';
     $('historyList').innerHTML = '<div class="empty">Not logged in.</div>';
     return;
   }
@@ -1153,7 +1302,7 @@ async function loadHistory(){
   $('historyHint').style.display='block';
   $('historyHint').textContent='Loading…';
   try {
-    const data = await trySend({ action: 'history' });
+    const data = await trySend({ action: 'history', filterMonth: $('historyMonth').value });
     renderHistory(data);
   } catch (err) {
     if (err.message === 'invalid-pin'){
@@ -1181,15 +1330,31 @@ function renderHistory(data){
   }
   $('historyList').innerHTML = trips.map(t => {
     const statusBadge = t.status === 'Completed' ? 'synced' : 'awaiting';
-    const amountText = t.amountSpent ? t.amountSpent.toFixed(2) + ' EGP' : '—';
-    const solfaText = t.solfa ? ` · +${t.solfa.toFixed(2)} received` : '';
+    const amountText = t.amountSpent ? Number(t.amountSpent).toFixed(2) + ' EGP' : '—';
+    const solfaText = t.solfa ? ` · +${Number(t.solfa).toFixed(2)} received` : '';
+    const startThumb = t.startPhotoThumb || t.startPhoto
+      ? `<img class="audit-thumb history-audit-thumb" src="${t.startPhotoThumb || t.startPhoto}" data-full="${t.startPhoto || t.startPhotoThumb}" alt="start odometer photo" loading="lazy">`
+      : '<span class="hint">No start photo</span>';
+    const finishThumb = t.finishPhotoThumb || t.finishPhoto
+      ? `<img class="audit-thumb history-audit-thumb" src="${t.finishPhotoThumb || t.finishPhoto}" data-full="${t.finishPhoto || t.finishPhotoThumb}" alt="finish odometer photo" loading="lazy">`
+      : '<span class="hint">No finish photo</span>';
     return `
-      <div class="history-item">
+      <div class="admin-trip-card history-trip-card">
         <div class="top-row">
           <span>${t.date || '—'} · ${t.area || 'No area'}</span>
           <span class="badge ${statusBadge}">${t.status || '—'}</span>
         </div>
         <div class="sub-row">${t.task || ''}${t.task ? ' · ' : ''}${t.totalKm||0} km <span class="amount">${amountText}</span>${solfaText}</div>
+        <div class="audit-row">
+          <div class="audit-col">
+            <div class="audit-lbl">Start KM: <strong>${t.startKm||'—'}</strong></div>
+            ${startThumb}
+          </div>
+          <div class="audit-col">
+            <div class="audit-lbl">Finish KM: <strong>${t.finishKm||'—'}</strong></div>
+            ${finishThumb}
+          </div>
+        </div>
       </div>`;
   }).join('');
 }
