@@ -64,6 +64,7 @@
   .modal .close{float:right;background:none;border:none;font-size:20px;color:var(--muted);}
   .hint{font-size:12px;color:var(--muted);margin-top:4px;}
   .save-btn{width:100%;padding:13px;background:var(--teal);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;margin-top:14px;}
+  #loginPin{min-height:54px;font-size:20px;letter-spacing:3px;text-align:center;}
   .toast{position:fixed;bottom:16px;left:16px;right:16px;max-width:520px;margin:0 auto;background:var(--card-alt);border:0.5px solid var(--border);color:#fff;padding:12px 16px;border-radius:10px;font-size:14px;text-align:center;z-index:30;}
   .empty{color:var(--muted);font-size:13px;text-align:center;padding:10px 0;}
   .tabs{display:flex;gap:8px;margin-bottom:14px;}
@@ -428,27 +429,19 @@
   <div class="modal">
     <button class="close" id="closeSettings">✕</button>
     <h2>Settings</h2>
-    <label>Sync URL *</label>
-    <input type="text" id="scriptUrl" placeholder="Apps Script Web App URL">
-    <div class="hint">From your deployed Google Apps Script (see SETUP.md). Required to sync to Google Sheets.</div>
-
     <label>Sync token</label>
     <input type="text" id="scriptToken" placeholder="Shared token from Code.gs">
 
     <h2 style="font-size:15px;margin-top:22px;">🔐 Engineer Login</h2>
-    <div class="hint">Each engineer logs in with their own name + private PIN. This keeps your
-      submissions and balance private — only you can see or add to your own history.</div>
     <label>My Name</label>
     <div class="search-select" id="engineerSearchWrap">
       <input type="text" id="loginEngineerSelect" placeholder="Search or select engineer" autocomplete="off">
       <div class="search-options" id="engineerOptions"></div>
     </div>
-    <div class="hint">Start typing to search registered engineers.</div>
     <label>My PIN</label>
     <input type="password" inputmode="numeric" id="loginPin" placeholder="PIN given to you by your admin">
     <button type="button" class="save-btn" id="loginBtn">🔐 Login</button>
     <div class="hint" id="loginStatus">Not logged in yet.</div>
-    <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="logoutBtn">Log out</button>
 
     <label style="margin-top:18px;">Default Driver Name</label>
     <div class="search-select" id="defaultDriverSearchWrap">
@@ -489,6 +482,7 @@ const $ = (id) => document.getElementById(id);
 const todayISO = () => new Date().toISOString().slice(0,10);
 const dayName = (iso) => new Date(iso+'T00:00:00').toLocaleDateString('en-US',{weekday:'long'});
 const genId = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-'+Date.now()+'-'+Math.random().toString(16).slice(2));
+const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyPpI27VQqpIrZHn8mizmONCLHEbp_aJj_wnan6nyYh-0R2bNW_C7qbYuAHQvRgwS5_fg/exec';
 
 // ---------- side menu ----------
 const sideMenu = $('sideMenu');
@@ -523,9 +517,10 @@ document.addEventListener('keydown', (e) => {
 function loadSettings(){ try { return JSON.parse(localStorage.getItem('benzine_settings')) || {}; } catch(e){ return {}; } }
 function saveSettingsToStorage(s){ localStorage.setItem('benzine_settings', JSON.stringify(s)); }
 let settings = loadSettings();
+settings.scriptUrl = DEFAULT_SCRIPT_URL;
+saveSettingsToStorage(settings);
 
 function fillSettingsForm(){
-  $('scriptUrl').value = settings.scriptUrl || '';
   $('scriptToken').value = settings.scriptToken || '';
   $('defaultDriver').value = settings.defaultDriver || '';
   $('rate').value = settings.rate ?? 2.225;
@@ -541,25 +536,36 @@ function updateLoginStatus(){
   $('historyWhoami').textContent = loggedIn ? ('Showing history for: ' + settings.engineer) : '';
   $('userRowText').textContent = loggedIn ? (settings.engineer + ' · Engineer') : 'Not logged in';
   if ($('sideMenuUserName')) $('sideMenuUserName').textContent = loggedIn ? settings.engineer : 'Not logged in';
+  $('loginBtn').textContent = loggedIn ? '↪ Log out' : '🔐 Login';
   if (loggedIn) $('loginEngineerSelect').value = settings.engineer;
 }
 updateLoginStatus();
 $('switchUserBtn').onclick = () => { $('settingsModal').style.display='flex'; };
 
 $('loginBtn').onclick = async () => {
+  const loggedIn = !!(settings.engineer && settings.pin);
+  if (loggedIn){
+    delete settings.engineer; delete settings.pin;
+    saveSettingsToStorage(settings);
+    $('loginPin').value = '';
+    updateLoginStatus();
+    updateLockState();
+    renderLog();
+    toast('Logged out');
+    return;
+  }
+
   const name = $('loginEngineerSelect').value;
   const pin = $('loginPin').value.trim();
-  const scriptUrl = $('scriptUrl').value.trim();
   const scriptToken = $('scriptToken').value.trim();
-  if (!scriptUrl) return toast('Set the Google Sheet sync URL first');
   if (!name) return toast('Select your name');
   if (!pin) return toast('Enter your PIN');
   $('loginBtn').disabled = true; $('loginBtn').textContent = 'Checking…';
   try {
-    const res = await fetch(scriptUrl, { method:'POST', body: JSON.stringify({ token: scriptToken, action:'verifyLogin', engineer:name, pin }) });
+    const res = await fetch(DEFAULT_SCRIPT_URL, { method:'POST', body: JSON.stringify({ token: scriptToken, action:'verifyLogin', engineer:name, pin }) });
     const data = JSON.parse(await res.text());
     if (data.ok){
-      settings.scriptUrl = scriptUrl; settings.scriptToken = scriptToken;
+      settings.scriptUrl = DEFAULT_SCRIPT_URL; settings.scriptToken = scriptToken;
       settings.engineer = name; settings.pin = pin;
       saveSettingsToStorage(settings);
       $('loginPin').value = '';
@@ -572,18 +578,10 @@ $('loginBtn').onclick = async () => {
       toast('❌ Wrong PIN for ' + name);
     }
   } catch (err) {
-    toast('Could not verify — check your connection and Sync URL');
+    toast('Could not verify — check your connection');
   }
-  $('loginBtn').disabled = false; $('loginBtn').textContent = '🔐 Login';
-};
-$('logoutBtn').onclick = () => {
-  delete settings.engineer; delete settings.pin;
-  saveSettingsToStorage(settings);
-  $('loginPin').value = '';
+  $('loginBtn').disabled = false;
   updateLoginStatus();
-  updateLockState();
-  renderLog();
-  toast('Logged out');
 };
 
 function updateReminderStatus(){
@@ -601,7 +599,7 @@ $('enableRemindersBtn').onclick = async () => {
   if (perm === 'granted') toast('Reminders enabled');
 };
 $('saveSettings').onclick = () => {
-  settings.scriptUrl = $('scriptUrl').value.trim();
+  settings.scriptUrl = DEFAULT_SCRIPT_URL;
   settings.scriptToken = $('scriptToken').value.trim();
   settings.defaultDriver = $('defaultDriver').value.trim();
   settings.rate = parseFloat($('rate').value) || 2.225;
@@ -676,8 +674,7 @@ $('date').addEventListener('change', () => {
   if ($('date').value < todayISO()) { $('date').value = todayISO(); toast('Past dates aren\'t allowed — reset to today'); }
   $('day').value = dayName($('date').value);
 });
-if (!settings.scriptUrl) setTimeout(() => { $('settingsModal').style.display='flex'; toast('Set up your Google Sheets sync URL first'); }, 300);
-else if (!settings.engineer || !settings.pin) setTimeout(() => { $('settingsModal').style.display='flex'; toast('Log in with your name and PIN first'); }, 300);
+if (!settings.engineer || !settings.pin) setTimeout(() => { $('settingsModal').style.display='flex'; toast('Log in with your name and PIN first'); }, 300);
 
 // ---------- engineer/driver dropdown lists ----------
 function getCachedLists(){ try { return JSON.parse(localStorage.getItem('benzine_lists')) || {engineers:[],drivers:[]}; } catch(e){ return {engineers:[],drivers:[]}; } }
@@ -977,8 +974,7 @@ function renderLog(){
 renderLog();
 
 async function trySend(payload){
-  if (!settings.scriptUrl) throw new Error('no-url');
-  const res = await fetch(settings.scriptUrl, {
+    const res = await fetch(settings.scriptUrl, {
     method: 'POST',
     body: JSON.stringify({ token: settings.scriptToken, engineer: settings.engineer, pin: settings.pin, ...payload })
   });
@@ -990,7 +986,7 @@ async function trySend(payload){
 
 async function flushQueue(){
   const q = getQueue();
-  if (!q.length || !settings.scriptUrl) return;
+  if (!q.length) return;
   const remaining = [];
   for (const item of q) {
     try {
@@ -1014,8 +1010,7 @@ let adminPinValue = '';
 let adminTripsCache = [];
 
 async function adminFetch(action, extra){
-  if (!settings.scriptUrl) { toast('Set the Google Sheet sync URL first (☰ Menu → Settings)'); throw new Error('no-url'); }
-  const res = await fetch(settings.scriptUrl, {
+    const res = await fetch(settings.scriptUrl, {
     method: 'POST',
     body: JSON.stringify({ token: settings.scriptToken, action, adminPin: adminPinValue, ...(extra||{}) })
   });
@@ -1323,8 +1318,7 @@ async function loadHistory(){
     $('historyList').innerHTML = '<div class="empty">Not logged in.</div>';
     return;
   }
-  if (!settings.scriptUrl){ toast('Set up your Google Sheets sync URL first'); return; }
-  $('historyHint').style.display='block';
+    $('historyHint').style.display='block';
   $('historyHint').textContent='Loading…';
   try {
     const data = await trySend({ action: 'history', filterMonth: $('historyMonth').value });
