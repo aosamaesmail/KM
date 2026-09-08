@@ -932,11 +932,14 @@ function recalcFinish(){
   const trip = openTripsCache.find(t => t.tripId === $('openTripSelect').value);
   const start = trip ? parseFloat(trip.startKm) : NaN;
   const finish = parseFloat($('finishKm').value);
-  const rate = settings.rate ?? 2.225;
+  const rate = trip && isFinite(parseFloat(trip.rate)) ? parseFloat(trip.rate) : (settings.rate ?? 2.225);
+  const lastForthBack = trip && isFinite(parseFloat(trip.lastForthBack)) ? parseFloat(trip.lastForthBack) : 0;
   let tripKm = 0;
   if (!isNaN(start) && !isNaN(finish) && finish >= start) tripKm = finish - start;
   const total = tripKm;
-  const amount = total * rate;
+  // Driver payment = today's trip KM + the last automatically calculated Forth&Back.
+  const amountToPayKm = tripKm + lastForthBack;
+  const amount = amountToPayKm * rate;
   $('totalOut').textContent = total;
   $('amountOut').textContent = amount.toFixed(2);
 }
@@ -990,7 +993,15 @@ async function flushQueue(){
   const remaining = [];
   for (const item of q) {
     try {
-      await trySend(item.payload);
+      const serverResult = await trySend(item.payload);
+      if (item.action === 'start' && serverResult && serverResult.autoForthBack && serverResult.autoForthBack.updated) {
+        const fb = Number(serverResult.autoForthBack.forthBack) || 0;
+        const updatedOpenTrips = getOpenTrips().map(t =>
+          t.tripId === item.tripId ? Object.assign({}, t, { lastForthBack: fb }) : t
+        );
+        setOpenTrips(updatedOpenTrips);
+        recalcFinish();
+      }
       upsertLogEntry(item.tripId, { engineer: item.engineer, display: item.display, status: item.action === 'finish' ? 'synced' : 'awaiting' });
     } catch (e) {
       remaining.push(item);
@@ -1205,6 +1216,8 @@ $('startForm').addEventListener('submit', async (e) => {
     date: $('date').value, day: $('day').value,
     area: $('area').value.trim(), task: $('task').value.trim(),
     startKm: parseFloat(start), startedAt: new Date().toISOString(),
+    rate: settings.rate ?? 2.225,
+    lastForthBack: 0,
   };
   const payload = { action: 'start', ...trip, startPhoto };
   const display = `${trip.engineer} · ${trip.area||'—'} · Start ${trip.startKm}km`;
@@ -1214,7 +1227,15 @@ $('startForm').addEventListener('submit', async (e) => {
   $('startSubmitBtn').disabled = true; $('startSubmitBtn').textContent = 'Submitting…';
   showResultDialog('loading', 'Uploading start reading…');
   try {
-    await trySend(payload);
+    const serverResult = await trySend(payload);
+    const autoForthBack = serverResult && serverResult.autoForthBack;
+    if (autoForthBack && autoForthBack.updated) {
+      const updatedOpenTrips = getOpenTrips().map(t =>
+        t.tripId === tripId ? Object.assign({}, t, { lastForthBack: Number(autoForthBack.forthBack) || 0 }) : t
+      );
+      setOpenTrips(updatedOpenTrips);
+      recalcFinish();
+    }
     upsertLogEntry(tripId, { engineer, display, status: 'awaiting' });
     toast('✅ Trip started — submit Finish later today');
     showResultDialog('success', `${trip.area} - ${trip.task} - ${trip.startKm} KM`);
@@ -1259,11 +1280,12 @@ $('finishForm').addEventListener('submit', async (e) => {
   if (parseFloat(finish) < parseFloat(trip.startKm)) return toast('Finish KM must be ≥ Start KM (' + trip.startKm + ')');
 
   const payload = {
-    action: 'finish', tripId,
+    action: 'finish', tripId, driver: trip.driver,
     finishKm: parseFloat(finish),
     trip: parseFloat($('totalOut').textContent),
     totalKm: parseFloat($('totalOut').textContent),
     amountSpent: parseFloat($('amountOut').textContent),
+    rate: (isFinite(parseFloat(trip.rate)) ? parseFloat(trip.rate) : (settings.rate ?? 2.225)),
     staticKm: parseFloat($('staticKm').value)||0,
     finishPhoto, finishedAt: new Date().toISOString(),
   };
