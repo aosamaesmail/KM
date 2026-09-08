@@ -326,9 +326,10 @@
       </div>
 
       <div class="computed">
+        <div><div class="num" id="todayTripOut">0</div><div class="lbl">Today's Trip KM</div></div>
         <div><div class="num" id="lastForthBackOut">0</div><div class="lbl">Last Forth & Back KM</div></div>
-        <div><div class="num" id="totalOut">0</div><div class="lbl">Today's Total KM</div></div>
-        <div><div class="num" id="amountOut">0</div><div class="lbl">Amount to pay</div></div>
+        <div><div class="num" id="totalOut">0</div><div class="lbl">Today Total KM</div></div>
+        <div><div class="num" id="amountOut">0</div><div class="lbl">Amount to Pay now</div></div>
       </div>
 
       <button type="submit" class="submit-btn" id="finishSubmitBtn">⏹ Submit Finish</button>
@@ -935,15 +936,19 @@ function recalcFinish(){
   const finish = parseFloat($('finishKm').value);
   const rate = trip && isFinite(parseFloat(trip.rate)) ? parseFloat(trip.rate) : (settings.rate ?? 2.225);
   const lastForthBack = trip && isFinite(parseFloat(trip.lastForthBack)) ? parseFloat(trip.lastForthBack) : 0;
+
+  // Today's Trip = Finish odometer - Start odometer.
   let tripKm = 0;
   if (!isNaN(start) && !isNaN(finish) && finish >= start) tripKm = finish - start;
-  const total = tripKm;
-  // Driver payment = today's trip KM + the last automatically calculated Forth&Back.
-  const amountToPayKm = tripKm + lastForthBack;
-  const amount = amountToPayKm * rate;
+
+  // Driver payment only: Today's Trip + the last calculated Forth & Back.
+  const todayTotalKm = tripKm + lastForthBack;
+  const amountToPay = todayTotalKm * rate;
+
+  $('todayTripOut').textContent = tripKm;
   $('lastForthBackOut').textContent = lastForthBack;
-  $('totalOut').textContent = amountToPayKm;
-  $('amountOut').textContent = amount.toFixed(2);
+  $('totalOut').textContent = todayTotalKm;
+  $('amountOut').textContent = amountToPay.toFixed(2);
 }
 ['finishKm','staticKm'].forEach(id => $(id).addEventListener('input', recalcFinish));
 
@@ -1284,9 +1289,11 @@ $('finishForm').addEventListener('submit', async (e) => {
   const payload = {
     action: 'finish', tripId, driver: trip.driver,
     finishKm: parseFloat(finish),
-    trip: parseFloat($('totalOut').textContent),
+    // Google Sheet stores today's actual Trip KM and today's actual fuel amount.
+    // The Forth & Back is added only to the driver's payment calculation.
+    trip: parseFloat($('todayTripOut').textContent),
     totalKm: parseFloat($('totalOut').textContent),
-    amountSpent: parseFloat($('amountOut').textContent),
+    amountSpent: parseFloat($('todayTripOut').textContent) * (isFinite(parseFloat(trip.rate)) ? parseFloat(trip.rate) : (settings.rate ?? 2.225)),
     rate: (isFinite(parseFloat(trip.rate)) ? parseFloat(trip.rate) : (settings.rate ?? 2.225)),
     staticKm: parseFloat($('staticKm').value)||0,
     finishPhoto, finishedAt: new Date().toISOString(),
@@ -1303,7 +1310,7 @@ $('finishForm').addEventListener('submit', async (e) => {
     await trySend(payload);
     upsertLogEntry(tripId, { engineer: engineerForLog, display, status: 'synced' });
     toast('✅ Synced to Google Sheets');
-    showResultDialog('success', `Total KM : ${$('totalOut').textContent} & Amount to pay : ${$('amountOut').textContent} EGP`);
+    showResultDialog('success', `Today Total KM : ${$('totalOut').textContent} & Amount to Pay now : ${$('amountOut').textContent} EGP`);
   } catch (err) {
     const classified = classifySendError(err);
     if (classified.kind === 'invalid-pin') {
