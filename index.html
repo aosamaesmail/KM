@@ -1344,7 +1344,7 @@ function renderHistory(data){
           <span>${t.date || '—'} · ${t.area || 'No area'}</span>
           <span class="badge ${statusBadge}">${t.status || '—'}</span>
         </div>
-        <div class="sub-row">${t.task || ''}${t.task ? ' · ' : ''}${t.totalKm||0} km <span class="amount">${amountText}</span>${solfaText}</div>
+        <div class="sub-row">${t.task || ''}${t.task ? ' · ' : ''}<strong>Trip KM: ${t.tripKm||0}</strong> · <strong>Forth &amp; Back: ${t.forthBack||0}</strong> · <strong>Total: ${t.totalKm||0}</strong> km <span class="amount">${amountText}</span>${solfaText}</div>
         <div class="audit-row">
           <div class="audit-col">
             <div class="audit-lbl">Start KM: <strong>${t.startKm||'—'}</strong></div>
