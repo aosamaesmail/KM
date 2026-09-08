@@ -105,6 +105,13 @@
   .lightbox-close{position:absolute;top:-42px;right:0;background:rgba(255,255,255,.95);border:none;border-radius:50%;width:38px;height:38px;font-size:18px;color:#111;}
   .lightbox-link{color:#fff;margin-top:12px;font-weight:700;text-decoration:underline;font-size:14px;}
   .locked-field{width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;font-size:16px;background:var(--card-alt);color:var(--text);font-weight:600;}
+  .search-select{position:relative;}
+  .search-options{position:absolute;left:0;right:0;top:calc(100% + 4px);background:var(--card-alt);border:1px solid var(--border);border-radius:10px;max-height:220px;overflow-y:auto;z-index:40;display:none;box-shadow:0 8px 20px rgba(0,0,0,.35);}
+  .search-options.open{display:block;}
+  .search-option{padding:11px 12px;font-size:15px;color:var(--text);cursor:pointer;border-bottom:1px solid var(--border-soft);}
+  .search-option:last-child{border-bottom:none;}
+  .search-option:hover,.search-option:active{background:rgba(207,54,145,.18);}
+  .search-empty{padding:11px 12px;font-size:13px;color:var(--muted);}
   .result-modal{border-radius:16px;max-width:360px;margin:auto;}
   #resultModal{align-items:center;}
   .result-icon{font-size:44px;text-align:center;margin-bottom:6px;}
@@ -255,8 +262,10 @@
       <div class="hint">This is locked to your login. Not you? Switch in ☰ Menu → Settings.</div>
 
       <label>Driver Name</label>
-      <input type="text" id="driver" list="driverList" placeholder="Search or select driver" autocomplete="off">
-      <datalist id="driverList"></datalist>
+      <div class="search-select" id="driverSearchWrap">
+        <input type="text" id="driver" placeholder="Search or select driver" autocomplete="off">
+        <div class="search-options" id="driverOptions"></div>
+      </div>
       <div class="hint">Start typing to search registered drivers.</div>
 
       <div class="row2">
@@ -438,8 +447,10 @@
     <div class="hint">Each engineer logs in with their own name + private PIN. This keeps your
       submissions and balance private — only you can see or add to your own history.</div>
     <label>My Name</label>
-    <input type="text" id="loginEngineerSelect" list="engineerList" placeholder="Search or select engineer" autocomplete="off">
-    <datalist id="engineerList"></datalist>
+    <div class="search-select" id="engineerSearchWrap">
+      <input type="text" id="loginEngineerSelect" placeholder="Search or select engineer" autocomplete="off">
+      <div class="search-options" id="engineerOptions"></div>
+    </div>
     <div class="hint">Start typing to search registered engineers.</div>
     <label>My PIN</label>
     <input type="password" inputmode="numeric" id="loginPin" placeholder="PIN given to you by your admin">
@@ -448,8 +459,10 @@
     <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="logoutBtn">Log out</button>
 
     <label style="margin-top:18px;">Default Driver Name</label>
-    <input type="text" id="defaultDriver" list="driverListSettings" placeholder="Search or select driver" autocomplete="off">
-    <datalist id="driverListSettings"></datalist>
+    <div class="search-select" id="defaultDriverSearchWrap">
+      <input type="text" id="defaultDriver" placeholder="Search or select driver" autocomplete="off">
+      <div class="search-options" id="defaultDriverOptions"></div>
+    </div>
 
     <label>Rate per KM (EGP)</label>
     <input type="number" id="rate" step="0.001" value="2.225">
@@ -678,27 +691,51 @@ else if (!settings.engineer || !settings.pin) setTimeout(() => { $('settingsModa
 function getCachedLists(){ try { return JSON.parse(localStorage.getItem('benzine_lists')) || {engineers:[],drivers:[]}; } catch(e){ return {engineers:[],drivers:[]}; } }
 function setCachedLists(l){ localStorage.setItem('benzine_lists', JSON.stringify(l)); }
 
-function populateDatalist(inputEl, datalistEl, list, currentValue){
-  datalistEl.innerHTML = '';
-  (list || []).forEach(name => {
-    const o = document.createElement('option');
-    o.value = name;
-    datalistEl.appendChild(o);
+function setupSearchableInput(inputEl, optionsEl, list){
+  inputEl._searchList = Array.isArray(list) ? list : [];
+  const render = () => {
+    const q = inputEl.value.trim().toLowerCase();
+    const matches = inputEl._searchList.filter(name => String(name).toLowerCase().includes(q)).slice(0,50);
+    optionsEl.innerHTML = matches.length
+      ? matches.map(name => `<div class="search-option" data-value="${String(name).replace(/"/g,'&quot;')}">${String(name)}</div>`).join('')
+      : '<div class="search-empty">No matching name</div>';
+    optionsEl.classList.add('open');
+  };
+  inputEl.addEventListener('focus', render);
+  inputEl.addEventListener('input', render);
+  optionsEl.addEventListener('mousedown', e => {
+    const item = e.target.closest('.search-option');
+    if (!item) return;
+    e.preventDefault();
+    inputEl.value = item.dataset.value;
+    optionsEl.classList.remove('open');
+    inputEl.dispatchEvent(new Event('change', {bubbles:true}));
   });
+  inputEl.addEventListener('blur', () => setTimeout(() => optionsEl.classList.remove('open'), 150));
+  inputEl._setSearchList = (newList, currentValue) => {
+    inputEl._searchList = Array.isArray(newList) ? newList : [];
+    if (currentValue !== undefined && currentValue !== null) inputEl.value = currentValue || '';
+  };
+}
+
+function populateSearchInput(inputEl, optionsEl, list, currentValue){
+  if (!inputEl._setSearchList) setupSearchableInput(inputEl, optionsEl, list);
+  else inputEl._setSearchList(list, currentValue);
   if (currentValue !== undefined && currentValue !== null) inputEl.value = currentValue || '';
+}
+
+function populateDriverList(list, currentValue){
+  populateSearchInput($('driver'), $('driverOptions'), list, currentValue);
+}
+function populateEngineerList(list, currentValue){
+  populateSearchInput($('loginEngineerSelect'), $('engineerOptions'), list, currentValue);
+}
+function populateDefaultDriverList(list, currentValue){
+  populateSearchInput($('defaultDriver'), $('defaultDriverOptions'), list, currentValue);
 }
 
 function getDriverValue(){ return $('driver').value.trim(); }
 
-function populateDriverList(list, currentValue){
-  populateDatalist($('driver'), $('driverList'), list, currentValue);
-}
-function populateEngineerList(list, currentValue){
-  populateDatalist($('loginEngineerSelect'), $('engineerList'), list, currentValue);
-}
-function populateDefaultDriverList(list, currentValue){
-  populateDatalist($('defaultDriver'), $('driverListSettings'), list, currentValue);
-}
 
 function populateSimpleSelect(selectEl, list, currentValue, placeholder){
   const prev = selectEl.value;
@@ -1331,7 +1368,6 @@ function renderHistory(data){
   $('historyList').innerHTML = trips.map(t => {
     const statusBadge = t.status === 'Completed' ? 'synced' : 'awaiting';
     const amountText = t.amountSpent ? Number(t.amountSpent).toFixed(2) + ' EGP' : '—';
-    const solfaText = t.solfa ? ` · +${Number(t.solfa).toFixed(2)} received` : '';
     const startThumb = t.startPhotoThumb || t.startPhoto
       ? `<img class="audit-thumb history-audit-thumb" src="${t.startPhotoThumb || t.startPhoto}" data-full="${t.startPhoto || t.startPhotoThumb}" alt="start odometer photo" loading="lazy">`
       : '<span class="hint">No start photo</span>';
@@ -1341,10 +1377,15 @@ function renderHistory(data){
     return `
       <div class="admin-trip-card history-trip-card">
         <div class="top-row">
-          <span>${t.date || '—'} · ${t.area || 'No area'}</span>
+          <strong>${t.date || '—'} · ${t.area || 'No area'} · ${t.task || 'No task'}</strong>
           <span class="badge ${statusBadge}">${t.status || '—'}</span>
         </div>
-        <div class="sub-row">${t.task || ''}${t.task ? ' · ' : ''}<strong>Trip KM: ${t.tripKm||0}</strong> · <strong>Forth &amp; Back: ${t.forthBack||0}</strong> · <strong>Total: ${t.totalKm||0}</strong> km <span class="amount">${amountText}</span>${solfaText}</div>
+        <div class="sub-row" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px;text-align:center;">
+          <span><strong>Trip KM</strong><br>${t.tripKm||0}</span>
+          <span><strong>F&amp;B</strong><br>${t.forthBack||0}</span>
+          <span><strong>Total KM</strong><br>${t.totalKm||0}</span>
+        </div>
+        <div class="sub-row" style="margin-top:10px;"><strong>Amount spent:</strong> <span class="amount">${amountText}</span></div>
         <div class="audit-row">
           <div class="audit-col">
             <div class="audit-lbl">Start KM: <strong>${t.startKm||'—'}</strong></div>
