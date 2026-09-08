@@ -319,22 +319,14 @@
       </div>
       <div class="photo-missing" id="finishPhotoMissing">Required — photo of the dashboard right now</div>
 
-      <div class="row2">
-        <div>
-          <label>Forth &amp; Back</label>
-          <input type="number" id="forthBack" inputmode="numeric" value="0">
-        </div>
-        <div>
-          <label>Static</label>
-          <input type="number" id="staticKm" inputmode="numeric" value="0">
-        </div>
+      <div>
+        <label>Static</label>
+        <input type="number" id="staticKm" inputmode="numeric" value="0">
       </div>
 
       <div class="computed">
-        <div><div class="num" id="tripOut">0</div><div class="lbl">Trip (KM)</div></div>
         <div><div class="num" id="totalOut">0</div><div class="lbl">Total KM</div></div>
-        <div><div class="num" id="amountOut">0</div><div class="lbl">Amount Spent</div></div>
-        <div><div class="num" id="rateOut">0</div><div class="lbl">Rate / KM</div></div>
+        <div><div class="num" id="amountOut">0</div><div class="lbl">Amount to pay</div></div>
       </div>
 
       <button type="submit" class="submit-btn" id="finishSubmitBtn">⏹ Submit Finish</button>
@@ -943,18 +935,15 @@ function recalcFinish(){
   const trip = openTripsCache.find(t => t.tripId === $('openTripSelect').value);
   const start = trip ? parseFloat(trip.startKm) : NaN;
   const finish = parseFloat($('finishKm').value);
-  const fb = parseFloat($('forthBack').value) || 0;
   const rate = settings.rate ?? 2.225;
   let tripKm = 0;
   if (!isNaN(start) && !isNaN(finish) && finish >= start) tripKm = finish - start;
-  const total = tripKm + fb;
+  const total = tripKm;
   const amount = total * rate;
-  $('tripOut').textContent = tripKm;
   $('totalOut').textContent = total;
   $('amountOut').textContent = amount.toFixed(2);
-  $('rateOut').textContent = rate;
 }
-['finishKm','forthBack','staticKm'].forEach(id => $(id).addEventListener('input', recalcFinish));
+['finishKm','staticKm'].forEach(id => $(id).addEventListener('input', recalcFinish));
 
 // ---------- queue + log ----------
 function getQueue(){ try { return JSON.parse(localStorage.getItem('benzine_queue')) || []; } catch(e){ return []; } }
@@ -1233,7 +1222,7 @@ $('startForm').addEventListener('submit', async (e) => {
     await trySend(payload);
     upsertLogEntry(tripId, { engineer, display, status: 'awaiting' });
     toast('✅ Trip started — submit Finish later today');
-    showResultDialog('success', `Start recorded and synced to Google Sheets (${trip.area}, ${trip.startKm} km).`);
+    showResultDialog('success', `${trip.area} - ${trip.task} - ${trip.startKm} KM`);
   } catch (err) {
     const classified = classifySendError(err);
     if (classified.kind === 'invalid-pin') {
@@ -1277,10 +1266,9 @@ $('finishForm').addEventListener('submit', async (e) => {
   const payload = {
     action: 'finish', tripId,
     finishKm: parseFloat(finish),
-    trip: parseFloat($('tripOut').textContent),
+    trip: parseFloat($('totalOut').textContent),
     totalKm: parseFloat($('totalOut').textContent),
     amountSpent: parseFloat($('amountOut').textContent),
-    forthBack: parseFloat($('forthBack').value)||0,
     staticKm: parseFloat($('staticKm').value)||0,
     finishPhoto, finishedAt: new Date().toISOString(),
   };
@@ -1296,7 +1284,7 @@ $('finishForm').addEventListener('submit', async (e) => {
     await trySend(payload);
     upsertLogEntry(tripId, { engineer: engineerForLog, display, status: 'synced' });
     toast('✅ Synced to Google Sheets');
-    showResultDialog('success', `Finish recorded and synced to Google Sheets (${$('totalOut').textContent} km, ${$('amountOut').textContent} EGP).`);
+    showResultDialog('success', `Total KM : ${$('totalOut').textContent} & Amount to pay : ${$('amountOut').textContent} EGP`);
   } catch (err) {
     const classified = classifySendError(err);
     if (classified.kind === 'invalid-pin') {
@@ -1318,7 +1306,7 @@ $('finishForm').addEventListener('submit', async (e) => {
 });
 
 function resetFinishForm(){
-  $('finishKm').value=''; $('forthBack').value='0'; $('staticKm').value='0';
+  $('finishKm').value=''; $('staticKm').value='0';
   finishPhoto = null;
   const thumb = document.getElementById('finishThumb'); if (thumb) thumb.remove();
   $('finishPhotoBtn').textContent = 'Take photo';
