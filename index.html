@@ -326,7 +326,8 @@
       </div>
 
       <div class="computed">
-        <div><div class="num" id="totalOut">0</div><div class="lbl">Total KM</div></div>
+        <div><div class="num" id="lastForthBackOut">0</div><div class="lbl">Last Forth & Back KM</div></div>
+        <div><div class="num" id="totalOut">0</div><div class="lbl">Today's Total KM</div></div>
         <div><div class="num" id="amountOut">0</div><div class="lbl">Amount to pay</div></div>
       </div>
 
@@ -940,7 +941,8 @@ function recalcFinish(){
   // Driver payment = today's trip KM + the last automatically calculated Forth&Back.
   const amountToPayKm = tripKm + lastForthBack;
   const amount = amountToPayKm * rate;
-  $('totalOut').textContent = total;
+  $('lastForthBackOut').textContent = lastForthBack;
+  $('totalOut').textContent = amountToPayKm;
   $('amountOut').textContent = amount.toFixed(2);
 }
 ['finishKm','staticKm'].forEach(id => $(id).addEventListener('input', recalcFinish));
