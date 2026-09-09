@@ -89,6 +89,7 @@
   .balance-num.negative{color:var(--danger);}
   .history-item{padding:10px 0;border-bottom:0.5px solid var(--border-soft);font-size:13px;}
   .history-item:last-child{border-bottom:none;}
+  #historyList.history-photos-hidden .audit-row{display:none;}
   .history-item .top-row{display:flex;justify-content:space-between;align-items:center;gap:8px;}
   .history-item .sub-row{color:var(--muted);font-size:12px;margin-top:2px;}
   .history-item .amount{font-weight:700;color:var(--teal-dark);}
@@ -366,7 +367,10 @@
     </div>
 
     <div class="card">
-      <strong>Trip history</strong>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+        <strong>Trip history</strong>
+        <button type="button" class="save-btn" id="historyPhotosToggle" style="width:auto;padding:8px 12px;margin-top:0;background:#374151;">Hide Photos</button>
+      </div>
       <div id="historyList"><div class="empty">No history loaded yet.</div></div>
     </div>
   </section>
@@ -441,7 +445,7 @@
       <div class="search-options" id="engineerOptions"></div>
     </div>
     <label>My PIN</label>
-    <input type="password" inputmode="numeric" id="loginPin" placeholder="PIN given to you by your admin">
+    <input type="password" inputmode="numeric" id="loginPin" placeholder="Enter Your Pin">
     <button type="button" class="save-btn" id="loginBtn">🔐 Login</button>
     <div class="hint" id="loginStatus">Not logged in yet.</div>
 
@@ -640,6 +644,18 @@ $('historyMonth').value = new Date().toISOString().slice(0,7);
 $('historyMonth').addEventListener('change', () => loadHistory());
 $('historyClearMonthBtn').onclick = () => { $('historyMonth').value=''; loadHistory(); };
 
+let historyPhotosVisible = localStorage.getItem('historyPhotosVisible') !== '0';
+function updateHistoryPhotosToggle(){
+  $('historyList').classList.toggle('history-photos-hidden', !historyPhotosVisible);
+  $('historyPhotosToggle').textContent = historyPhotosVisible ? 'Hide Photos' : 'Show Photos';
+}
+$('historyPhotosToggle').onclick = () => {
+  historyPhotosVisible = !historyPhotosVisible;
+  localStorage.setItem('historyPhotosVisible', historyPhotosVisible ? '1' : '0');
+  updateHistoryPhotosToggle();
+};
+updateHistoryPhotosToggle();
+
 // One trip open at a time per device: Start is locked while a trip is open, Finish is locked when none is.
 // Both are locked entirely until the engineer logs in.
 // NOTE: local device storage can hold open trips from a PREVIOUS login on a shared phone —
@@ -679,7 +695,7 @@ $('date').addEventListener('change', () => {
 if (!settings.engineer || !settings.pin) setTimeout(() => { $('settingsModal').style.display='flex'; toast('Log in with your name and PIN first'); }, 300);
 
 // ---------- engineer/driver dropdown lists ----------
-function getCachedLists(){ try { return JSON.parse(localStorage.getItem('benzine_lists')) || {engineers:[],drivers:[]}; } catch(e){ return {engineers:[],drivers:[]}; } }
+function getCachedLists(){ try { return JSON.parse(localStorage.getItem('benzine_lists')) || {engineers:[],drivers:[],driverDefaults:{}}; } catch(e){ return {engineers:[],drivers:[],driverDefaults:{}}; } }
 function setCachedLists(l){ localStorage.setItem('benzine_lists', JSON.stringify(l)); }
 
 function setupSearchableInput(inputEl, optionsEl, list){
@@ -747,7 +763,7 @@ async function refreshLists(silent){
     const res = await fetch(settings.scriptUrl + '?action=config');
     const data = await res.json();
     if (data.engineers || data.drivers){
-      setCachedLists({ engineers: data.engineers||[], drivers: data.drivers||[] });
+      setCachedLists({ engineers: data.engineers||[], drivers: data.drivers||[], driverDefaults: data.driverDefaults||{} });
       populateDriverList(data.drivers||[], settings.defaultDriver);
       populateEngineerList(data.engineers||[], settings.engineer);
       populateDefaultDriverList(data.drivers||[], settings.defaultDriver);
@@ -1236,7 +1252,7 @@ $('startForm').addEventListener('submit', async (e) => {
   try {
     const serverResult = await trySend(payload);
     const autoForthBack = serverResult && serverResult.autoForthBack;
-    if (autoForthBack && autoForthBack.updated) {
+    if (autoForthBack && autoForthBack.forthBack !== undefined && autoForthBack.forthBack !== null) {
       const updatedOpenTrips = getOpenTrips().map(t =>
         t.tripId === tripId ? Object.assign({}, t, { lastForthBack: Number(autoForthBack.forthBack) || 0 }) : t
       );
