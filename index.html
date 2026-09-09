@@ -93,6 +93,7 @@
   #adminTripsList.admin-photos-hidden .audit-row{display:none;}
 .solfa-balance-box{grid-column:1 / -1;}
 .solfa-entries{margin-top:10px;text-align:left;border-top:1px solid rgba(255,255,255,.10);padding-top:6px;}
+.admin-filter-control{width:100%;min-height:44px;box-sizing:border-box;}
 .solfa-entry{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:7px 2px;font-size:14px;}
 .solfa-entry-date{font-weight:600;color:#e5e7eb;}
 .solfa-entry-amount{font-weight:700;color:#86efac;white-space:nowrap;}
@@ -362,7 +363,7 @@
           <div class="balance-num" id="balReceived">0</div>
           <div id="solfaEntries" class="solfa-entries"></div>
         </div>
-        <div class="balance-box">
+        <div class="balance-box wide">
           <div class="balance-lbl">Spent</div>
           <div class="balance-num" id="balSpent">0</div>
         </div>
@@ -397,10 +398,10 @@
       <div class="card">
         <strong>Balances</strong>
         <label>Filter Balances</label>
-        <div class="filter-row" style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;">
-          <div><div class="hint" style="margin-bottom:4px;">Month</div><input type="month" id="adminBalanceMonth" class="month-input"></div>
-          <div><div class="hint" style="margin-bottom:4px;">Engineer</div><select id="adminBalanceEngineer"><option value="">— All Engineers —</option></select></div>
-          <button type="button" class="save-btn" id="adminClearBalanceMonthBtn" style="background:#374151;">Clear</button>
+        <div class="filter-row" style="display:grid;grid-template-columns:1fr;gap:8px;">
+          <div><div class="hint" style="margin-bottom:4px;">Engineer</div><select id="adminBalanceEngineer" class="admin-filter-control"><option value="">— All Engineers —</option></select></div>
+          <div><div class="hint" style="margin-bottom:4px;">Month</div><input type="month" id="adminBalanceMonth" class="month-input admin-filter-control"></div>
+          <button type="button" class="save-btn" id="adminClearBalanceMonthBtn" style="background:#374151;width:100%;">Clear</button>
         </div>
         <div class="hint">Received, spent and balance below reflect the selected month and engineer.</div>
         <div class="balance-grid">
@@ -409,7 +410,7 @@
             <div class="balance-num" id="adminTotalReceived">0</div>
             <div id="adminSolfaEntries" class="solfa-entries" style="margin-top:7px;"></div>
           </div>
-          <div class="balance-box"><div class="balance-lbl">Total Spent</div><div class="balance-num" id="adminTotalSpent">0</div></div>
+          <div class="balance-box wide"><div class="balance-lbl">Total Spent</div><div class="balance-num" id="adminTotalSpent">0</div></div>
           <div class="balance-box wide"><div class="balance-lbl">Total Balance</div><div class="balance-num" id="adminTotalBalance">0</div></div>
         </div>
         <div id="adminEngineerList" style="margin-top:14px;"></div>
@@ -1113,11 +1114,14 @@ $('adminRefreshTabBtn').onclick = async () => {
 function renderAdminSummary(data){
   const totals = data.totals || { totalSolfa:0, totalSpent:0, balance:0 };
   const solfaEntries = data.solfaEntries || [];
-  $('adminSolfaEntries').innerHTML = solfaEntries.length
-    ? solfaEntries.map(e => `<div class="solfa-entry"><span class="solfa-entry-date">${formatSolfaDate(e.date)}</span><span class="solfa-entry-amount">${Number(e.amount||0).toFixed(2)} EGP</span></div>`).join('')
-      + `<div class="solfa-entry-total"><span>Total</span><span>${Number(totals.totalSolfa||0).toFixed(2)} EGP</span></div>`
-    : '<div class="hint" style="padding:7px 0 2px;">No Solfa received for this period.</div>';
-  $('adminTotalReceived').textContent = (totals.totalSolfa||0).toFixed(2);
+  const engineerSelected = !!$('adminBalanceEngineer').value;
+  $('adminSolfaEntries').innerHTML = engineerSelected
+    ? (solfaEntries.length
+      ? solfaEntries.map(e => `<div class="solfa-entry"><span class="solfa-entry-date">${formatSolfaDate(e.date)}</span><span class="solfa-entry-amount">${Number(e.amount||0).toFixed(2)} EGP</span></div>`).join('')
+        + `<div class="solfa-entry-total"><span>Total</span><span>${Number(totals.totalSolfa||0).toFixed(2)} EGP</span></div>`
+      : '<div class="hint" style="padding:7px 0 2px;">No Solfa received for this period.</div>')
+    : '';
+  $('adminTotalReceived').textContent = engineerSelected ? (totals.totalSolfa||0).toFixed(2) : Math.round(totals.totalSolfa||0).toString();
   $('adminTotalSpent').textContent = (totals.totalSpent||0).toFixed(2);
   $('adminTotalBalance').textContent = (totals.balance||0).toFixed(2);
   $('adminTotalBalance').classList.toggle('negative', (totals.balance||0) < 0);
@@ -1144,8 +1148,8 @@ function populateAdminEngineerFilter(){
 $('adminBalanceMonth').value = new Date().toISOString().slice(0,7);
 $('adminFilterMonth').value = new Date().toISOString().slice(0,7);
 $('adminBalanceMonth').addEventListener('change', () => loadAdminSummary());
-$('adminBalanceEngineer').addEventListener('change', () => loadAdminSummary());
 $('adminClearBalanceMonthBtn').onclick = () => { $('adminBalanceMonth').value=''; $('adminBalanceEngineer').value=''; loadAdminSummary(); };
+$('adminBalanceEngineer').addEventListener('change', loadAdminSummary);
 let adminPhotosVisible = localStorage.getItem('adminPhotosVisible') !== '0';
 function applyAdminPhotosVisibility(){
   $('adminTripsList').classList.toggle('admin-photos-hidden', !adminPhotosVisible);
