@@ -90,6 +90,12 @@
   .history-item{padding:10px 0;border-bottom:0.5px solid var(--border-soft);font-size:13px;}
   .history-item:last-child{border-bottom:none;}
   #historyList.history-photos-hidden .audit-row{display:none;}
+.solfa-balance-box{grid-column:1 / -1;}
+.solfa-entries{margin-top:10px;text-align:left;border-top:1px solid rgba(255,255,255,.10);padding-top:6px;}
+.solfa-entry{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:7px 2px;font-size:14px;}
+.solfa-entry-date{font-weight:600;color:#e5e7eb;}
+.solfa-entry-amount{font-weight:700;color:#86efac;white-space:nowrap;}
+.solfa-entry-total{display:flex;justify-content:space-between;padding:9px 2px 2px;margin-top:3px;border-top:1px solid rgba(255,255,255,.12);font-weight:800;font-size:14px;}
   .history-item .top-row{display:flex;justify-content:space-between;align-items:center;gap:8px;}
   .history-item .sub-row{color:var(--muted);font-size:12px;margin-top:2px;}
   .history-item .amount{font-weight:700;color:var(--teal-dark);}
@@ -350,9 +356,10 @@
       <div class="hint">Received, spent and remaining balance are calculated for the selected month only.</div>
 
       <div class="balance-grid" id="balanceGrid" style="display:none;">
-        <div class="balance-box">
+        <div class="balance-box solfa-balance-box">
           <div class="balance-lbl">Received (Solfa)</div>
           <div class="balance-num" id="balReceived">0</div>
+          <div id="solfaEntries" class="solfa-entries"></div>
         </div>
         <div class="balance-box">
           <div class="balance-lbl">Spent</div>
@@ -1380,10 +1387,27 @@ async function loadHistory(){
   }
 }
 
+function formatSolfaDate(value){
+  if (!value) return '—';
+  const parts = String(value).split('-');
+  if (parts.length === 3) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const day = String(Number(parts[2]));
+    const month = months[Number(parts[1]) - 1] || parts[1];
+    return `${day}-${month}`;
+  }
+  return String(value);
+}
+
 function renderHistory(data){
   $('historyHint').style.display='none';
   $('balanceGrid').style.display='grid';
   $('balReceived').textContent = (data.totalSolfa||0).toFixed(2);
+  const solfaEntries = data.solfaEntries || [];
+  $('solfaEntries').innerHTML = solfaEntries.length
+    ? solfaEntries.map(e => `<div class="solfa-entry"><span class="solfa-entry-date">${formatSolfaDate(e.date)}</span><span class="solfa-entry-amount">${Number(e.amount||0).toFixed(2)} EGP</span></div>`).join('')
+      + `<div class="solfa-entry-total"><span>Total</span><span>${Number(data.totalSolfa||0).toFixed(2)} EGP</span></div>`
+    : '<div class="hint" style="padding:7px 0 2px;">No Solfa received for this period.</div>';
   $('balSpent').textContent = (data.totalSpent||0).toFixed(2);
   const balance = data.balance||0;
   $('balBalance').textContent = balance.toFixed(2);
