@@ -48,7 +48,11 @@
   .computed{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;}
   .computed div{background:rgba(207,54,145,.12);border-radius:10px;padding:10px;text-align:center;}
   .computed .num{font-size:18px;font-weight:700;color:var(--teal-dark);}
-  .computed .lbl{font-size:11px;color:var(--muted);}
+   .computed .lbl{font-size:11px;color:var(--muted);}
+  .payment-card{grid-column:1 / -1;background:rgba(207,54,145,.16);border:1.5px solid var(--teal);border-radius:14px;padding:18px 14px 20px;text-align:center;margin-top:2px;box-shadow:0 0 0 1px rgba(207,54,145,.08),0 8px 24px rgba(0,0,0,.22);}
+  .payment-card .payment-lbl{font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--teal-dark);font-weight:800;margin-bottom:6px;}
+  .payment-card .payment-num{font-size:38px;line-height:1.05;font-weight:900;color:#fff;letter-spacing:.3px;}
+  .payment-card .payment-note{font-size:11px;color:var(--muted);margin-top:8px;font-weight:600;}
   .submit-btn{width:100%;padding:16px;background:var(--teal);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;margin-top:16px;letter-spacing:0.3px;}
   .submit-btn:disabled{background:#3A3A3D;color:var(--muted);}
   .log-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:0.5px solid var(--border-soft);font-size:13px;gap:8px;}
@@ -338,7 +342,11 @@
         <div><div class="num" id="todayTripOut">0</div><div class="lbl">Today's Trip KM</div></div>
         <div><div class="num" id="lastForthBackOut">0</div><div class="lbl">Last Forth & Back KM</div></div>
         <div><div class="num" id="totalOut">0</div><div class="lbl">Today Total KM</div></div>
-        <div><div class="num" id="amountOut">0</div><div class="lbl">Amount to Pay now</div></div>
+        <div class="payment-card">
+          <div class="payment-lbl">Amount to Pay now</div>
+          <div class="payment-num" id="amountOut">0.00 EGP</div>
+          <div class="payment-note">✓ Final amount — check before paying the driver</div>
+        </div>
       </div>
 
       <button type="submit" class="submit-btn" id="finishSubmitBtn">⏹ Submit Finish</button>
@@ -632,7 +640,7 @@ $('saveSettings').onclick = () => {
 };
 
 // ---------- tabs ----------
-function showTab(which){
+function showTab(which, skipFinishLoad = false){
   if (which==='start' && $('tabStartBtn').disabled) which = 'finish';
   if (which==='finish' && $('tabFinishBtn').disabled) which = 'start';
   const mainWorkflow = which==='start' || which==='finish';
@@ -649,7 +657,7 @@ function showTab(which){
   if ($('menuHistoryBtn')) $('menuHistoryBtn').classList.toggle('active', which==='history');
   if ($('menuAdminBtn')) $('menuAdminBtn').classList.toggle('active', which==='admin');
 
-  if (which==='finish') loadOpenTripsForFinish();
+  if (which==='finish' && !skipFinishLoad) loadOpenTripsForFinish();
   if (which==='history') loadHistory();
 }
 
@@ -681,6 +689,8 @@ function localOpenTripsForCurrentUser(){
   return getOpenTrips().filter(t => (t.engineer || '').trim().toLowerCase() === mine);
 }
 
+let deferFinishNavigation = false;
+
 function updateLockState(){
   const loggedIn = !!(settings.engineer && settings.pin);
   const hasOpen = localOpenTripsForCurrentUser().length > 0;
@@ -691,7 +701,7 @@ function updateLockState(){
     $('lockNote').textContent = '🔒 Log in from ☰ Menu → Settings to start or finish a trip.';
     return;
   }
-  if (hasOpen && $('startSection').classList.contains('active')) showTab('finish');
+  if (hasOpen && $('startSection').classList.contains('active') && !deferFinishNavigation) showTab('finish');
   if (!hasOpen && $('finishSection').classList.contains('active')) showTab('start');
   $('lockNote').style.display = hasOpen ? 'block' : 'none';
   $('lockNote').textContent = hasOpen
@@ -979,7 +989,7 @@ function recalcFinish(){
   $('todayTripOut').textContent = tripKm;
   $('lastForthBackOut').textContent = lastForthBack;
   $('totalOut').textContent = todayTotalKm;
-  $('amountOut').textContent = amountToPay.toFixed(2);
+  $('amountOut').textContent = amountToPay.toFixed(2) + ' EGP';
 }
 ['finishKm','staticKm'].forEach(id => $(id).addEventListener('input', recalcFinish));
 
@@ -1283,6 +1293,9 @@ $('startForm').addEventListener('submit', async (e) => {
   const payload = { action: 'start', ...trip, startPhoto };
   const display = `${trip.engineer} · ${trip.area||'—'} · Start ${trip.startKm}km`;
 
+  // Do not switch to Finish yet. The server must first calculate and return the
+  // final Forth & Back value so the engineer never sees a stale/old value.
+  deferFinishNavigation = true;
   const trips = getOpenTrips(); trips.push(trip); setOpenTrips(trips); updateLockState();
 
   $('startSubmitBtn').disabled = true; $('startSubmitBtn').textContent = 'Submitting…';
@@ -1311,6 +1324,19 @@ $('startForm').addEventListener('submit', async (e) => {
       upsertLogEntry(tripId, { engineer, display, status: 'pending' });
       toast(classified.kind === 'offline' ? '📴 No internet — will sync automatically' : '⚠️ Upload failed — will retry automatically');
       showResultDialog(classified.kind === 'offline' ? 'offline' : 'failure', classified.text);
+    }
+  }
+
+  // Only now move to Finish. At this point the Start request has completed, the
+  // backend has recorded the final F&B, and local state has been updated.
+  deferFinishNavigation = false;
+  updateLockState();
+  if (getOpenTrips().some(t => t.tripId === tripId)) {
+    showTab('finish', true);
+    await loadOpenTripsForFinish();
+    if ($('openTripSelect')) {
+      $('openTripSelect').value = tripId;
+      $('openTripSelect').dispatchEvent(new Event('change'));
     }
   }
   renderLog();
