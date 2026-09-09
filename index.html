@@ -53,6 +53,9 @@
   .payment-card .payment-lbl{font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--teal-dark);font-weight:800;margin-bottom:6px;}
   .payment-card .payment-num{font-size:38px;line-height:1.05;font-weight:900;color:#fff;letter-spacing:.3px;}
   .payment-card .payment-note{font-size:11px;color:var(--muted);margin-top:8px;font-weight:600;}
+  .overnight-option{display:flex;align-items:center;gap:10px;margin:14px 0 2px;padding:13px 14px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.04);font-weight:800;cursor:pointer;}
+  .overnight-option input{width:22px;height:22px;accent-color:var(--teal);margin:0;}
+  .overnight-option span{font-size:15px;}
   .submit-btn{width:100%;padding:16px;background:var(--teal);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;margin-top:16px;letter-spacing:0.3px;}
   .submit-btn:disabled{background:#3A3A3D;color:var(--muted);}
   .log-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:0.5px solid var(--border-soft);font-size:13px;gap:8px;}
@@ -337,6 +340,11 @@
         <label>Static</label>
         <input type="number" id="staticKm" inputmode="numeric" value="0">
       </div>
+
+      <label class="overnight-option">
+        <input type="checkbox" id="overNightStay">
+        <span>Over Night Stay</span>
+      </label>
 
       <div class="computed">
         <div><div class="num" id="todayTripOut">0</div><div class="lbl">Today's Trip KM</div></div>
@@ -976,7 +984,8 @@ function recalcFinish(){
   const start = trip ? parseFloat(trip.startKm) : NaN;
   const finish = parseFloat($('finishKm').value);
   const rate = trip && isFinite(parseFloat(trip.rate)) ? parseFloat(trip.rate) : (settings.rate ?? 2.225);
-  const lastForthBack = trip && isFinite(parseFloat(trip.lastForthBack)) ? parseFloat(trip.lastForthBack) : 0;
+  const normalLastForthBack = trip && isFinite(parseFloat(trip.lastForthBack)) ? parseFloat(trip.lastForthBack) : 0;
+  const lastForthBack = $('overNightStay').checked ? 0 : normalLastForthBack;
 
   // Today's Trip = Finish odometer - Start odometer.
   let tripKm = 0;
@@ -992,6 +1001,7 @@ function recalcFinish(){
   $('amountOut').textContent = amountToPay.toFixed(2) + ' EGP';
 }
 ['finishKm','staticKm'].forEach(id => $(id).addEventListener('input', recalcFinish));
+$('overNightStay').addEventListener('change', recalcFinish);
 
 // ---------- queue + log ----------
 function getQueue(){ try { return JSON.parse(localStorage.getItem('benzine_queue')) || []; } catch(e){ return []; } }
@@ -1376,6 +1386,7 @@ $('finishForm').addEventListener('submit', async (e) => {
     amountSpent: parseFloat($('todayTripOut').textContent) * (isFinite(parseFloat(trip.rate)) ? parseFloat(trip.rate) : (settings.rate ?? 2.225)),
     rate: (isFinite(parseFloat(trip.rate)) ? parseFloat(trip.rate) : (settings.rate ?? 2.225)),
     staticKm: parseFloat($('staticKm').value)||0,
+    overNightStay: $('overNightStay').checked,
     finishPhoto, finishedAt: new Date().toISOString(),
   };
   const display = `${trip.engineer} · ${trip.area||'—'} · ${$('totalOut').textContent}km total`;
@@ -1412,7 +1423,7 @@ $('finishForm').addEventListener('submit', async (e) => {
 });
 
 function resetFinishForm(){
-  $('finishKm').value=''; $('staticKm').value='0';
+  $('finishKm').value=''; $('staticKm').value='0'; $('overNightStay').checked=false;
   finishPhoto = null;
   const thumb = document.getElementById('finishThumb'); if (thumb) thumb.remove();
   $('finishPhotoBtn').textContent = 'Take photo';
