@@ -896,8 +896,17 @@ async function loadOpenTripsForFinish(){
   // queued offline), so the engineer can still pick them to finish even without a connection.
   // Filtered to the current login — a shared phone must never surface another engineer's trip here.
   const local = localOpenTripsForCurrentUser();
-  const merged = [...serverTrips];
-  local.forEach(lt => { if (!merged.some(st => st.tripId === lt.tripId)) merged.push(lt); });
+  // A trip can exist in both the server response and localStorage after a successful
+  // Start. Compare IDs as strings so numeric/string representations cannot create a
+  // duplicate option. Also de-duplicate the final list defensively.
+  const merged = [];
+  const seenTripIds = new Set();
+  [...serverTrips, ...local].forEach(t => {
+    const id = String(t && t.tripId || '').trim();
+    if (!id || seenTripIds.has(id)) return;
+    seenTripIds.add(id);
+    merged.push(t);
+  });
   openTripsCache = merged;
 
   sel.innerHTML = '<option value="">— Select an open trip —</option>';
