@@ -90,6 +90,7 @@
   .history-item{padding:10px 0;border-bottom:0.5px solid var(--border-soft);font-size:13px;}
   .history-item:last-child{border-bottom:none;}
   #historyList.history-photos-hidden .audit-row{display:none;}
+  #adminTripsList.admin-photos-hidden .audit-row{display:none;}
 .solfa-balance-box{grid-column:1 / -1;}
 .solfa-entries{margin-top:10px;text-align:left;border-top:1px solid rgba(255,255,255,.10);padding-top:6px;}
 .solfa-entry{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:7px 2px;font-size:14px;}
@@ -395,14 +396,19 @@
     <div id="adminDashboard" style="display:none;">
       <div class="card">
         <strong>Balances</strong>
-        <label>Filter Balances by Month</label>
-        <div class="filter-row">
-          <input type="month" id="adminBalanceMonth" class="month-input">
+        <label>Filter Balances</label>
+        <div class="filter-row" style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;">
+          <div><div class="hint" style="margin-bottom:4px;">Month</div><input type="month" id="adminBalanceMonth" class="month-input"></div>
+          <div><div class="hint" style="margin-bottom:4px;">Engineer</div><select id="adminBalanceEngineer"><option value="">— All Engineers —</option></select></div>
           <button type="button" class="save-btn" id="adminClearBalanceMonthBtn" style="background:#374151;">Clear</button>
         </div>
-        <div class="hint">Totals below reflect the selected month only.</div>
+        <div class="hint">Received, spent and balance below reflect the selected month and engineer.</div>
         <div class="balance-grid">
-          <div class="balance-box"><div class="balance-lbl">Total Received</div><div class="balance-num" id="adminTotalReceived">0</div></div>
+          <div class="balance-box solfa-balance-box">
+            <div class="balance-lbl">Total Received</div>
+            <div class="balance-num" id="adminTotalReceived">0</div>
+            <div id="adminSolfaEntries" class="solfa-entries" style="margin-top:7px;"></div>
+          </div>
           <div class="balance-box"><div class="balance-lbl">Total Spent</div><div class="balance-num" id="adminTotalSpent">0</div></div>
           <div class="balance-box wide"><div class="balance-lbl">Total Balance</div><div class="balance-num" id="adminTotalBalance">0</div></div>
         </div>
@@ -412,6 +418,7 @@
       <div class="card">
         <strong>📷 Photo Audit</strong>
         <div class="hint">Compare each odometer photo against the KM the engineer entered, grouped by day and engineer.</div>
+        <button type="button" class="save-btn" id="adminPhotosToggle" style="width:auto;padding:8px 12px;margin:8px 0 2px;background:#374151;">Hide Photos</button>
         <label>Filter by Engineer</label>
         <select id="adminFilterEngineer"><option value="">— All Engineers —</option></select>
         <label>Filter by Month</label>
@@ -1067,7 +1074,7 @@ $('adminLoginTabBtn').onclick = async () => {
   adminPinValue = pin;
   $('adminLoginTabBtn').disabled = true; $('adminLoginTabBtn').textContent = 'Checking…';
   try {
-    const data = await adminFetch('adminSummary', { filterMonth: $('adminBalanceMonth').value });
+    const data = await adminFetch('adminSummary', { filterMonth: $('adminBalanceMonth').value, filterEngineer: $('adminBalanceEngineer').value });
     adminAuthed = true;
     renderAdminSummary(data);
     populateAdminEngineerFilter();
@@ -1090,7 +1097,7 @@ $('adminLogoutBtn').onclick = () => {
 
 async function loadAdminSummary(){
   if (!adminAuthed) return;
-  try { renderAdminSummary(await adminFetch('adminSummary', { filterMonth: $('adminBalanceMonth').value })); }
+  try { renderAdminSummary(await adminFetch('adminSummary', { filterMonth: $('adminBalanceMonth').value, filterEngineer: $('adminBalanceEngineer').value })); }
   catch (err) { toast('Could not load balances — check connection'); }
 }
 $('adminRefreshTabBtn').onclick = async () => {
@@ -1105,6 +1112,11 @@ $('adminRefreshTabBtn').onclick = async () => {
 
 function renderAdminSummary(data){
   const totals = data.totals || { totalSolfa:0, totalSpent:0, balance:0 };
+  const solfaEntries = data.solfaEntries || [];
+  $('adminSolfaEntries').innerHTML = solfaEntries.length
+    ? solfaEntries.map(e => `<div class="solfa-entry"><span class="solfa-entry-date">${formatSolfaDate(e.date)}</span><span class="solfa-entry-amount">${Number(e.amount||0).toFixed(2)} EGP</span></div>`).join('')
+      + `<div class="solfa-entry-total"><span>Total</span><span>${Number(totals.totalSolfa||0).toFixed(2)} EGP</span></div>`
+    : '<div class="hint" style="padding:7px 0 2px;">No Solfa received for this period.</div>';
   $('adminTotalReceived').textContent = (totals.totalSolfa||0).toFixed(2);
   $('adminTotalSpent').textContent = (totals.totalSpent||0).toFixed(2);
   $('adminTotalBalance').textContent = (totals.balance||0).toFixed(2);
@@ -1124,13 +1136,28 @@ function renderAdminSummary(data){
 
 function populateAdminEngineerFilter(){
   const cached = getCachedLists();
-  populateSimpleSelect($('adminFilterEngineer'), cached.engineers||[], '', '— All Engineers —');
+  const engineers = cached.engineers||[];
+  populateSimpleSelect($('adminFilterEngineer'), engineers, '', '— All Engineers —');
+  populateSimpleSelect($('adminBalanceEngineer'), engineers, '', '— All Engineers —');
 }
 
 $('adminBalanceMonth').value = new Date().toISOString().slice(0,7);
 $('adminFilterMonth').value = new Date().toISOString().slice(0,7);
 $('adminBalanceMonth').addEventListener('change', () => loadAdminSummary());
-$('adminClearBalanceMonthBtn').onclick = () => { $('adminBalanceMonth').value=''; loadAdminSummary(); };
+$('adminBalanceEngineer').addEventListener('change', () => loadAdminSummary());
+$('adminClearBalanceMonthBtn').onclick = () => { $('adminBalanceMonth').value=''; $('adminBalanceEngineer').value=''; loadAdminSummary(); };
+let adminPhotosVisible = localStorage.getItem('adminPhotosVisible') !== '0';
+function applyAdminPhotosVisibility(){
+  $('adminTripsList').classList.toggle('admin-photos-hidden', !adminPhotosVisible);
+  $('adminPhotosToggle').textContent = adminPhotosVisible ? 'Hide Photos' : 'Show Photos';
+}
+$('adminPhotosToggle').onclick = () => {
+  adminPhotosVisible = !adminPhotosVisible;
+  localStorage.setItem('adminPhotosVisible', adminPhotosVisible ? '1' : '0');
+  applyAdminPhotosVisibility();
+};
+applyAdminPhotosVisibility();
+
 $('adminApplyFiltersBtn').onclick = () => loadAdminTrips();
 $('adminClearFiltersBtn').onclick = () => {
   $('adminFilterEngineer').value = '';
