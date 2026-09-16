@@ -478,7 +478,7 @@
           <input type="number" id="adminRentBenzine" class="locked-field" readonly value="0">
           <label>Rent Amount</label>
           <div class="row2" style="align-items:end;">
-            <input type="number" id="adminRentAmount" min="0" step="0.01" inputmode="decimal" placeholder="Enter Rent amount">
+            <input type="number" id="adminRentAmount" min="0.01" step="0.01" inputmode="decimal" placeholder="Enter Rent amount">
             <button type="button" class="save-btn" id="adminRentSumBtn" style="margin-top:0;">➕ Sum</button>
           </div>
           <div class="rent-total-card"><div class="rent-total-lbl">Total Amount to Pay</div><div class="rent-total-num" id="adminRentTotal">0.00 EGP</div></div>
@@ -1326,7 +1326,7 @@ $('adminRentSumBtn').onclick=()=>{
   const t=selectedAdminRentTrip();
   if(!t)return toast('Select a Rent trip');
   const rent=parseFloat($('adminRentAmount').value);
-  if(!isFinite(rent)||rent<0)return toast('Enter a valid Rent amount');
+  if(!isFinite(rent)||rent<=0)return toast('Enter a valid Rent amount');
   $('adminRentTotal').textContent=(Number(t.benzineAmount||0)+rent).toFixed(2)+' EGP';
 };
 $('adminRentUploadBtn').onclick=async()=>{
@@ -1334,7 +1334,7 @@ $('adminRentUploadBtn').onclick=async()=>{
   const rent=parseFloat($('adminRentAmount').value);
   const deduction=$('adminRentDeduction').value;
   if(!t)return toast('Select a Rent trip');
-  if(!isFinite(rent)||rent<0)return toast('Enter a valid Rent amount');
+  if(!isFinite(rent)||rent<=0)return toast('Enter a valid Rent amount');
   if(!['On TMX','On Driver'].includes(deduction))return toast('Select Rent Deduction');
   $('adminRentUploadBtn').disabled=true;$('adminRentUploadBtn').textContent='Uploading…';
   try{
@@ -1342,7 +1342,13 @@ $('adminRentUploadBtn').onclick=async()=>{
     $('adminRentTotal').textContent=Number(result.totalRentBenzine||0).toFixed(2)+' EGP';
     $('adminRentStatus').textContent=`✅ ${Number(result.totalRentBenzine||0).toFixed(2)} EGP uploaded for ${t.engineer} on ${t.date}.`;
     toast('Rent uploaded');
+
+    // Reset the current trip and fields so the next unprocessed Rent trip can be selected.
+    $('adminRentTrip').value='';
+    updateAdminRentTripFields();
     await loadAdminRentTrips();
+    $('adminRentTrip').value='';
+    updateAdminRentTripFields();
     await loadAdminSummary();
   }catch(err){ $('adminRentStatus').textContent='❌ '+adminErrorMessage(err); }
   $('adminRentUploadBtn').disabled=false;$('adminRentUploadBtn').textContent='⬆ Upload';
