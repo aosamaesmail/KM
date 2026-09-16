@@ -1132,24 +1132,44 @@ async function adminFetch(action, extra){
   return data;
 }
 
+function adminErrorMessage(err){
+  const code = String(err && err.message || 'server-error');
+  const messages = {
+    'invalid-admin-pin': '❌ Wrong admin PIN',
+    'invalid-token': '❌ Invalid Sync token',
+    'engineer-required': 'Engineer is required',
+    'invalid-engineer': 'Engineer is not registered in Config',
+    'invalid-date': 'Invalid date',
+    'invalid-amount': 'Enter a valid amount',
+    'failed-to-fetch': 'Could not reach the Google Apps Script backend',
+    'server-error': 'Admin request failed'
+  };
+  if (messages[code]) return messages[code];
+  if (/^SyntaxError/i.test(code)) return '❌ Backend returned an invalid response';
+  return '❌ Admin error: ' + code;
+}
+
 $('adminLoginTabBtn').onclick = async () => {
   const pin = $('adminPinInputTab').value.trim();
   if (!pin) return toast('Enter the admin PIN');
   adminPinValue = pin;
   $('adminLoginTabBtn').disabled = true; $('adminLoginTabBtn').textContent = 'Checking…';
   try {
-    const data = await adminFetch('adminSummary', { filterMonth: $('adminBalanceMonth').value, filterEngineer: $('adminBalanceEngineer').value });
+    // Verify the Admin PIN separately from loading the Admin dashboard data.
+    // This prevents a temporary Sheet/summary problem from looking like a login failure.
+    await adminFetch('adminVerify');
     adminAuthed = true;
-    renderAdminSummary(data);
+    $('adminLoginCard').style.display = 'none';
+    $('adminDashboard').style.display = 'block';
     populateAdminEngineerFilter();
     populateAdminSolfaEngineer();
     $('adminSolfaDate').value = adminTodayISO();
-    $('adminLoginCard').style.display = 'none';
-    $('adminDashboard').style.display = 'block';
-    loadAdminTrips();
+    await loadAdminSummary();
+    await loadAdminTrips();
   } catch (err) {
+    adminAuthed = false;
     adminPinValue = '';
-    toast(err.message === 'invalid-admin-pin' ? '❌ Wrong admin PIN' : 'Could not verify — check connection');
+    toast(adminErrorMessage(err));
   }
   $('adminLoginTabBtn').disabled = false; $('adminLoginTabBtn').textContent = '🔐 Login as Admin';
 };
@@ -1164,7 +1184,7 @@ $('adminLogoutBtn').onclick = () => {
 async function loadAdminSummary(){
   if (!adminAuthed) return;
   try { renderAdminSummary(await adminFetch('adminSummary', { filterMonth: $('adminBalanceMonth').value, filterEngineer: $('adminBalanceEngineer').value })); }
-  catch (err) { toast('Could not load balances — check connection'); }
+  catch (err) { toast(adminErrorMessage(err)); }
 }
 $('adminRefreshTabBtn').onclick = async () => {
   try {
@@ -1173,7 +1193,7 @@ $('adminRefreshTabBtn').onclick = async () => {
     populateAdminSolfaEngineer();
     toast('Refreshed');
   } catch (err) {
-    toast('Could not refresh — check connection');
+    toast(adminErrorMessage(err));
   }
 };
 
