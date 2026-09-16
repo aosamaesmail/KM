@@ -306,10 +306,10 @@
       </div>
 
       <label>Area *</label>
-      <input type="text" id="area" name="km_area_input" placeholder="e.g. Sharm El-Sheikh" autocomplete="new-password" autocapitalize="words" autocorrect="off" spellcheck="false" required>
+      <input type="text" id="area" name="tmx_area_entry" placeholder="e.g. Sharm El-Sheikh" autocomplete="off" aria-autocomplete="none" data-lpignore="true" autocapitalize="words" autocorrect="off" spellcheck="false" required>
 
       <label>Task *</label>
-      <input type="text" id="task" name="km_task_input" placeholder="e.g. Travel to site / complaint" autocomplete="new-password" autocapitalize="sentences" autocorrect="off" spellcheck="false" required>
+      <input type="text" id="task" name="tmx_task_entry" placeholder="e.g. Travel to site / complaint" autocomplete="off" aria-autocomplete="none" data-lpignore="true" autocapitalize="sentences" autocorrect="off" spellcheck="false" required>
 
       <label>Start KM *</label>
       <div class="km-row">
@@ -413,7 +413,6 @@
   <section class="section" id="adminSection">
     <div class="page-header"><span class="page-header-icon">🛡</span><span class="page-header-title">Admin</span></div>
     <div class="card" id="adminLoginCard">
-      <div class="hint">Uses a separate Admin PIN (set in Code.gs) — not any engineer's personal PIN. Not saved on this phone, so you log in again each visit.</div>
       <label>Admin PIN</label>
       <input type="password" inputmode="numeric" id="adminPinInputTab" placeholder="Admin PIN">
       <button type="button" class="save-btn" id="adminLoginTabBtn">🔐 Login as Admin</button>
@@ -1197,6 +1196,7 @@ $('adminLoginTabBtn').onclick = async () => {
     // This prevents a temporary Sheet/summary problem from looking like a login failure.
     await adminFetch('adminVerify');
     adminAuthed = true;
+    sessionStorage.setItem('telecomax_admin_session_pin', adminPinValue);
     $('adminLoginCard').style.display = 'none';
     $('adminDashboard').style.display = 'block';
     populateAdminEngineerFilter();
@@ -1208,6 +1208,7 @@ $('adminLoginTabBtn').onclick = async () => {
   } catch (err) {
     adminAuthed = false;
     adminPinValue = '';
+    sessionStorage.removeItem('telecomax_admin_session_pin');
     toast(adminErrorMessage(err));
   }
   $('adminLoginTabBtn').disabled = false; $('adminLoginTabBtn').textContent = '🔐 Login as Admin';
@@ -1215,10 +1216,36 @@ $('adminLoginTabBtn').onclick = async () => {
 
 $('adminLogoutBtn').onclick = () => {
   adminAuthed = false; adminPinValue = '';
+  sessionStorage.removeItem('telecomax_admin_session_pin');
   $('adminPinInputTab').value = '';
   $('adminLoginCard').style.display = 'block';
   $('adminDashboard').style.display = 'none';
 };
+
+async function restoreAdminSession(){
+  const savedPin = sessionStorage.getItem('telecomax_admin_session_pin');
+  if (!savedPin) return;
+  adminPinValue = savedPin;
+  try {
+    await adminFetch('adminVerify');
+    adminAuthed = true;
+    $('adminLoginCard').style.display = 'none';
+    $('adminDashboard').style.display = 'block';
+    populateAdminEngineerFilter();
+    populateAdminSolfaEngineer();
+    $('adminSolfaDate').value = adminTodayISO();
+    await loadAdminSummary();
+    await loadAdminTrips();
+    await loadAdminRentTrips();
+  } catch (err) {
+    adminAuthed = false;
+    adminPinValue = '';
+    sessionStorage.removeItem('telecomax_admin_session_pin');
+    $('adminLoginCard').style.display = 'block';
+    $('adminDashboard').style.display = 'none';
+  }
+}
+restoreAdminSession();
 
 async function loadAdminSummary(){
   if (!adminAuthed) return;
@@ -1697,6 +1724,7 @@ function renderHistory(data){
           <span><strong>Total KM</strong><br>${t.totalKm||0}</span>
         </div>
         <div class="sub-row" style="margin-top:10px;"><strong>Amount spent:</strong> <span class="amount">${amountText}</span></div>
+        <div class="sub-row" style="margin-top:6px;"><strong>Driver Name:</strong> ${t.driver || '—'}</div>
         <div class="audit-row">
           <div class="audit-col">
             <div class="audit-lbl">Start KM: <strong>${t.startKm||'—'}</strong></div>
