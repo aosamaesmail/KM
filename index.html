@@ -101,6 +101,12 @@
 .solfa-balance-box{grid-column:1 / -1;}
 .solfa-entries{margin-top:10px;text-align:left;border-top:1px solid rgba(255,255,255,.10);padding-top:6px;}
 .admin-filter-control{width:100%;min-height:44px;box-sizing:border-box;}
+  .admin-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+  .admin-tab-btn{padding:11px 6px;border:1px solid var(--border-soft);border-radius:10px;background:var(--card-alt);color:var(--muted);font-weight:800;font-size:12px;cursor:pointer;}
+  .admin-tab-btn.active{background:var(--teal);color:#fff;border-color:var(--teal);}
+  .admin-panel{display:none;}
+  .admin-panel.active{display:block;}
+  .solfa-upload-card{max-width:520px;margin:0 auto;}
 .solfa-entry{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:7px 2px;font-size:14px;}
 .solfa-entry-date{font-weight:600;color:#e5e7eb;}
 .solfa-entry-amount{font-weight:700;color:#86efac;white-space:nowrap;}
@@ -273,7 +279,7 @@
 
   <!-- START SECTION -->
   <section class="section active" id="startSection">
-    <form class="card" id="startForm">
+    <form class="card" id="startForm" autocomplete="off">
       <label>Engineer</label>
       <div class="locked-field" id="startEngineerDisplay">— not logged in —</div>
       <div class="hint">This is locked to your login. Not you? Switch in ☰ Menu → Settings.</div>
@@ -297,10 +303,10 @@
       </div>
 
       <label>Area *</label>
-      <input type="text" id="area" placeholder="e.g. Sharm El-Sheikh" autocomplete="off" autocapitalize="words" required>
+      <input type="text" id="area" name="km_area_input" placeholder="e.g. Sharm El-Sheikh" autocomplete="new-password" autocapitalize="words" autocorrect="off" spellcheck="false" required>
 
       <label>Task *</label>
-      <input type="text" id="task" placeholder="e.g. Travel to site / complaint" autocomplete="off" autocapitalize="sentences" required>
+      <input type="text" id="task" name="km_task_input" placeholder="e.g. Travel to site / complaint" autocomplete="new-password" autocapitalize="sentences" autocorrect="off" spellcheck="false" required>
 
       <label>Start KM *</label>
       <div class="km-row">
@@ -411,45 +417,51 @@
     </div>
 
     <div id="adminDashboard" style="display:none;">
-      <div class="card">
-        <strong>Balances</strong>
-        <label>Filter Balances</label>
-        <div class="filter-row" style="display:grid;grid-template-columns:1fr;gap:8px;">
-          <div><div class="hint" style="margin-bottom:4px;">Engineer</div><select id="adminBalanceEngineer" class="admin-filter-control"><option value="">— All Engineers —</option></select></div>
-          <div><div class="hint" style="margin-bottom:4px;">Month</div><input type="month" id="adminBalanceMonth" class="month-input admin-filter-control"></div>
-          <button type="button" class="save-btn" id="adminClearBalanceMonthBtn" style="background:#374151;width:100%;">Clear</button>
-        </div>
-        <div class="hint">Received, spent and balance below reflect the selected month and engineer.</div>
-        <div class="balance-grid">
-          <div class="balance-box solfa-balance-box">
-            <div class="balance-lbl">Total Received</div>
-            <div class="balance-num" id="adminTotalReceived">0</div>
-            <div id="adminSolfaEntries" class="solfa-entries" style="margin-top:7px;"></div>
+      <div class="admin-tabs" role="tablist" aria-label="Admin sections">
+        <button type="button" class="admin-tab-btn active" id="adminBalancesTabBtn">💰 Balances</button>
+        <button type="button" class="admin-tab-btn" id="adminPhotoAuditTabBtn">📷 Photo Audit</button>
+        <button type="button" class="admin-tab-btn" id="adminSolfaTabBtn">💵 Solfa</button>
+      </div>
+      <div class="admin-panel active" id="adminBalancesPanel">
+        <div class="card">
+          <strong>Balances</strong>
+          <label>Filter Balances</label>
+          <div class="filter-row" style="display:grid;grid-template-columns:1fr;gap:8px;">
+            <div><div class="hint" style="margin-bottom:4px;">Engineer</div><select id="adminBalanceEngineer" class="admin-filter-control"><option value="">— All Engineers —</option></select></div>
+            <div><div class="hint" style="margin-bottom:4px;">Month</div><input type="month" id="adminBalanceMonth" class="month-input admin-filter-control"></div>
+            <button type="button" class="save-btn" id="adminClearBalanceMonthBtn" style="background:#374151;width:100%;">Clear</button>
           </div>
-          <div class="balance-box wide"><div class="balance-lbl">Total Spent</div><div class="balance-num" id="adminTotalSpent">0</div></div>
-          <div class="balance-box wide"><div class="balance-lbl">Total Balance</div><div class="balance-num" id="adminTotalBalance">0</div></div>
-        </div>
-        <div id="adminEngineerList" style="margin-top:14px;"></div>
-      </div>
-
-      <div class="card">
-        <strong>📷 Photo Audit</strong>
-        <div class="hint">Compare each odometer photo against the KM the engineer entered, grouped by day and engineer.</div>
-        <button type="button" class="save-btn" id="adminPhotosToggle" style="width:auto;padding:8px 12px;margin:8px 0 2px;background:#374151;">Hide Photos</button>
-        <label>Filter by Engineer</label>
-        <select id="adminFilterEngineer"><option value="">— All Engineers —</option></select>
-        <label>Filter by Month</label>
-        <input type="month" id="adminFilterMonth" class="month-input">
-        <div class="row2" style="margin-top:10px;">
-          <button type="button" class="save-btn" id="adminApplyFiltersBtn">Apply Filters</button>
-          <button type="button" class="save-btn" style="background:#374151;" id="adminClearFiltersBtn">Clear</button>
+          <div class="hint">Received, spent and balance below reflect the selected month and engineer.</div>
+          <div class="balance-grid">
+            <div class="balance-box solfa-balance-box"><div class="balance-lbl">Total Received</div><div class="balance-num" id="adminTotalReceived">0</div><div id="adminSolfaEntries" class="solfa-entries" style="margin-top:7px;"></div></div>
+            <div class="balance-box wide"><div class="balance-lbl">Total Spent</div><div class="balance-num" id="adminTotalSpent">0</div></div>
+            <div class="balance-box wide"><div class="balance-lbl">Total Balance</div><div class="balance-num" id="adminTotalBalance">0</div></div>
+          </div>
+          <div id="adminEngineerList" style="margin-top:14px;"></div>
         </div>
       </div>
-
-      <div class="card">
-        <div id="adminTripsList"><div class="empty">No trips loaded yet.</div></div>
+      <div class="admin-panel" id="adminPhotoAuditPanel">
+        <div class="card">
+          <strong>📷 Photo Audit</strong>
+          <div class="hint">Compare each odometer photo against the KM the engineer entered, grouped by day and engineer.</div>
+          <button type="button" class="save-btn" id="adminPhotosToggle" style="width:auto;padding:8px 12px;margin:8px 0 2px;background:#374151;">Hide Photos</button>
+          <label>Filter by Engineer</label><select id="adminFilterEngineer"><option value="">— All Engineers —</option></select>
+          <label>Filter by Month</label><input type="month" id="adminFilterMonth" class="month-input">
+          <div class="row2" style="margin-top:10px;"><button type="button" class="save-btn" id="adminApplyFiltersBtn">Apply Filters</button><button type="button" class="save-btn" style="background:#374151;" id="adminClearFiltersBtn">Clear</button></div>
+        </div>
+        <div class="card"><div id="adminTripsList"><div class="empty">No trips loaded yet.</div></div></div>
       </div>
-
+      <div class="admin-panel" id="adminSolfaPanel">
+        <div class="card solfa-upload-card">
+          <strong>💵 Add Solfa</strong>
+          <div class="hint">Add a Solfa amount for an engineer. The entry is stored in the Solfa column with the selected engineer and date.</div>
+          <label>Engineer Name</label><select id="adminSolfaEngineer"><option value="">— Select Engineer —</option></select>
+          <label>Date</label><input type="date" id="adminSolfaDate">
+          <label>Amount</label><input type="number" id="adminSolfaAmount" min="0.01" step="0.01" inputmode="decimal" placeholder="Enter amount">
+          <button type="button" class="save-btn" id="adminSolfaUploadBtn">⬆ Upload</button>
+          <div id="adminSolfaStatus" class="hint" style="margin-top:8px;"></div>
+        </div>
+      </div>
       <button type="button" class="save-btn" style="background:#374151;" id="adminRefreshTabBtn">🔄 Refresh</button>
       <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="adminLogoutBtn">Log out of Admin</button>
     </div>
@@ -1087,6 +1099,24 @@ let adminAuthed = false;
 let adminPinValue = '';
 let adminTripsCache = [];
 
+function adminTodayISO(){
+  const d = new Date();
+  const local = new Date(d.getTime() - d.getTimezoneOffset()*60000);
+  return local.toISOString().slice(0,10);
+}
+function showAdminPanel(which){
+  const panels={balances:'adminBalancesPanel',photos:'adminPhotoAuditPanel',solfa:'adminSolfaPanel'};
+  const buttons={balances:'adminBalancesTabBtn',photos:'adminPhotoAuditTabBtn',solfa:'adminSolfaTabBtn'};
+  Object.keys(panels).forEach(k=>{$(panels[k]).classList.toggle('active',k===which);$(buttons[k]).classList.toggle('active',k===which);});
+  if(which==='balances') loadAdminSummary();
+  if(which==='photos') loadAdminTrips();
+  if(which==='solfa') populateAdminSolfaEngineer();
+}
+$('adminBalancesTabBtn').onclick=()=>showAdminPanel('balances');
+$('adminPhotoAuditTabBtn').onclick=()=>showAdminPanel('photos');
+$('adminSolfaTabBtn').onclick=()=>{ $('adminSolfaDate').value=adminTodayISO(); showAdminPanel('solfa'); };
+
+
 async function adminFetch(action, extra){
     const res = await fetch(settings.scriptUrl, {
     method: 'POST',
@@ -1108,6 +1138,8 @@ $('adminLoginTabBtn').onclick = async () => {
     adminAuthed = true;
     renderAdminSummary(data);
     populateAdminEngineerFilter();
+    populateAdminSolfaEngineer();
+    $('adminSolfaDate').value = adminTodayISO();
     $('adminLoginCard').style.display = 'none';
     $('adminDashboard').style.display = 'block';
     loadAdminTrips();
@@ -1134,6 +1166,7 @@ $('adminRefreshTabBtn').onclick = async () => {
   try {
     await loadAdminSummary();
     await loadAdminTrips();
+    populateAdminSolfaEngineer();
     toast('Refreshed');
   } catch (err) {
     toast('Could not refresh — check connection');
@@ -1172,6 +1205,29 @@ function populateAdminEngineerFilter(){
   const engineers = cached.engineers||[];
   populateSimpleSelect($('adminFilterEngineer'), engineers, '', '— All Engineers —');
   populateSimpleSelect($('adminBalanceEngineer'), engineers, '', '— All Engineers —');
+}
+
+function populateAdminSolfaEngineer(){
+  const cached=getCachedLists();
+  populateSimpleSelect($('adminSolfaEngineer'),cached.engineers||[],'','— Select Engineer —');
+}
+$('adminSolfaUploadBtn').onclick=async()=>{
+  const engineer=$('adminSolfaEngineer').value;
+  const date=$('adminSolfaDate').value||adminTodayISO();
+  const amount=parseFloat($('adminSolfaAmount').value);
+  if(!engineer)return toast('Select an engineer');
+  if(!date)return toast('Select a date');
+  if(!isFinite(amount)||amount<=0)return toast('Enter a valid amount');
+  $('adminSolfaUploadBtn').disabled=true;$('adminSolfaUploadBtn').textContent='Uploading…';$('adminSolfaStatus').textContent='';
+  try{
+    await adminFetch('adminSolfa',{engineer,date,amount});
+    $('adminSolfaStatus').textContent=`✅ ${amount.toFixed(2)} EGP added for ${engineer} on ${date}.`;
+    $('adminSolfaAmount').value=''; toast('Solfa uploaded'); await loadAdminSummary();
+  }catch(err){
+    const m={'engineer-required':'Select an engineer','invalid-date':'Invalid date','invalid-amount':'Enter a valid amount','invalid-engineer':'Engineer is not registered'};
+    $('adminSolfaStatus').textContent='❌ '+(m[err.message]||'Could not upload Solfa — check connection.');
+  }
+  $('adminSolfaUploadBtn').disabled=false;$('adminSolfaUploadBtn').textContent='⬆ Upload';
 }
 
 $('adminBalanceMonth').value = new Date().toISOString().slice(0,7);
