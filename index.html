@@ -532,6 +532,7 @@ const todayISO = () => new Date().toISOString().slice(0,10);
 const dayName = (iso) => new Date(iso+'T00:00:00').toLocaleDateString('en-US',{weekday:'long'});
 const genId = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-'+Date.now()+'-'+Math.random().toString(16).slice(2));
 const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyPpI27VQqpIrZHn8mizmONCLHEbp_aJj_wnan6nyYh-0R2bNW_C7qbYuAHQvRgwS5_fg/exec';
+const DEFAULT_SHARED_TOKEN = 'CHANGE-ME-TO-A-SECRET';
 
 // ---------- side menu ----------
 const sideMenu = $('sideMenu');
@@ -567,6 +568,9 @@ function loadSettings(){ try { return JSON.parse(localStorage.getItem('benzine_s
 function saveSettingsToStorage(s){ localStorage.setItem('benzine_settings', JSON.stringify(s)); }
 let settings = loadSettings();
 settings.scriptUrl = DEFAULT_SCRIPT_URL;
+// Keep the existing token if one was already configured; otherwise use the token
+// expected by the bundled Apps Script backend so a fresh install can verify login.
+if (!settings.scriptToken) settings.scriptToken = DEFAULT_SHARED_TOKEN;
 saveSettingsToStorage(settings);
 
 function fillSettingsForm(){
@@ -606,7 +610,7 @@ $('loginBtn').onclick = async () => {
 
   const name = $('loginEngineerSelect').value;
   const pin = $('loginPin').value.trim();
-  const scriptToken = $('scriptToken').value.trim();
+  const scriptToken = ($('scriptToken').value.trim() || DEFAULT_SHARED_TOKEN);
   if (!name) return toast('Select your name');
   if (!pin) return toast('Enter your PIN');
   $('loginBtn').disabled = true; $('loginBtn').textContent = 'Checking…';
@@ -627,7 +631,7 @@ $('loginBtn').onclick = async () => {
       toast('❌ Wrong PIN for ' + name);
     }
   } catch (err) {
-    toast('Could not verify — check your connection');
+    toast('Could not verify — check connection or Sync token');
   }
   $('loginBtn').disabled = false;
   updateLoginStatus();
@@ -649,7 +653,7 @@ $('enableRemindersBtn').onclick = async () => {
 };
 $('saveSettings').onclick = () => {
   settings.scriptUrl = DEFAULT_SCRIPT_URL;
-  settings.scriptToken = $('scriptToken').value.trim();
+  settings.scriptToken = ($('scriptToken').value.trim() || DEFAULT_SHARED_TOKEN);
   settings.defaultDriver = $('defaultDriver').value.trim();
   settings.rate = parseFloat($('rate').value) || 2.225;
   saveSettingsToStorage(settings);
