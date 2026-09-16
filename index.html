@@ -101,12 +101,15 @@
 .solfa-balance-box{grid-column:1 / -1;}
 .solfa-entries{margin-top:10px;text-align:left;border-top:1px solid rgba(255,255,255,.10);padding-top:6px;}
 .admin-filter-control{width:100%;min-height:44px;box-sizing:border-box;}
-  .admin-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+  .admin-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
   .admin-tab-btn{padding:11px 6px;border:1px solid var(--border-soft);border-radius:10px;background:var(--card-alt);color:var(--muted);font-weight:800;font-size:12px;cursor:pointer;}
   .admin-tab-btn.active{background:var(--teal);color:#fff;border-color:var(--teal);}
   .admin-panel{display:none;}
   .admin-panel.active{display:block;}
-  .solfa-upload-card{max-width:520px;margin:0 auto;}
+  .solfa-upload-card,.rent-upload-card{max-width:520px;margin:0 auto;}
+.rent-total-card{background:rgba(207,54,145,.16);border:1.5px solid var(--teal);border-radius:14px;padding:18px 14px;text-align:center;margin-top:14px;}
+.rent-total-card .rent-total-lbl{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--teal-dark);font-weight:800;}
+.rent-total-card .rent-total-num{font-size:32px;font-weight:900;margin-top:5px;}
 .solfa-entry{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:7px 2px;font-size:14px;}
 .solfa-entry-date{font-weight:600;color:#e5e7eb;}
 .solfa-entry-amount{font-weight:700;color:#86efac;white-space:nowrap;}
@@ -421,6 +424,7 @@
         <button type="button" class="admin-tab-btn active" id="adminBalancesTabBtn">💰 Balances</button>
         <button type="button" class="admin-tab-btn" id="adminPhotoAuditTabBtn">📷 Photo Audit</button>
         <button type="button" class="admin-tab-btn" id="adminSolfaTabBtn">💵 Solfa</button>
+        <button type="button" class="admin-tab-btn" id="adminRentTabBtn">🚗 Rent</button>
       </div>
       <div class="admin-panel active" id="adminBalancesPanel">
         <div class="card">
@@ -462,7 +466,29 @@
           <div id="adminSolfaStatus" class="hint" style="margin-top:8px;"></div>
         </div>
       </div>
-      <button type="button" class="save-btn" style="background:#374151;" id="adminRefreshTabBtn">🔄 Refresh</button>
+      <div class="admin-panel" id="adminRentPanel">
+        <div class="card rent-upload-card">
+          <strong>🚗 Rent Payment</strong>
+          <div class="hint">Select a completed trip using Driver = Rent. Benzine is taken from that trip's Amount Spent. Enter the Rent amount, press Sum, review the total, then Upload.</div>
+          <label>Trip</label>
+          <select id="adminRentTrip"><option value="">— Select Rent Trip —</option></select>
+          <label>Engineer Name</label>
+          <input type="text" id="adminRentEngineer" class="locked-field" readonly placeholder="Select a rent trip">
+          <label>Benzine Amount Spent</label>
+          <input type="number" id="adminRentBenzine" class="locked-field" readonly value="0">
+          <label>Rent Amount</label>
+          <div class="row2" style="align-items:end;">
+            <input type="number" id="adminRentAmount" min="0" step="0.01" inputmode="decimal" placeholder="Enter Rent amount">
+            <button type="button" class="save-btn" id="adminRentSumBtn" style="margin-top:0;">➕ Sum</button>
+          </div>
+          <div class="rent-total-card"><div class="rent-total-lbl">Total Amount to Pay</div><div class="rent-total-num" id="adminRentTotal">0.00 EGP</div></div>
+          <label>Rent Deduction</label>
+          <select id="adminRentDeduction"><option value="">— Select —</option><option value="On TMX">On TMX</option><option value="On Driver">On Driver</option></select>
+          <button type="button" class="save-btn" id="adminRentUploadBtn">⬆ Upload</button>
+          <div id="adminRentStatus" class="hint" style="margin-top:8px;"></div>
+        </div>
+      </div>
+            <button type="button" class="save-btn" style="background:#374151;" id="adminRefreshTabBtn">🔄 Refresh</button>
       <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="adminLogoutBtn">Log out of Admin</button>
     </div>
   </section>
@@ -1109,16 +1135,18 @@ function adminTodayISO(){
   return local.toISOString().slice(0,10);
 }
 function showAdminPanel(which){
-  const panels={balances:'adminBalancesPanel',photos:'adminPhotoAuditPanel',solfa:'adminSolfaPanel'};
-  const buttons={balances:'adminBalancesTabBtn',photos:'adminPhotoAuditTabBtn',solfa:'adminSolfaTabBtn'};
+  const panels={balances:'adminBalancesPanel',photos:'adminPhotoAuditPanel',solfa:'adminSolfaPanel',rent:'adminRentPanel'};
+  const buttons={balances:'adminBalancesTabBtn',photos:'adminPhotoAuditTabBtn',solfa:'adminSolfaTabBtn',rent:'adminRentTabBtn'};
   Object.keys(panels).forEach(k=>{$(panels[k]).classList.toggle('active',k===which);$(buttons[k]).classList.toggle('active',k===which);});
   if(which==='balances') loadAdminSummary();
   if(which==='photos') loadAdminTrips();
   if(which==='solfa') populateAdminSolfaEngineer();
+  if(which==='rent') loadAdminRentTrips();
 }
 $('adminBalancesTabBtn').onclick=()=>showAdminPanel('balances');
 $('adminPhotoAuditTabBtn').onclick=()=>showAdminPanel('photos');
 $('adminSolfaTabBtn').onclick=()=>{ $('adminSolfaDate').value=adminTodayISO(); showAdminPanel('solfa'); };
+$('adminRentTabBtn').onclick=()=>showAdminPanel('rent');
 
 
 async function adminFetch(action, extra){
@@ -1141,6 +1169,16 @@ function adminErrorMessage(err){
     'invalid-engineer': 'Engineer is not registered in Config',
     'invalid-date': 'Invalid date',
     'invalid-amount': 'Enter a valid amount',
+    'trip-required': 'Select a Rent trip',
+    'rent-required': 'Enter a valid Rent amount',
+    'invalid-rent-deduction': 'Select On TMX or On Driver',
+    'trip-not-found': 'Trip was not found',
+    'not-rent-trip': 'Selected trip is not a Rent trip',
+    'trip-required': 'Select a Rent trip',
+    'rent-required': 'Enter a valid Rent amount',
+    'invalid-rent-deduction': 'Select On TMX or On Driver',
+    'trip-not-found': 'Trip was not found',
+    'not-rent-trip': 'Selected trip is not a Rent trip',
     'failed-to-fetch': 'Could not reach the Google Apps Script backend',
     'server-error': 'Admin request failed'
   };
@@ -1166,6 +1204,7 @@ $('adminLoginTabBtn').onclick = async () => {
     $('adminSolfaDate').value = adminTodayISO();
     await loadAdminSummary();
     await loadAdminTrips();
+    await loadAdminRentTrips();
   } catch (err) {
     adminAuthed = false;
     adminPinValue = '';
@@ -1191,6 +1230,7 @@ $('adminRefreshTabBtn').onclick = async () => {
     await loadAdminSummary();
     await loadAdminTrips();
     populateAdminSolfaEngineer();
+    await loadAdminRentTrips();
     toast('Refreshed');
   } catch (err) {
     toast(adminErrorMessage(err));
@@ -1253,6 +1293,61 @@ $('adminSolfaUploadBtn').onclick=async()=>{
   }
   $('adminSolfaUploadBtn').disabled=false;$('adminSolfaUploadBtn').textContent='⬆ Upload';
 }
+
+
+async function loadAdminRentTrips(){
+  if(!adminAuthed) return;
+  try{
+    const data=await adminFetch('adminRentTrips');
+    adminTripsRentCache=data.trips||[];
+    const select=$('adminRentTrip');
+    const current=select.value;
+    select.innerHTML='<option value="">— Select Rent Trip —</option>' + (data.trips||[]).map(t=>`<option value="${String(t.tripId).replace(/"/g,'&quot;')}">${t.date} · ${t.engineer} · ${t.area||'—'} · ${t.task||'—'} · ${Number(t.benzineAmount||0).toFixed(2)} EGP</option>`).join('');
+    if(current && [...select.options].some(o=>o.value===current)) select.value=current;
+    updateAdminRentTripFields();
+  }catch(err){ toast(adminErrorMessage(err)); }
+}
+function selectedAdminRentTrip(){
+  const id=$('adminRentTrip').value;
+  return adminTripsRentCache.find(t=>String(t.tripId)===String(id));
+}
+let adminTripsRentCache=[];
+function updateAdminRentTripFields(){
+  const t=selectedAdminRentTrip();
+  $('adminRentEngineer').value=t ? (t.engineer||'') : '';
+  $('adminRentBenzine').value=t ? Number(t.benzineAmount||0).toFixed(2) : '0';
+  $('adminRentAmount').value=t && Number(t.rent||0)>0 ? Number(t.rent).toFixed(2) : '';
+  $('adminRentDeduction').value=t && t.rentDeduction ? t.rentDeduction : '';
+  $('adminRentTotal').textContent=(t ? (Number(t.benzineAmount||0)+Number(t.rent||0)) : 0).toFixed(2)+' EGP';
+  $('adminRentStatus').textContent='';
+}
+$('adminRentTrip').addEventListener('change', updateAdminRentTripFields);
+$('adminRentSumBtn').onclick=()=>{
+  const t=selectedAdminRentTrip();
+  if(!t)return toast('Select a Rent trip');
+  const rent=parseFloat($('adminRentAmount').value);
+  if(!isFinite(rent)||rent<0)return toast('Enter a valid Rent amount');
+  $('adminRentTotal').textContent=(Number(t.benzineAmount||0)+rent).toFixed(2)+' EGP';
+};
+$('adminRentUploadBtn').onclick=async()=>{
+  const t=selectedAdminRentTrip();
+  const rent=parseFloat($('adminRentAmount').value);
+  const deduction=$('adminRentDeduction').value;
+  if(!t)return toast('Select a Rent trip');
+  if(!isFinite(rent)||rent<0)return toast('Enter a valid Rent amount');
+  if(!['On TMX','On Driver'].includes(deduction))return toast('Select Rent Deduction');
+  $('adminRentUploadBtn').disabled=true;$('adminRentUploadBtn').textContent='Uploading…';
+  try{
+    const result=await adminFetch('adminRent',{tripId:t.tripId,rent,rentDeduction:deduction});
+    $('adminRentTotal').textContent=Number(result.totalRentBenzine||0).toFixed(2)+' EGP';
+    $('adminRentStatus').textContent=`✅ ${Number(result.totalRentBenzine||0).toFixed(2)} EGP uploaded for ${t.engineer} on ${t.date}.`;
+    toast('Rent uploaded');
+    await loadAdminRentTrips();
+    await loadAdminSummary();
+  }catch(err){ $('adminRentStatus').textContent='❌ '+adminErrorMessage(err); }
+  $('adminRentUploadBtn').disabled=false;$('adminRentUploadBtn').textContent='⬆ Upload';
+};
+
 
 $('adminBalanceMonth').value = new Date().toISOString().slice(0,7);
 $('adminFilterMonth').value = new Date().toISOString().slice(0,7);
