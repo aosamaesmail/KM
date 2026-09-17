@@ -432,7 +432,7 @@
           <strong>Balances</strong>
           <label>Filter Balances</label>
           <div class="filter-row" style="display:grid;grid-template-columns:1fr;gap:8px;">
-            <div><div class="hint" style="margin-bottom:4px;">Engineer</div><select id="adminBalanceEngineer" class="admin-filter-control"><option value="">— All Engineers —</option></select></div>
+            <div><div class="hint" style="margin-bottom:4px;">Engineer</div><div class="search-select admin-filter-control" id="adminBalanceEngineerSearchWrap"><input type="text" id="adminBalanceEngineer" class="admin-filter-control" placeholder="Search or select engineer" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"><div class="search-options" id="adminBalanceEngineerOptions"></div></div></div>
             <div><div class="hint" style="margin-bottom:4px;">Month</div><input type="month" id="adminBalanceMonth" class="month-input admin-filter-control"></div>
             <button type="button" class="save-btn" id="adminClearBalanceMonthBtn" style="background:#374151;width:100%;">Clear</button>
           </div>
@@ -450,8 +450,8 @@
           <strong>📷 Photo Audit</strong>
           <div class="hint">Compare each odometer photo against the KM the engineer entered, grouped by day and engineer.</div>
           <button type="button" class="save-btn" id="adminPhotosToggle" style="width:auto;padding:8px 12px;margin:8px 0 2px;background:#374151;">Hide Photos</button>
-          <label>Filter by Engineer</label><select id="adminFilterEngineer"><option value="">— All Engineers —</option></select>
-          <label>Filter by Month</label><input type="month" id="adminFilterMonth" class="month-input">
+          <label>Filter by Engineer</label><div class="search-select admin-filter-control" id="adminFilterEngineerSearchWrap"><input type="text" id="adminFilterEngineer" class="admin-filter-control" placeholder="Search or select engineer" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"><div class="search-options" id="adminFilterEngineerOptions"></div></div>
+          <label>Filter by Month</label><input type="month" id="adminFilterMonth" class="month-input admin-filter-control">
           <div class="row2" style="margin-top:10px;"><button type="button" class="save-btn" id="adminApplyFiltersBtn">Apply Filters</button><button type="button" class="save-btn" style="background:#374151;" id="adminClearFiltersBtn">Clear</button></div>
         </div>
         <div class="card"><div id="adminTripsList"><div class="empty">No trips loaded yet.</div></div></div>
@@ -460,7 +460,7 @@
         <div class="card solfa-upload-card">
           <strong>💵 Add Solfa</strong>
           <div class="hint">Add a Solfa amount for an engineer. The entry is stored in the Solfa column with the selected engineer and date.</div>
-          <label>Engineer Name</label><select id="adminSolfaEngineer"><option value="">— Select Engineer —</option></select>
+          <label>Engineer Name</label><div class="search-select" id="adminSolfaEngineerSearchWrap"><input type="text" id="adminSolfaEngineer" placeholder="Search or select engineer" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"><div class="search-options" id="adminSolfaEngineerOptions"></div></div>
           <label>Date</label><input type="date" id="adminSolfaDate">
           <label>Amount</label><input type="number" id="adminSolfaAmount" min="0.01" step="0.01" inputmode="decimal" placeholder="Enter amount">
           <button type="button" class="save-btn" id="adminSolfaUploadBtn">⬆ Upload</button>
@@ -1323,9 +1323,9 @@ function renderAdminSummary(data){
 
 function populateAdminEngineerFilter(){
   const cached = getCachedLists();
-  const engineers = cached.engineers||[];
-  populateSimpleSelect($('adminFilterEngineer'), engineers, '', '— All Engineers —');
-  populateSimpleSelect($('adminBalanceEngineer'), engineers, '', '— All Engineers —');
+  const engineers = cached.engineers || [];
+  populateSearchInput($('adminFilterEngineer'), $('adminFilterEngineerOptions'), engineers, $('adminFilterEngineer').value || '');
+  populateSearchInput($('adminBalanceEngineer'), $('adminBalanceEngineerOptions'), engineers, $('adminBalanceEngineer').value || '');
 }
 
 function populateAdminRentDeductionDriver(currentValue){
@@ -1334,8 +1334,8 @@ function populateAdminRentDeductionDriver(currentValue){
 }
 
 function populateAdminSolfaEngineer(){
-  const cached=getCachedLists();
-  populateSimpleSelect($('adminSolfaEngineer'),cached.engineers||[],'','— Select Engineer —');
+  const cached = getCachedLists();
+  populateSearchInput($('adminSolfaEngineer'), $('adminSolfaEngineerOptions'), cached.engineers || [], $('adminSolfaEngineer').value || '');
 }
 $('adminSolfaUploadBtn').onclick=async()=>{
   const engineer=$('adminSolfaEngineer').value;
