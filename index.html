@@ -484,7 +484,10 @@
           <label>Rent Deduction</label>
           <select id="adminRentDeduction"><option value="">— Select —</option><option value="On TMX">On TMX</option><option value="On Driver">On Driver</option></select>
           <label>Rent Deduction Driver</label>
-          <select id="adminRentDeductionDriver"><option value="">— Select Driver (Optional) —</option></select>
+          <div class="search-select" id="adminRentDeductionDriverSearchWrap">
+            <input type="text" id="adminRentDeductionDriver" placeholder="Search or select driver (Optional)" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+            <div class="search-options" id="adminRentDeductionDriverOptions"></div>
+          </div>
           <button type="button" class="save-btn" id="adminRentUploadBtn">⬆ Upload</button>
           <div id="adminRentStatus" class="hint" style="margin-top:8px;"></div>
         </div>
@@ -1300,9 +1303,9 @@ function populateAdminEngineerFilter(){
   populateSimpleSelect($('adminBalanceEngineer'), engineers, '', '— All Engineers —');
 }
 
-function populateAdminRentDeductionDriver(){
+function populateAdminRentDeductionDriver(currentValue){
   const cached=getCachedLists();
-  populateSimpleSelect($('adminRentDeductionDriver'),cached.drivers||[],'','— Select Driver (Optional) —');
+  populateSearchInput($('adminRentDeductionDriver'), $('adminRentDeductionDriverOptions'), cached.drivers||[], currentValue);
 }
 
 function populateAdminSolfaEngineer(){
@@ -1353,7 +1356,7 @@ function updateAdminRentTripFields(){
   $('adminRentBenzine').value=t ? Number(t.benzineAmount||0).toFixed(2) : '0';
   $('adminRentAmount').value=t && Number(t.rent||0)>0 ? Number(t.rent).toFixed(2) : '';
   $('adminRentDeduction').value=t && t.rentDeduction ? t.rentDeduction : '';
-  $('adminRentDeductionDriver').value=t && t.rentDeductionDriver ? t.rentDeductionDriver : '';
+  populateAdminRentDeductionDriver(t && t.rentDeductionDriver ? t.rentDeductionDriver : '');
   $('adminRentTotal').textContent=(t ? (Number(t.benzineAmount||0)+Number(t.rent||0)) : 0).toFixed(2)+' EGP';
   $('adminRentStatus').textContent='';
 }
