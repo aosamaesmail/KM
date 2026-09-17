@@ -495,6 +495,13 @@
         </div>
       </div>
             <button type="button" class="save-btn" style="background:#374151;" id="adminRefreshTabBtn">🔄 Refresh</button>
+      <div class="card" id="adminRateCard" style="margin-top:12px;">
+        <h3 style="margin:0 0 10px;font-size:15px;">⚙️ Rate Settings</h3>
+        <label>Rate per KM (EGP)</label>
+        <input type="number" id="adminRate" step="0.001" min="0.001" inputmode="decimal" placeholder="Enter rate">
+        <button type="button" class="save-btn" id="adminSaveRateBtn">💾 Save Rate</button>
+        <div class="hint" id="adminRateStatus" style="margin-top:8px;"></div>
+      </div>
       <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="adminLogoutBtn">Log out of Admin</button>
     </div>
   </section>
@@ -511,7 +518,7 @@
     <button class="close" id="closeSettings">✕</button>
     <h2>Settings</h2>
     <label>Sync token</label>
-    <input type="text" id="scriptToken" placeholder="Shared token from Code.gs">
+    <input type="text" id="scriptToken" placeholder="Enter the Sync token sent to you" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
 
     <h2 style="font-size:15px;margin-top:22px;">🔐 Engineer Login</h2>
     <label>My Name</label>
@@ -529,9 +536,6 @@
       <input type="text" id="defaultDriver" placeholder="Search or select driver" autocomplete="off">
       <div class="search-options" id="defaultDriverOptions"></div>
     </div>
-
-    <label>Rate per KM (EGP)</label>
-    <input type="number" id="rate" step="0.001" value="2.225">
 
     <button class="save-btn" id="saveSettings">Save Settings</button>
     <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="enableRemindersBtn">🔔 Enable Finish Reminders</button>
@@ -600,15 +604,14 @@ function loadSettings(){ try { return JSON.parse(localStorage.getItem('benzine_s
 function saveSettingsToStorage(s){ localStorage.setItem('benzine_settings', JSON.stringify(s)); }
 let settings = loadSettings();
 settings.scriptUrl = DEFAULT_SCRIPT_URL;
-// Keep the existing token if one was already configured; otherwise use the token
-// expected by the bundled Apps Script backend so a fresh install can verify login.
-if (!settings.scriptToken) settings.scriptToken = DEFAULT_SHARED_TOKEN;
+// Sync token is intentionally blank on a fresh install.
+// Clear only the bundled placeholder from older builds; preserve any real token.
+if (settings.scriptToken === DEFAULT_SHARED_TOKEN) settings.scriptToken = '';
 saveSettingsToStorage(settings);
 
 function fillSettingsForm(){
   $('scriptToken').value = settings.scriptToken || '';
   $('defaultDriver').value = settings.defaultDriver || '';
-  $('rate').value = settings.rate ?? 2.225;
 }
 fillSettingsForm();
 
@@ -642,7 +645,8 @@ $('loginBtn').onclick = async () => {
 
   const name = $('loginEngineerSelect').value;
   const pin = $('loginPin').value.trim();
-  const scriptToken = ($('scriptToken').value.trim() || DEFAULT_SHARED_TOKEN);
+  const scriptToken = $('scriptToken').value.trim();
+  if (!scriptToken) return toast('Enter the Sync token sent to you');
   if (!name) return toast('Select your name');
   if (!pin) return toast('Enter your PIN');
   $('loginBtn').disabled = true; $('loginBtn').textContent = 'Checking…';
@@ -685,9 +689,10 @@ $('enableRemindersBtn').onclick = async () => {
 };
 $('saveSettings').onclick = () => {
   settings.scriptUrl = DEFAULT_SCRIPT_URL;
-  settings.scriptToken = ($('scriptToken').value.trim() || DEFAULT_SHARED_TOKEN);
+  const tokenValue = $('scriptToken').value.trim();
+  if (!tokenValue) return toast('Enter the Sync token sent to you');
+  settings.scriptToken = tokenValue;
   settings.defaultDriver = $('defaultDriver').value.trim();
-  settings.rate = parseFloat($('rate').value) || 2.225;
   saveSettingsToStorage(settings);
   if (settings.defaultDriver) $('driver').value = settings.defaultDriver;
   recalcFinish();
@@ -1063,7 +1068,7 @@ function recalcFinish(){
   const trip = openTripsCache.find(t => t.tripId === $('openTripSelect').value);
   const start = trip ? parseFloat(trip.startKm) : NaN;
   const finish = parseFloat($('finishKm').value);
-  const rate = trip && isFinite(parseFloat(trip.rate)) ? parseFloat(trip.rate) : (settings.rate ?? 2.225);
+  const rate = trip && isFinite(parseFloat(trip.rate)) ? parseFloat(trip.rate) : 0;
   const normalLastForthBack = trip && isFinite(parseFloat(trip.lastForthBack)) ? parseFloat(trip.lastForthBack) : 0;
   const lastForthBack = $('overNightStay').checked ? 0 : normalLastForthBack;
 
@@ -1189,11 +1194,40 @@ async function adminFetch(action, extra){
   return data;
 }
 
+async function loadAdminRate(){
+  if (!adminAuthed) return;
+  try {
+    const data = await adminFetch('adminGetRate');
+    $('adminRate').value = Number(data.ratePerKm || 0).toFixed(3);
+    $('adminRateStatus').textContent = 'Current configured rate: ' + Number(data.ratePerKm || 0).toFixed(3) + ' EGP/KM';
+  } catch (err) {
+    $('adminRateStatus').textContent = '❌ ' + adminErrorMessage(err);
+  }
+}
+
+$('adminSaveRateBtn').onclick = async () => {
+  const rate = parseFloat($('adminRate').value);
+  if (!isFinite(rate) || rate <= 0) return toast('Enter a valid rate greater than 0');
+  $('adminSaveRateBtn').disabled = true;
+  $('adminSaveRateBtn').textContent = 'Saving…';
+  try {
+    const data = await adminFetch('adminSetRate', { ratePerKm: rate });
+    $('adminRate').value = Number(data.ratePerKm).toFixed(3);
+    $('adminRateStatus').textContent = '✅ Rate updated to ' + Number(data.ratePerKm).toFixed(3) + ' EGP/KM';
+    toast('Rate updated');
+  } catch (err) {
+    $('adminRateStatus').textContent = '❌ ' + adminErrorMessage(err);
+  }
+  $('adminSaveRateBtn').disabled = false;
+  $('adminSaveRateBtn').textContent = '💾 Save Rate';
+};
+
 function adminErrorMessage(err){
   const code = String(err && err.message || 'server-error');
   const messages = {
     'invalid-admin-pin': '❌ Wrong admin PIN',
     'invalid-token': '❌ Invalid Sync token',
+    'invalid-rate': 'Enter a valid rate greater than 0',
     'engineer-required': 'Engineer is required',
     'invalid-engineer': 'Engineer is not registered in Config',
     'invalid-date': 'Invalid date',
@@ -1232,6 +1266,7 @@ $('adminLoginTabBtn').onclick = async () => {
     populateAdminEngineerFilter();
     populateAdminSolfaEngineer();
     $('adminSolfaDate').value = adminTodayISO();
+    await loadAdminRate();
     await loadAdminSummary();
     await loadAdminTrips();
     await loadAdminRentTrips();
@@ -1264,6 +1299,7 @@ async function restoreAdminSession(){
     populateAdminEngineerFilter();
     populateAdminSolfaEngineer();
     $('adminSolfaDate').value = adminTodayISO();
+    await loadAdminRate();
     await loadAdminSummary();
     await loadAdminTrips();
     await loadAdminRentTrips();
@@ -1284,6 +1320,7 @@ async function loadAdminSummary(){
 }
 $('adminRefreshTabBtn').onclick = async () => {
   try {
+    await loadAdminRate();
     await loadAdminSummary();
     await loadAdminTrips();
     populateAdminSolfaEngineer();
@@ -1559,7 +1596,7 @@ $('startForm').addEventListener('submit', async (e) => {
     date: $('date').value, day: $('day').value,
     area: $('area').value.trim(), task: $('task').value.trim(),
     startKm: parseFloat(start), startedAt: new Date().toISOString(),
-    rate: settings.rate ?? 2.225,
+    rate: undefined,
     lastForthBack: 0,
   };
   const payload = { action: 'start', ...trip, startPhoto };
@@ -1577,7 +1614,10 @@ $('startForm').addEventListener('submit', async (e) => {
     const autoForthBack = serverResult && serverResult.autoForthBack;
     if (autoForthBack && autoForthBack.forthBack !== undefined && autoForthBack.forthBack !== null) {
       const updatedOpenTrips = getOpenTrips().map(t =>
-        t.tripId === tripId ? Object.assign({}, t, { lastForthBack: Number(autoForthBack.forthBack) || 0 }) : t
+        t.tripId === tripId ? Object.assign({}, t, {
+          lastForthBack: Number(autoForthBack.forthBack) || 0,
+          rate: isFinite(parseFloat(autoForthBack.ratePerKm)) ? Number(autoForthBack.ratePerKm) : t.rate
+        }) : t
       );
       setOpenTrips(updatedOpenTrips);
       recalcFinish();
@@ -1649,8 +1689,8 @@ $('finishForm').addEventListener('submit', async (e) => {
     // The Forth & Back is added only to the driver's payment calculation.
     trip: parseFloat($('todayTripOut').textContent),
     totalKm: parseFloat($('totalOut').textContent),
-    amountSpent: parseFloat($('todayTripOut').textContent) * (isFinite(parseFloat(trip.rate)) ? parseFloat(trip.rate) : (settings.rate ?? 2.225)),
-    rate: (isFinite(parseFloat(trip.rate)) ? parseFloat(trip.rate) : (settings.rate ?? 2.225)),
+    amountSpent: parseFloat($('todayTripOut').textContent) * (isFinite(parseFloat(trip.rate)) ? parseFloat(trip.rate) : 0),
+    rate: (isFinite(parseFloat(trip.rate)) ? parseFloat(trip.rate) : 0),
     staticKm: parseFloat($('staticKm').value)||0,
     overNightStay: $('overNightStay').checked,
     finishPhoto, finishedAt: new Date().toISOString(),
