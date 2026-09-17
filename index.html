@@ -483,6 +483,8 @@
           <div class="rent-total-card"><div class="rent-total-lbl">Total Amount to Pay</div><div class="rent-total-num" id="adminRentTotal">0.00 EGP</div></div>
           <label>Rent Deduction</label>
           <select id="adminRentDeduction"><option value="">— Select —</option><option value="On TMX">On TMX</option><option value="On Driver">On Driver</option></select>
+          <label>Rent Deduction Driver</label>
+          <select id="adminRentDeductionDriver"><option value="">— Select Driver (Optional) —</option></select>
           <button type="button" class="save-btn" id="adminRentUploadBtn">⬆ Upload</button>
           <div id="adminRentStatus" class="hint" style="margin-top:8px;"></div>
         </div>
@@ -1298,6 +1300,11 @@ function populateAdminEngineerFilter(){
   populateSimpleSelect($('adminBalanceEngineer'), engineers, '', '— All Engineers —');
 }
 
+function populateAdminRentDeductionDriver(){
+  const cached=getCachedLists();
+  populateSimpleSelect($('adminRentDeductionDriver'),cached.drivers||[],'','— Select Driver (Optional) —');
+}
+
 function populateAdminSolfaEngineer(){
   const cached=getCachedLists();
   populateSimpleSelect($('adminSolfaEngineer'),cached.engineers||[],'','— Select Engineer —');
@@ -1324,6 +1331,7 @@ $('adminSolfaUploadBtn').onclick=async()=>{
 
 async function loadAdminRentTrips(){
   if(!adminAuthed) return;
+  populateAdminRentDeductionDriver();
   try{
     const data=await adminFetch('adminRentTrips');
     adminTripsRentCache=data.trips||[];
@@ -1345,6 +1353,7 @@ function updateAdminRentTripFields(){
   $('adminRentBenzine').value=t ? Number(t.benzineAmount||0).toFixed(2) : '0';
   $('adminRentAmount').value=t && Number(t.rent||0)>0 ? Number(t.rent).toFixed(2) : '';
   $('adminRentDeduction').value=t && t.rentDeduction ? t.rentDeduction : '';
+  $('adminRentDeductionDriver').value=t && t.rentDeductionDriver ? t.rentDeductionDriver : '';
   $('adminRentTotal').textContent=(t ? (Number(t.benzineAmount||0)+Number(t.rent||0)) : 0).toFixed(2)+' EGP';
   $('adminRentStatus').textContent='';
 }
@@ -1360,12 +1369,13 @@ $('adminRentUploadBtn').onclick=async()=>{
   const t=selectedAdminRentTrip();
   const rent=parseFloat($('adminRentAmount').value);
   const deduction=$('adminRentDeduction').value;
+  const deductionDriver=$('adminRentDeductionDriver').value.trim();
   if(!t)return toast('Select a Rent trip');
   if(!isFinite(rent)||rent<=0)return toast('Enter a valid Rent amount');
   if(!['On TMX','On Driver'].includes(deduction))return toast('Select Rent Deduction');
   $('adminRentUploadBtn').disabled=true;$('adminRentUploadBtn').textContent='Uploading…';
   try{
-    const result=await adminFetch('adminRent',{tripId:t.tripId,rent,rentDeduction:deduction});
+    const result=await adminFetch('adminRent',{tripId:t.tripId,rent,rentDeduction:deduction,rentDeductionDriver:deductionDriver});
     $('adminRentTotal').textContent=Number(result.totalRentBenzine||0).toFixed(2)+' EGP';
     $('adminRentStatus').textContent=`✅ ${Number(result.totalRentBenzine||0).toFixed(2)} EGP uploaded for ${t.engineer} on ${t.date}.`;
     toast('Rent uploaded');
