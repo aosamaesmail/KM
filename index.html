@@ -69,6 +69,7 @@
   .modal{background:var(--card);border-radius:16px 16px 0 0;padding:20px;width:100%;max-height:88vh;overflow:auto;border-top:0.5px solid var(--border-soft);}
   .modal h2{margin-top:0;font-size:17px;color:#fff;}
   .modal .close{float:right;background:none;border:none;font-size:20px;color:var(--muted);}
+  .validation-error{color:#fca5a5;font-weight:800;margin-top:6px;display:block;}
   .hint{font-size:12px;color:var(--muted);margin-top:4px;}
   .save-btn{width:100%;padding:13px;background:var(--teal);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;margin-top:14px;}
   #loginPin{min-height:54px;font-size:20px;letter-spacing:3px;text-align:center;}
@@ -285,14 +286,14 @@
     <form class="card" id="startForm" autocomplete="off">
       <label>Engineer</label>
       <div class="locked-field" id="startEngineerDisplay">— not logged in —</div>
-      <div class="hint">This is locked to your login. Not you? Switch in ☰ Menu → Settings.</div>
+      <div class="hint" id="startEngineerHint">This is locked to your login. Not you? Switch in ☰ Menu → Settings.</div>
 
       <label>Driver Name</label>
       <div class="search-select" id="driverSearchWrap">
         <input type="text" id="driver" placeholder="Search or select driver" autocomplete="off">
         <div class="search-options" id="driverOptions"></div>
       </div>
-      <div class="hint">Start typing to search registered drivers.</div>
+      <div class="hint" id="startDriverHint">Start typing to search registered drivers.</div>
 
       <div class="row2">
         <div>
@@ -354,6 +355,7 @@
         <input type="checkbox" id="overNightStay">
         <span>Over Night Stay</span>
       </label>
+      <div class="hint">Checked = F&amp;B for this trip is always 0 KM and no home/personal F&amp;B is added later.</div>
 
       <div class="computed">
         <div><div class="num" id="todayTripOut">0</div><div class="lbl">Today's Trip KM</div></div>
@@ -821,6 +823,29 @@ function populateDefaultDriverList(list, currentValue){
 }
 
 function getDriverValue(){ return $('driver').value.trim(); }
+
+function findRegisteredName(value, list){
+  const target = String(value || '').trim().toLowerCase();
+  if (!target) return null;
+  return (list || []).find(name => String(name || '').trim().toLowerCase() === target) || null;
+}
+function validateStartNamesClient(){
+  const cached = getCachedLists();
+  const engineer = findRegisteredName(settings.engineer, cached.engineers || []);
+  const driver = findRegisteredName(getDriverValue(), cached.drivers || []);
+  const eh = $('startEngineerHint'), dh = $('startDriverHint');
+  if (eh) {
+    eh.style.display='block';
+    eh.className = engineer ? 'hint' : 'validation-error';
+    eh.textContent = engineer ? 'This is locked to your login. Not you? Switch in ☰ Menu → Settings.' : '❌ Engineer name is not registered. Please log in again with the correct registered engineer name.';
+  }
+  if (dh) {
+    dh.style.display='block';
+    dh.className = driver ? 'hint' : 'validation-error';
+    dh.textContent = driver ? 'Start typing to search registered drivers.' : '❌ Invalid driver name. Please select a driver from the registered searchable list.';
+  }
+  return { engineer, driver };
+}
 
 
 function populateSimpleSelect(selectEl, list, currentValue, placeholder){
@@ -1503,6 +1528,7 @@ function renderAdminTripCard(t){
         </div>
       </div>
       <div class="sub-row">${t.totalKm||0} km · ${Number(t.amountSpent||0).toFixed(2)} EGP</div>
+      <div class="sub-row" style="margin-top:6px;"><strong>Driver Name:</strong> ${t.driver || '—'}</div>
     </div>`;
 }
 
@@ -1521,9 +1547,15 @@ $('startForm').addEventListener('submit', async (e) => {
   if (!start) return toast('Start KM is required');
   if (!startPhoto) { $('startPhotoMissing').style.display='block'; return toast('Start KM photo is required'); }
 
+  const validNames = validateStartNamesClient();
+  if (!validNames.engineer || !validNames.driver) {
+    return toast(!validNames.engineer ? '❌ Re-enter the correct registered Engineer name in Settings' : '❌ Re-enter the correct Driver name from the searchable list');
+  }
+  const canonicalEngineer = validNames.engineer;
+  const canonicalDriver = validNames.driver;
   const tripId = genId();
   const trip = {
-    tripId, engineer, driver: getDriverValue(),
+    tripId, engineer: canonicalEngineer, driver: canonicalDriver,
     date: $('date').value, day: $('day').value,
     area: $('area').value.trim(), task: $('task').value.trim(),
     startKm: parseFloat(start), startedAt: new Date().toISOString(),
@@ -1555,9 +1587,13 @@ $('startForm').addEventListener('submit', async (e) => {
     showResultDialog('success', `${trip.area} - ${trip.task} - ${trip.startKm} KM`);
   } catch (err) {
     const classified = classifySendError(err);
-    if (classified.kind === 'invalid-pin') {
+    if (classified.kind === 'invalid-pin' || classified.kind === 'invalid-engineer-name' || classified.kind === 'invalid-driver-name') {
+      // Validation errors must never be queued as uploads. Remove the local trip too,
+      // because nothing was accepted by Google Sheets.
+      setOpenTrips(getOpenTrips().filter(t => t.tripId !== tripId));
       upsertLogEntry(tripId, { engineer, display, status: 'error' });
-      toast('🔒 Login invalid — log in again in Settings');
+      if (classified.kind === 'invalid-pin') toast('🔒 Login invalid — log in again in Settings');
+      else toast('❌ Please re-enter the correct registered name');
       showResultDialog('failure', classified.text);
     } else {
       const q = getQueue(); q.push({ tripId, action: 'start', payload, display, engineer }); setQueue(q);
@@ -1771,6 +1807,12 @@ function showResultDialog(state, message){
 function classifySendError(err){
   if (err && err.message === 'invalid-pin') {
     return { kind: 'invalid-pin', text: 'Your login is invalid. Please log in again in Settings, then try again.' };
+  }
+  if (err && err.message === 'invalid-engineer-name') {
+    return { kind: 'invalid-engineer-name', text: 'Engineer name is not registered. Please re-enter the correct registered name in Settings.' };
+  }
+  if (err && err.message === 'invalid-driver-name') {
+    return { kind: 'invalid-driver-name', text: 'Driver name is not registered. Please select the correct driver from the searchable list.' };
   }
   if (!navigator.onLine || err instanceof TypeError) {
     return { kind: 'offline', text: 'No internet connection — this upload will be saved and sent automatically once you\'re back online.' };
