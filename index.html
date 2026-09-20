@@ -212,6 +212,8 @@
     html[dir="rtl"] input,html[dir="rtl"] select,html[dir="rtl"] textarea{text-align:right;}
     html[dir="rtl"] .modal .close{left:12px;right:auto;}
     html[dir="rtl"] .search-options{text-align:right;}
+
+    .side-menu-logout { margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -265,6 +267,14 @@
     <button type="button" class="side-menu-item" id="menuSettingsBtn">
       <span class="side-menu-icon">⚙️</span>
       <span data-i18n="Settings">Settings</span>
+    </button>
+    <button type="button" class="side-menu-item side-menu-logout" id="sideAdminLogoutBtn" style="display:none;">
+      <span class="side-menu-icon">↪</span>
+      <span data-i18n="Log out of Admin">Log out of Admin</span>
+    </button>
+    <button type="button" class="side-menu-item side-menu-logout" id="sideFinanceLogoutBtn" style="display:none;">
+      <span class="side-menu-icon">↪</span>
+      <span data-i18n="Log out of Finance">Log out of Finance</span>
     </button>
   </nav>
 
@@ -509,7 +519,6 @@
         </div>
       </div>
             <button type="button" class="save-btn" style="background:#374151;" id="adminRefreshTabBtn">🔄 Refresh</button>
-      <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="adminLogoutBtn">Log out of Admin</button>
     </div>
   </section>
 
@@ -532,7 +541,6 @@
         <div class="row2" style="margin-top:10px;"><button type="button" class="save-btn" id="financeApplyFiltersBtn">Apply Filters</button><button type="button" class="save-btn" style="background:#374151;" id="financeClearFiltersBtn">Clear</button></div>
       </div>
       <div class="card"><div id="financeTripsList"><div class="empty">No trips loaded yet.</div></div></div>
-      <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="financeLogoutBtn">Log out of Finance</button>
     </div>
   </section>
 
@@ -1377,10 +1385,13 @@ $('adminRentTabBtn').onclick=()=>showAdminPanel('rent');
 
 function updateFinanceUI(){
   const roleEl = document.querySelector('.side-menu-role');
-  if (roleEl) roleEl.textContent = financeAuthed ? 'Finance' : 'Engineer';
+  if (roleEl) roleEl.textContent = financeAuthed ? 'Finance' : (adminAuthed ? 'Admin' : 'Engineer');
   $('financeLoginCard').style.display = financeAuthed ? 'none' : 'block';
   $('financeDashboard').style.display = financeAuthed ? 'block' : 'none';
   if ($('menuAdminBtn')) $('menuAdminBtn').style.display = financeAuthed ? 'none' : '';
+  if ($('menuFinanceBtn')) $('menuFinanceBtn').style.display = adminAuthed ? 'none' : '';
+  if ($('sideAdminLogoutBtn')) $('sideAdminLogoutBtn').style.display = adminAuthed ? 'flex' : 'none';
+  if ($('sideFinanceLogoutBtn')) $('sideFinanceLogoutBtn').style.display = financeAuthed ? 'flex' : 'none';
 }
 
 function showFinanceSection(){
@@ -1413,14 +1424,16 @@ $('financeLoginBtn').onclick = async () => {
     $('financeLoginBtn').disabled = false; $('financeLoginBtn').textContent = '🔐 Login as Finance';
   }
 };
-$('financeLogoutBtn').onclick = () => {
+function logoutFinance(){
   financeAuthed = false; financePinValue = '';
   sessionStorage.removeItem('telecomax_finance_session_pin');
   $('financePinInput').value = '';
   updateFinanceUI();
   showTab('start');
+  closeSideMenu();
   toast('Finance logged out');
-};
+}
+$('sideFinanceLogoutBtn').onclick = logoutFinance;
 $('financeFilterEngineer').addEventListener('change', loadFinanceTrips);
 $('financeApplyFiltersBtn').onclick=()=>loadFinanceTrips();
 $('financeClearFiltersBtn').onclick=()=>{ $('financeFilterEngineer').value=''; $('financeFilterMonth').value=''; loadFinanceTrips(); };
@@ -1533,6 +1546,7 @@ $('adminLoginTabBtn').onclick = async () => {
     await adminFetch('adminVerify');
     adminAuthed = true;
     sessionStorage.setItem('telecomax_admin_session_pin', adminPinValue);
+    updateFinanceUI();
     $('adminLoginCard').style.display = 'none';
     $('adminDashboard').style.display = 'block';
     populateAdminEngineerFilter();
@@ -1550,13 +1564,18 @@ $('adminLoginTabBtn').onclick = async () => {
   $('adminLoginTabBtn').disabled = false; $('adminLoginTabBtn').textContent = '🔐 Login as Admin';
 };
 
-$('adminLogoutBtn').onclick = () => {
+function logoutAdmin(){
   adminAuthed = false; adminPinValue = '';
   sessionStorage.removeItem('telecomax_admin_session_pin');
   $('adminPinInputTab').value = '';
   $('adminLoginCard').style.display = 'block';
   $('adminDashboard').style.display = 'none';
-};
+  updateFinanceUI();
+  showTab('start');
+  closeSideMenu();
+  toast('Admin logged out');
+}
+$('sideAdminLogoutBtn').onclick = logoutAdmin;
 
 async function restoreAdminSession(){
   const savedPin = sessionStorage.getItem('telecomax_admin_session_pin');
@@ -1565,6 +1584,7 @@ async function restoreAdminSession(){
   try {
     await adminFetch('adminVerify');
     adminAuthed = true;
+    updateFinanceUI();
     $('adminLoginCard').style.display = 'none';
     $('adminDashboard').style.display = 'block';
     populateAdminEngineerFilter();
