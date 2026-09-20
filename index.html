@@ -204,6 +204,14 @@
   .filter-row .save-btn{margin-top:0;}
   .month-input{color-scheme:dark;}
 
+
+    html[dir="rtl"] body{direction:rtl;}
+    html[dir="rtl"] .side-menu{right:0;left:auto;transform:translateX(105%);}
+    html[dir="rtl"] .side-menu.open{transform:translateX(0);}
+    html[dir="rtl"] .side-menu-overlay{direction:rtl;}
+    html[dir="rtl"] input,html[dir="rtl"] select,html[dir="rtl"] textarea{text-align:right;}
+    html[dir="rtl"] .modal .close{left:12px;right:auto;}
+    html[dir="rtl"] .search-options{text-align:right;}
 </style>
 </head>
 <body>
@@ -239,24 +247,24 @@
   <nav class="side-menu-nav">
     <button type="button" class="side-menu-item" id="menuHomeBtn">
       <span class="side-menu-icon">🏠</span>
-      <span>Home</span>
+      <span data-i18n="Home">Home</span>
     </button>
     <button type="button" class="side-menu-item" id="menuHistoryBtn">
       <span class="side-menu-icon">📊</span>
-      <span>History</span>
+      <span data-i18n="History">History</span>
     </button>
     <button type="button" class="side-menu-item" id="menuAdminBtn">
       <span class="side-menu-icon">🛡</span>
-      <span>Admin</span>
+      <span data-i18n="Admin">Admin</span>
     </button>
     <button type="button" class="side-menu-item" id="menuFinanceBtn">
       <span class="side-menu-icon">💳</span>
-      <span>Finance</span>
+      <span data-i18n="Finance">Finance</span>
     </button>
     <div class="side-menu-divider"></div>
     <button type="button" class="side-menu-item" id="menuSettingsBtn">
       <span class="side-menu-icon">⚙️</span>
-      <span>Settings</span>
+      <span data-i18n="Settings">Settings</span>
     </button>
   </nav>
 
@@ -282,19 +290,19 @@
   </div>
 
   <div class="tabs" id="tabs">
-    <button class="tab-btn active" id="tabStartBtn">▶ Start</button>
-    <button class="tab-btn" id="tabFinishBtn">⏹ Finish</button>
+    <button class="tab-btn active" id="tabStartBtn">▶ <span data-i18n="Start">Start</span></button>
+    <button class="tab-btn" id="tabFinishBtn">⏹ <span data-i18n="Finish">Finish</span></button>
   </div>
   <div class="lock-note" id="lockNote" style="display:none;"></div>
 
   <!-- START SECTION -->
   <section class="section active" id="startSection">
     <form class="card" id="startForm" autocomplete="off">
-      <label>Engineer</label>
+      <label data-i18n="Engineer">Engineer</label>
       <div class="locked-field" id="startEngineerDisplay">— not logged in —</div>
       <div class="hint" id="startEngineerHint">This is locked to your login. Not you? Switch in ☰ Menu → Settings.</div>
 
-      <label>Driver Name</label>
+      <label data-i18n="Driver Name">Driver Name</label>
       <div class="search-select" id="driverSearchWrap">
         <input type="text" id="driver" placeholder="Search or select driver" autocomplete="off">
         <div class="search-options" id="driverOptions"></div>
@@ -303,22 +311,22 @@
 
       <div class="row2">
         <div>
-          <label>Date *</label>
+          <label data-i18n="Date *">Date *</label>
           <input type="date" id="date" required>
         </div>
         <div>
-          <label>Day</label>
+          <label data-i18n="Day">Day</label>
           <input type="text" id="day" disabled>
         </div>
       </div>
 
-      <label>Area *</label>
+      <label data-i18n="Area *">Area *</label>
       <input type="text" id="area" name="tmx_area_entry" placeholder="e.g. Sharm El-Sheikh" autocomplete="off" aria-autocomplete="none" data-lpignore="true" autocapitalize="words" autocorrect="off" spellcheck="false" required>
 
-      <label>Task *</label>
+      <label data-i18n="Task *">Task *</label>
       <input type="text" id="task" name="tmx_task_entry" placeholder="e.g. Travel to site / complaint" autocomplete="off" aria-autocomplete="none" data-lpignore="true" autocapitalize="sentences" autocorrect="off" spellcheck="false" required>
 
-      <label>Start KM *</label>
+      <label data-i18n="Start KM *">Start KM *</label>
       <div class="km-row">
         <input type="number" id="startKm" inputmode="numeric" placeholder="Odometer reading" required>
         <div id="startPhotoBlock">
@@ -342,7 +350,7 @@
       <div class="empty" id="noOpenTrips" style="display:none;">No open trips on this phone. Start a trip first.</div>
       <div class="trip-summary" id="tripSummary" style="display:none;"></div>
 
-      <label>Finish KM *</label>
+      <label data-i18n="Finish KM *">Finish KM *</label>
       <div class="km-row">
         <input type="number" id="finishKm" inputmode="numeric" placeholder="Odometer reading" required>
         <div id="finishPhotoBlock">
@@ -353,7 +361,7 @@
       <div class="photo-missing" id="finishPhotoMissing">Required — photo of the dashboard right now</div>
 
       <div>
-        <label>Static</label>
+        <label data-i18n="Static">Static</label>
         <input type="number" id="staticKm" inputmode="numeric" value="0">
       </div>
 
@@ -421,7 +429,7 @@
   <section class="section" id="adminSection">
     <div class="page-header"><span class="page-header-icon">🛡</span><span class="page-header-title">Admin</span></div>
     <div class="card" id="adminLoginCard">
-      <label>Admin PIN</label>
+      <label data-i18n="Admin PIN">Admin PIN</label>
       <input type="password" inputmode="numeric" id="adminPinInputTab" placeholder="Admin PIN">
       <button type="button" class="save-btn" id="adminLoginTabBtn">🔐 Login as Admin</button>
     </div>
@@ -456,7 +464,7 @@
           <strong>📷 Photo Audit</strong>
           <div class="hint">Compare each odometer photo against the KM the engineer entered, grouped by day and engineer.</div>
           <button type="button" class="save-btn" id="adminPhotosToggle" style="width:auto;padding:8px 12px;margin:8px 0 2px;background:#374151;">Hide Photos</button>
-          <label>Filter by Engineer</label><div class="search-select admin-filter-control" id="adminFilterEngineerSearchWrap"><input type="text" id="adminFilterEngineer" class="admin-filter-control" placeholder="Search or select engineer" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"><div class="search-options" id="adminFilterEngineerOptions"></div></div>
+          <label data-i18n="Filter by Engineer">Filter by Engineer</label><div class="search-select admin-filter-control" id="adminFilterEngineerSearchWrap"><input type="text" id="adminFilterEngineer" class="admin-filter-control" placeholder="Search or select engineer" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"><div class="search-options" id="adminFilterEngineerOptions"></div></div>
           <label>Filter by Month</label><input type="month" id="adminFilterMonth" class="month-input admin-filter-control">
           <div class="row2" style="margin-top:10px;"><button type="button" class="save-btn" id="adminApplyFiltersBtn">Apply Filters</button><button type="button" class="save-btn" style="background:#374151;" id="adminClearFiltersBtn">Clear</button></div>
         </div>
@@ -466,7 +474,7 @@
         <div class="card solfa-upload-card">
           <strong>💵 Add Solfa</strong>
           <div class="hint">Add a Solfa amount for an engineer. The entry is stored in the Solfa column with the selected engineer and date.</div>
-          <label>Engineer Name</label><div class="search-select" id="adminSolfaEngineerSearchWrap"><input type="text" id="adminSolfaEngineer" placeholder="Search or select engineer" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"><div class="search-options" id="adminSolfaEngineerOptions"></div></div>
+          <label data-i18n="Engineer Name">Engineer Name</label><div class="search-select" id="adminSolfaEngineerSearchWrap"><input type="text" id="adminSolfaEngineer" placeholder="Search or select engineer" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"><div class="search-options" id="adminSolfaEngineerOptions"></div></div>
           <label>Date</label><input type="date" id="adminSolfaDate">
           <label>Amount</label><input type="number" id="adminSolfaAmount" min="0.01" step="0.01" inputmode="decimal" placeholder="Enter amount">
           <button type="button" class="save-btn" id="adminSolfaUploadBtn">⬆ Upload</button>
@@ -479,7 +487,7 @@
           <div class="hint">Select a completed trip using Driver = Rent. Benzine is taken from that trip's Amount Spent. Enter the Rent amount, press Sum, review the total, then Upload.</div>
           <label>Trip</label>
           <select id="adminRentTrip"><option value="">— Select Rent Trip —</option></select>
-          <label>Engineer Name</label>
+          <label data-i18n="Engineer Name">Engineer Name</label>
           <input type="text" id="adminRentEngineer" class="locked-field" readonly placeholder="Select a rent trip">
           <label>Benzine Amount Spent</label>
           <input type="number" id="adminRentBenzine" class="locked-field" readonly value="0">
@@ -509,7 +517,7 @@
   <section class="section" id="financeSection">
     <div class="page-header"><span class="page-header-icon">💳</span><span class="page-header-title">Finance</span></div>
     <div class="card" id="financeLoginCard">
-      <label>Finance PIN</label>
+      <label data-i18n="Finance PIN">Finance PIN</label>
       <input type="password" inputmode="numeric" id="financePinInput" placeholder="Finance PIN">
       <button type="button" class="save-btn" id="financeLoginBtn">🔐 Login as Finance</button>
       <div class="hint">Finance has separate access and cannot open the Admin section.</div>
@@ -519,7 +527,7 @@
         <strong>📷 Photo Audit</strong>
         <div class="hint">Finance copy of Photo Audit. Review the same trip, odometer and GPS information.</div>
         <button type="button" class="save-btn" id="financePhotosToggle" style="width:auto;padding:8px 12px;margin:8px 0 2px;background:#374151;">Hide Photos</button>
-        <label>Filter by Engineer</label><div class="search-select admin-filter-control" id="financeFilterEngineerSearchWrap"><input type="text" id="financeFilterEngineer" class="admin-filter-control" placeholder="Search or select engineer" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"><div class="search-options" id="financeFilterEngineerOptions"></div></div>
+        <label data-i18n="Filter by Engineer">Filter by Engineer</label><div class="search-select admin-filter-control" id="financeFilterEngineerSearchWrap"><input type="text" id="financeFilterEngineer" class="admin-filter-control" placeholder="Search or select engineer" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"><div class="search-options" id="financeFilterEngineerOptions"></div></div>
         <label>Filter by Month</label><input type="month" id="financeFilterMonth" class="month-input admin-filter-control">
         <div class="row2" style="margin-top:10px;"><button type="button" class="save-btn" id="financeApplyFiltersBtn">Apply Filters</button><button type="button" class="save-btn" style="background:#374151;" id="financeClearFiltersBtn">Clear</button></div>
       </div>
@@ -529,7 +537,7 @@
   </section>
 
   <div class="card">
-    <strong>Recent activity</strong>
+    <strong data-i18n="Recent activity">Recent activity</strong>
     <div id="logList"><div class="empty">Nothing yet.</div></div>
   </div>
 
@@ -538,8 +546,15 @@
 <div class="modal-bg" id="settingsModal" style="display:none;">
   <div class="modal">
     <button class="close" id="closeSettings">✕</button>
-    <h2>Settings</h2>
-    <label>Sync token</label>
+    <h2 data-i18n="Settings">Settings</h2>
+    <label data-i18n="Language">Language</label>
+    <select id="languageSelect">
+      <option value="en">English</option>
+      <option value="ar">العربية</option>
+    </select>
+    <div class="hint" data-i18n="Choose the app language. The interface will switch between English and Arabic.">Choose the app language. The interface will switch between English and Arabic.</div>
+
+    <label data-i18n="Sync token">Sync token</label>
     <input type="text" id="scriptToken" placeholder="Enter the Sync token sent to you" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
 
     <h2 style="font-size:15px;margin-top:22px;">🔐 Engineer Login</h2>
@@ -632,10 +647,84 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && sideMenu.classList.contains('open')) closeSideMenu();
 });
 
+// ---------- language / localization ----------
+const I18N = {
+  ar: {
+    'Settings':'الإعدادات','Language':'اللغة','English':'English','العربية':'العربية',
+    'Choose the app language. The interface will switch between English and Arabic.':'اختر لغة التطبيق. سيتم تغيير واجهة التطبيق بين الإنجليزية والعربية.',
+    'Sync token':'رمز المزامنة','Enter the Sync token sent to you':'أدخل رمز المزامنة المرسل إليك',
+    'Engineer Login':'تسجيل دخول المهندس','My Name':'اسمي','Search or select engineer':'ابحث عن المهندس أو اختره',
+    'My PIN':'الرقم السري','Enter Your Pin':'أدخل الرقم السري','Project Name':'اسم المشروع','— Select Project —':'— اختر المشروع —',
+    'The selected project determines the Benzine rate used for your trips.':'المشروع المختار يحدد سعر البنزين المستخدم في رحلاتك.',
+    'Default Driver Name':'اسم السائق الافتراضي','Search or select driver':'ابحث عن السائق أو اختره',
+    'Login':'تسجيل الدخول','Log out':'تسجيل الخروج','Save Settings':'حفظ الإعدادات','Enable Finish Reminders':'تفعيل تذكيرات إنهاء الرحلة',
+    'Refresh Engineer/Driver list':'تحديث قائمة المهندسين والسائقين','Sync pending now':'مزامنة العمليات المعلقة الآن',
+    'Not logged in yet.':'لم يتم تسجيل الدخول بعد.','Home':'الرئيسية','History':'السجل','Admin':'المشرف','Finance':'المالية',
+    'Switch':'تبديل','Not logged in':'لم يتم تسجيل الدخول','Engineer':'مهندس','Start':'بدء','Finish':'إنهاء',
+    'Driver Name':'اسم السائق','Date *':'التاريخ *','Day':'اليوم','Area *':'المنطقة *','Task *':'المهمة *',
+    'Start KM *':'عداد البداية *','Start Photo *':'صورة البداية *','Finish KM *':'عداد النهاية *','Finish Photo *':'صورة النهاية *',
+    'Over Night Stay':'مبيت','Static':'ثابت','Start Trip':'بدء الرحلة','Finish Trip':'إنهاء الرحلة',
+    'Recent activity':'آخر النشاطات','Nothing yet.':'لا يوجد شيء حتى الآن.','Finance PIN':'الرقم السري للمالية',
+    'Login as Finance':'تسجيل الدخول كمالية','Finance has separate access and cannot open the Admin section.':'المالية لها صلاحيات منفصلة ولا يمكنها فتح قسم المشرف.',
+    'Log out of Finance':'تسجيل الخروج من المالية','Admin PIN':'الرقم السري للمشرف','Login as Admin':'تسجيل الدخول كمشرف',
+    'Log out of Admin':'تسجيل الخروج من المشرف','Admin access required':'يتطلب الوصول إلى قسم المشرف تسجيل الدخول',
+    'Hide Photos':'إخفاء الصور','Show Photos':'إظهار الصور','Apply':'تطبيق','Clear':'مسح','Filter by Engineer':'تصفية حسب المهندس',
+    'Filter by Month':'تصفية حسب الشهر','Engineer Name':'اسم المهندس','Amount':'المبلغ','Date':'التاريخ','Upload':'رفع',
+    'Balances':'الأرصدة','Photo Audit':'مراجعة الصور','Solfa':'السلفة','Rent':'الإيجار','Loading…':'جارٍ التحميل…',
+    'No trips loaded yet.':'لم يتم تحميل رحلات بعد.','No trips match these filters.':'لا توجد رحلات مطابقة لهذه الفلاتر.',
+    'Could not load trips — check connection.':'تعذر تحميل الرحلات — تحقق من الاتصال.',
+    'Search or select engineer':'ابحث عن المهندس أو اختره','Search or select driver':'ابحث عن السائق أو اختره',
+    'No matching name':'لا يوجد اسم مطابق','Close':'إغلاق','Save':'حفظ','Cancel':'إلغاء','OK':'موافق',
+    'Amount to Pay':'المبلغ المطلوب دفعه','Amount Spent':'المبلغ المصروف','Total KM':'إجمالي الكيلومترات',
+    'Trip KM':'كيلومترات الرحلة','F&B':'بدل الطعام والشراب','Received':'المستلم','Spent':'المصروف','Balance Remaining':'الرصيد المتبقي',
+    'Project':'المشروع','GPS':'الموقع','Driver':'السائق','Engineer':'المهندس','Area':'المنطقة','Task':'المهمة',
+    'Start':'بدء','Finish':'إنهاء','Status':'الحالة','Today\'s Trip':'رحلة اليوم','Today Total':'إجمالي اليوم',
+    'Amount to pay':'المبلغ المطلوب دفعه','Amount Spent uploaded':'المبلغ المصروف المرفوع',
+    'This is locked to your login. Not you? Switch in ☰ Menu → Settings.':'هذا الحقل مرتبط بتسجيل دخولك. إذا لم تكن أنت، انتقل إلى القائمة ☰ ← الإعدادات.',
+    'Start typing to search registered drivers.':'ابدأ بالكتابة للبحث عن السائقين المسجلين.',
+    'Admin request failed':'فشل طلب المشرف','Server request failed':'فشل طلب الخادم',
+    'Select a Project Name':'اختر اسم المشروع','Select your name':'اختر اسمك','Enter your PIN':'أدخل الرقم السري',
+    'Enter the Sync token sent to you':'أدخل رمز المزامنة المرسل إليك','Enter the admin PIN':'أدخل الرقم السري للمشرف',
+    'Enter the finance PIN':'أدخل الرقم السري للمالية','Wrong admin PIN':'الرقم السري للمشرف غير صحيح','Wrong finance PIN':'الرقم السري للمالية غير صحيح',
+    'Settings saved and login verified':'تم حفظ الإعدادات والتحقق من تسجيل الدخول','Logged out':'تم تسجيل الخروج',
+    'Could not verify — check connection or Sync token':'تعذر التحقق — تحقق من الاتصال أو رمز المزامنة',
+    'Checking…':'جارٍ التحقق…','Syncing…':'جارٍ المزامنة…','Sync attempt finished':'انتهت محاولة المزامنة',
+    'Refresh':'تحديث','Back':'رجوع','Next':'التالي','Required':'مطلوب'
+  }
+};
+function localizeApp(){
+  if (typeof i18nObserver !== 'undefined') i18nObserver.disconnect();
+  const lang = settings.language || 'en';
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  document.body.classList.toggle('rtl', lang === 'ar');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    if(!el.dataset.enText) el.dataset.enText = el.textContent;
+    const en = el.dataset.enText;
+    el.textContent = lang === 'ar' ? (I18N.ar[en] || en) : en;
+  });
+  document.querySelectorAll('input[placeholder],textarea[placeholder]').forEach(el=>{
+    if(!el.dataset.enPlaceholder) el.dataset.enPlaceholder = el.getAttribute('placeholder');
+    const en=el.dataset.enPlaceholder;
+    if(lang==='ar' && I18N.ar[en]) el.setAttribute('placeholder',I18N.ar[en]); else el.setAttribute('placeholder',en);
+  });
+  document.querySelectorAll('option').forEach(el=>{
+    if(!el.dataset.enText) el.dataset.enText=el.textContent;
+    const en=el.dataset.enText;
+    el.textContent = lang==='ar' ? (I18N.ar[en] || en) : en;
+  });
+  $('languageSelect').value = lang;
+  if (typeof i18nObserver !== 'undefined') i18nObserver.observe(document.body, {subtree:true, childList:true});
+}
+function setLanguage(lang){ settings.language = lang === 'ar' ? 'ar' : 'en'; saveSettingsToStorage(settings); localizeApp(); }
+const i18nObserver = new MutationObserver(() => { if ((settings.language || 'en') === 'ar') localizeApp(); });
+i18nObserver.observe(document.body, {subtree:true, childList:true});
+
 // ---------- settings ----------
 function loadSettings(){ try { return JSON.parse(localStorage.getItem('benzine_settings')) || {}; } catch(e){ return {}; } }
 function saveSettingsToStorage(s){ localStorage.setItem('benzine_settings', JSON.stringify(s)); }
 let settings = loadSettings();
+settings.language = settings.language || 'en';
 let financeAuthed = false;
 let financePinValue = '';
 settings.scriptUrl = DEFAULT_SCRIPT_URL;
@@ -645,6 +734,7 @@ if (settings.scriptToken === DEFAULT_SHARED_TOKEN) settings.scriptToken = '';
 saveSettingsToStorage(settings);
 
 function fillSettingsForm(){
+  $('languageSelect').value = settings.language || 'en';
   $('scriptToken').value = settings.scriptToken || '';
   $('loginEngineerSelect').value = settings.engineer || '';
   $('loginPin').value = settings.pin || '';
@@ -652,6 +742,7 @@ function fillSettingsForm(){
   $('defaultDriver').value = settings.defaultDriver || '';
 }
 fillSettingsForm();
+$('languageSelect').addEventListener('change', e => setLanguage(e.target.value));
 
 $('closeSettings').onclick = () => { $('settingsModal').style.display='none'; };
 
@@ -668,6 +759,7 @@ function updateLoginStatus(){
   if (loggedIn) $('loginEngineerSelect').value = settings.engineer;
 }
 updateLoginStatus();
+localizeApp();
 $('switchUserBtn').onclick = () => { $('settingsModal').style.display='flex'; };
 
 $('loginBtn').onclick = async () => {
@@ -706,6 +798,7 @@ $('loginBtn').onclick = async () => {
       settings.scriptUrl = DEFAULT_SCRIPT_URL; settings.scriptToken = scriptToken;
       settings.engineer = name; settings.pin = pin; settings.projectName = projectName;
       settings.defaultDriver = $('defaultDriver').value.trim();
+      settings.language = $('languageSelect').value || settings.language || 'en';
       saveSettingsToStorage(settings);
       $('driver').value = settings.defaultDriver || $('driver').value;
       updateLoginStatus();
@@ -744,6 +837,7 @@ $('saveSettings').onclick = async () => {
   const pin = $('loginPin').value.trim();
   const projectName = $('projectNameSelect').value;
   const driverName = $('defaultDriver').value.trim();
+  const language = $('languageSelect').value || 'en';
   if (!tokenValue) return toast('Enter the Sync token sent to you');
   if (!engineer) return toast('Select your name');
   if (!pin) return toast('Enter your PIN');
@@ -758,6 +852,7 @@ $('saveSettings').onclick = async () => {
     settings.pin = pin;
     settings.projectName = projectName;
     settings.defaultDriver = driverName;
+    settings.language = language;
     saveSettingsToStorage(settings);
     $('driver').value = driverName;
     updateLoginStatus();
@@ -1299,7 +1394,7 @@ $('financeLoginBtn').onclick = async () => {
   if (!pin) return toast('Enter the finance PIN');
   $('financeLoginBtn').disabled = true; $('financeLoginBtn').textContent = 'Checking…';
   try {
-    const res = await fetch(settings.scriptUrl, { method:'POST', body: JSON.stringify({ token: settings.scriptToken, action:'financeVerify', financePin: pin }) });
+    const res = await fetch(settings.scriptUrl, { method:'POST', body: JSON.stringify({ action:'financeVerify', financePin: pin }) });
     const data = JSON.parse(await res.text());
     if (!data.ok) return toast(adminErrorMessage(new Error(data.error || 'invalid-finance-pin')));
     financeAuthed = true; financePinValue = pin;
@@ -1347,7 +1442,7 @@ async function loadFinanceTrips(){
 async function financeFetch(action, extra){
   const res = await fetch(settings.scriptUrl, {
     method: 'POST',
-    body: JSON.stringify({ token: settings.scriptToken, action, financePin: financePinValue, ...(extra||{}) })
+    body: JSON.stringify({ action, financePin: financePinValue, ...(extra||{}) })
   });
   const text = await res.text();
   const data = JSON.parse(text);
@@ -1390,7 +1485,7 @@ $('financeTripsList').addEventListener('click',(e)=>{const img=e.target.closest(
 async function adminFetch(action, extra){
     const res = await fetch(settings.scriptUrl, {
     method: 'POST',
-    body: JSON.stringify({ token: settings.scriptToken, action, adminPin: adminPinValue, ...(extra||{}) })
+    body: JSON.stringify({ action, adminPin: adminPinValue, ...(extra||{}) })
   });
   const text = await res.text();
   const data = JSON.parse(text);
