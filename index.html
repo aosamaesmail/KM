@@ -99,10 +99,12 @@
   .history-item:last-child{border-bottom:none;}
   #historyList.history-photos-hidden .audit-row{display:none;}
   #adminTripsList.admin-photos-hidden .audit-row{display:none;}
+  #financeTripsList.finance-photos-hidden .audit-row{display:none;}
+  #financeTripsList.finance-photos-hidden .audit-row{display:none;}
 .solfa-balance-box{grid-column:1 / -1;}
 .solfa-entries{margin-top:10px;text-align:left;border-top:1px solid rgba(255,255,255,.10);padding-top:6px;}
 .admin-filter-control{width:100%;min-height:44px;box-sizing:border-box;}
-  .admin-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
+  .admin-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px;}
   .admin-tab-btn{padding:11px 6px;border:1px solid var(--border-soft);border-radius:10px;background:var(--card-alt);color:var(--muted);font-weight:800;font-size:12px;cursor:pointer;}
   .admin-tab-btn.active{background:var(--teal);color:#fff;border-color:var(--teal);}
   .admin-panel{display:none;}
@@ -246,6 +248,10 @@
     <button type="button" class="side-menu-item" id="menuAdminBtn">
       <span class="side-menu-icon">🛡</span>
       <span>Admin</span>
+    </button>
+    <button type="button" class="side-menu-item" id="menuFinanceBtn">
+      <span class="side-menu-icon">💳</span>
+      <span>Finance</span>
     </button>
     <div class="side-menu-divider"></div>
     <button type="button" class="side-menu-item" id="menuSettingsBtn">
@@ -495,14 +501,28 @@
         </div>
       </div>
             <button type="button" class="save-btn" style="background:#374151;" id="adminRefreshTabBtn">🔄 Refresh</button>
-      <div class="card" id="adminRateCard" style="margin-top:12px;">
-        <h3 style="margin:0 0 10px;font-size:15px;">⚙️ Rate Settings</h3>
-        <label>Rate per KM (EGP)</label>
-        <input type="number" id="adminRate" step="0.001" min="0.001" inputmode="decimal" placeholder="Enter rate">
-        <button type="button" class="save-btn" id="adminSaveRateBtn">💾 Save Rate</button>
-        <div class="hint" id="adminRateStatus" style="margin-top:8px;"></div>
-      </div>
       <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="adminLogoutBtn">Log out of Admin</button>
+    </div>
+  </section>
+
+  <!-- FINANCE SECTION -->
+  <section class="section" id="financeSection">
+    <div class="page-header"><span class="page-header-icon">💳</span><span class="page-header-title">Finance</span></div>
+    <div class="card" id="financeLoginRequired" style="display:none;">
+      <strong>🔒 Admin access required</strong>
+      <div class="hint">Finance uses the same Admin authorization as Photo Audit.</div>
+      <button type="button" class="save-btn" id="financeGoAdminBtn">Open Admin Login</button>
+    </div>
+    <div id="financeDashboard" style="display:none;">
+      <div class="card">
+        <strong>📷 Photo Audit</strong>
+        <div class="hint">Finance copy of Photo Audit. Review the same trip, odometer and GPS information.</div>
+        <button type="button" class="save-btn" id="financePhotosToggle" style="width:auto;padding:8px 12px;margin:8px 0 2px;background:#374151;">Hide Photos</button>
+        <label>Filter by Engineer</label><div class="search-select admin-filter-control" id="financeFilterEngineerSearchWrap"><input type="text" id="financeFilterEngineer" class="admin-filter-control" placeholder="Search or select engineer" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"><div class="search-options" id="financeFilterEngineerOptions"></div></div>
+        <label>Filter by Month</label><input type="month" id="financeFilterMonth" class="month-input admin-filter-control">
+        <div class="row2" style="margin-top:10px;"><button type="button" class="save-btn" id="financeApplyFiltersBtn">Apply Filters</button><button type="button" class="save-btn" style="background:#374151;" id="financeClearFiltersBtn">Clear</button></div>
+      </div>
+      <div class="card"><div id="financeTripsList"><div class="empty">No trips loaded yet.</div></div></div>
     </div>
   </section>
 
@@ -530,6 +550,16 @@
     <input type="password" inputmode="numeric" id="loginPin" placeholder="Enter Your Pin">
     <button type="button" class="save-btn" id="loginBtn">🔐 Login</button>
     <div class="hint" id="loginStatus">Not logged in yet.</div>
+
+    <label style="margin-top:18px;">Project Name</label>
+    <select id="projectNameSelect">
+      <option value="">— Select Project —</option>
+      <option value="NSNDT">NSNDT</option>
+      <option value="ETEGYDT">ETEGYDT</option>
+      <option value="VFEGY">VFEGY</option>
+      <option value="Huawei">Huawei</option>
+    </select>
+    <div class="hint">The selected project determines the Benzine rate used for your trips.</div>
 
     <label style="margin-top:18px;">Default Driver Name</label>
     <div class="search-select" id="defaultDriverSearchWrap">
@@ -593,6 +623,7 @@ sideMenuOverlay.onclick = closeSideMenu;
 $('menuHomeBtn').onclick = () => { closeSideMenu(); showTab('start'); };
 $('menuHistoryBtn').onclick = () => { closeSideMenu(); showTab('history'); };
 $('menuAdminBtn').onclick = () => { closeSideMenu(); showTab('admin'); };
+$('menuFinanceBtn').onclick = () => { closeSideMenu(); showTab('finance'); };
 $('menuSettingsBtn').onclick = () => { closeSideMenu(); $('settingsModal').style.display='flex'; };
 
 document.addEventListener('keydown', (e) => {
@@ -611,6 +642,7 @@ saveSettingsToStorage(settings);
 
 function fillSettingsForm(){
   $('scriptToken').value = settings.scriptToken || '';
+  $('projectNameSelect').value = settings.projectName || '';
   $('defaultDriver').value = settings.defaultDriver || '';
 }
 fillSettingsForm();
@@ -647,6 +679,8 @@ $('loginBtn').onclick = async () => {
   const pin = $('loginPin').value.trim();
   const scriptToken = $('scriptToken').value.trim();
   if (!scriptToken) return toast('Enter the Sync token sent to you');
+  const projectName = $('projectNameSelect').value;
+  if (!projectName) return toast('Select a Project Name');
   if (!name) return toast('Select your name');
   if (!pin) return toast('Enter your PIN');
   $('loginBtn').disabled = true; $('loginBtn').textContent = 'Checking…';
@@ -655,7 +689,7 @@ $('loginBtn').onclick = async () => {
     const data = JSON.parse(await res.text());
     if (data.ok){
       settings.scriptUrl = DEFAULT_SCRIPT_URL; settings.scriptToken = scriptToken;
-      settings.engineer = name; settings.pin = pin;
+      settings.engineer = name; settings.pin = pin; settings.projectName = projectName; settings.projectName = projectName;
       saveSettingsToStorage(settings);
       $('loginPin').value = '';
       updateLoginStatus();
@@ -691,7 +725,10 @@ $('saveSettings').onclick = () => {
   settings.scriptUrl = DEFAULT_SCRIPT_URL;
   const tokenValue = $('scriptToken').value.trim();
   if (!tokenValue) return toast('Enter the Sync token sent to you');
+  const projectName = $('projectNameSelect').value;
+  if (!projectName) return toast('Select a Project Name');
   settings.scriptToken = tokenValue;
+  settings.projectName = projectName;
   settings.defaultDriver = $('defaultDriver').value.trim();
   saveSettingsToStorage(settings);
   if (settings.defaultDriver) $('driver').value = settings.defaultDriver;
@@ -713,13 +750,16 @@ function showTab(which, skipFinishLoad = false){
   $('finishSection').classList.toggle('active', which==='finish');
   $('historySection').classList.toggle('active', which==='history');
   $('adminSection').classList.toggle('active', which==='admin');
+  $('financeSection').classList.toggle('active', which==='finance');
 
   if ($('menuHomeBtn')) $('menuHomeBtn').classList.toggle('active', which==='start' || which==='finish');
   if ($('menuHistoryBtn')) $('menuHistoryBtn').classList.toggle('active', which==='history');
   if ($('menuAdminBtn')) $('menuAdminBtn').classList.toggle('active', which==='admin');
+  if ($('menuFinanceBtn')) $('menuFinanceBtn').classList.toggle('active', which==='finance');
 
   if (which==='finish' && !skipFinishLoad) loadOpenTripsForFinish();
   if (which==='history') loadHistory();
+  if (which==='finance') showFinanceSection();
 }
 
 $('tabStartBtn').onclick = () => { if (!$('tabStartBtn').disabled) showTab('start'); };
@@ -896,41 +936,61 @@ refreshLists(true);
 // ---------- photo capture (compressed) ----------
 let startPhoto = null;
 let finishPhoto = null;
+let startPhotoLocation = null;
+let finishPhotoLocation = null;
 
-function wirePhoto(which, btnId, inputId, missingId, setter){
+function getCurrentPhotoLocation(){
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) return reject(new Error('geolocation-not-supported'));
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ latitude: Number(pos.coords.latitude.toFixed(7)), longitude: Number(pos.coords.longitude.toFixed(7)), accuracy: pos.coords.accuracy || null }),
+      err => reject(err || new Error('location-denied')),
+      { enableHighAccuracy:true, timeout:15000, maximumAge:0 }
+    );
+  });
+}
+
+function getCurrentPhotoLocation(){
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) return reject(new Error('geolocation-not-supported'));
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ latitude:Number(pos.coords.latitude.toFixed(7)), longitude:Number(pos.coords.longitude.toFixed(7)), accuracy:pos.coords.accuracy||null }),
+      err => reject(err || new Error('location-denied')),
+      {enableHighAccuracy:true, timeout:15000, maximumAge:0}
+    );
+  });
+}
+
+function wirePhoto(which, btnId, inputId, missingId, setter, locationSetter){
   $(btnId).addEventListener('click', () => $(inputId).click());
-  $(inputId).addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const img = new Image();
-    const reader = new FileReader();
-    reader.onload = (ev) => { img.src = ev.target.result; };
-    img.onload = () => {
-      const maxW = 1000;
-      const scale = Math.min(1, maxW / img.width);
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.55);
-      setter(dataUrl);
-      $(missingId).style.display = 'none';
-      $(btnId).textContent = 'Retake';
-      $(btnId).classList.add('retake');
-      let img2 = document.getElementById(which+'Thumb');
-      if (!img2) {
-        img2 = document.createElement('img');
-        img2.id = which+'Thumb';
-        const row = $(btnId).closest('.km-row');
-        (row || $(btnId)).insertAdjacentElement('afterend', img2);
-      }
-      img2.src = dataUrl;
+  $(inputId).addEventListener('change', async (e) => {
+    const file=e.target.files[0]; if(!file)return;
+    $(btnId).disabled=true; $(btnId).textContent='Getting GPS…';
+    let location;
+    try { location=await getCurrentPhotoLocation(); } catch(err) {
+      $(btnId).disabled=false; $(btnId).textContent='Take photo'; e.target.value='';
+      $(missingId).textContent='Required — photo + GPS location'; $(missingId).style.display='block';
+      toast('📍 Location is required for each photo. Allow Location permission and retake the photo.'); return;
+    }
+    const img=new Image(), reader=new FileReader();
+    reader.onload=(ev)=>{img.src=ev.target.result;};
+    img.onload=()=>{
+      const maxW=1000, scale=Math.min(1,maxW/img.width), canvas=document.createElement('canvas');
+      canvas.width=img.width*scale; canvas.height=img.height*scale;
+      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+      setter(canvas.toDataURL('image/jpeg',0.55)); locationSetter(location);
+      $(missingId).textContent=`GPS captured: ${location.latitude}, ${location.longitude}`;
+      $(missingId).style.display='block'; $(missingId).style.color='var(--ok)';
+      $(btnId).disabled=false; $(btnId).textContent='Retake'; $(btnId).classList.add('retake');
+      let img2=document.getElementById(which+'Thumb');
+      if(!img2){img2=document.createElement('img');img2.id=which+'Thumb';const row=$(btnId).closest('.km-row');(row||$(btnId)).insertAdjacentElement('afterend',img2);}
+      img2.src=canvas.toDataURL('image/jpeg',0.55);
     };
     reader.readAsDataURL(file);
   });
 }
-wirePhoto('start','startPhotoBtn','startPhotoInput','startPhotoMissing', (d)=>startPhoto=d);
-wirePhoto('finish','finishPhotoBtn','finishPhotoInput','finishPhotoMissing', (d)=>finishPhoto=d);
+wirePhoto('start','startPhotoBtn','startPhotoInput','startPhotoMissing', (d)=>startPhoto=d, (p)=>startPhotoLocation=p);
+wirePhoto('finish','finishPhotoBtn','finishPhotoInput','finishPhotoMissing', (d)=>finishPhoto=d, (p)=>finishPhotoLocation=p);
 
 // ---------- open trips (started, not yet finished) ----------
 function getOpenTrips(){ try { return JSON.parse(localStorage.getItem('benzine_open_trips')) || []; } catch(e){ return []; } }
@@ -1162,6 +1222,7 @@ $('syncNowBtn').onclick = async () => { toast('Syncing…'); await flushQueue();
 let adminAuthed = false;
 let adminPinValue = '';
 let adminTripsCache = [];
+let financeTripsCache = [];
 
 function adminTodayISO(){
   const d = new Date();
@@ -1182,6 +1243,46 @@ $('adminPhotoAuditTabBtn').onclick=()=>showAdminPanel('photos');
 $('adminSolfaTabBtn').onclick=()=>{ $('adminSolfaDate').value=adminTodayISO(); showAdminPanel('solfa'); };
 $('adminRentTabBtn').onclick=()=>showAdminPanel('rent');
 
+function showFinanceSection(){
+  if (!adminAuthed) {
+    $('financeLoginRequired').style.display='block';
+    $('financeDashboard').style.display='none';
+    return;
+  }
+  $('financeLoginRequired').style.display='none';
+  $('financeDashboard').style.display='block';
+  populateFinanceEngineerFilter();
+  loadFinanceTrips();
+}
+$('financeGoAdminBtn').onclick=()=>showTab('admin');
+$('financeFilterEngineer').addEventListener('change', loadFinanceTrips);
+$('financeApplyFiltersBtn').onclick=()=>loadFinanceTrips();
+$('financeClearFiltersBtn').onclick=()=>{ $('financeFilterEngineer').value=''; $('financeFilterMonth').value=''; loadFinanceTrips(); };
+let financePhotosVisible = localStorage.getItem('financePhotosVisible') !== '0';
+function applyFinancePhotosVisibility(){ $('financeTripsList').classList.toggle('finance-photos-hidden', !financePhotosVisible); $('financePhotosToggle').textContent = financePhotosVisible ? 'Hide Photos' : 'Show Photos'; }
+$('financePhotosToggle').onclick=()=>{ financePhotosVisible=!financePhotosVisible; localStorage.setItem('financePhotosVisible', financePhotosVisible?'1':'0'); applyFinancePhotosVisibility(); };
+applyFinancePhotosVisibility();
+function populateFinanceEngineerFilter(){ const cached=getCachedLists(); populateSearchInput($('financeFilterEngineer'), $('financeFilterEngineerOptions'), cached.engineers||[], $('financeFilterEngineer').value||''); }
+async function loadFinanceTrips(){
+  if(!adminAuthed) return;
+  $('financeTripsList').innerHTML='<div class="empty">Loading…</div>';
+  try{
+    const data=await adminFetch('adminTrips',{filterEngineer:$('financeFilterEngineer').value,filterMonth:$('financeFilterMonth').value});
+    financeTripsCache=data.trips||[];
+    renderTripListInto('financeTripsList', financeTripsCache);
+  }catch(err){ $('financeTripsList').innerHTML='<div class="empty">Could not load trips — check connection.</div>'; }
+}
+function renderTripListInto(containerId,trips){
+  const el=$(containerId);
+  if(!trips.length){el.innerHTML='<div class="empty">No trips match these filters.</div>';return;}
+  const byDate={};
+  trips.forEach(t=>{const d=t.date||'Unknown date';if(!byDate[d])byDate[d]={};const eng=t.engineer||'Unknown';if(!byDate[d][eng])byDate[d][eng]=[];byDate[d][eng].push(t);});
+  const dates=Object.keys(byDate).sort((a,b)=>a<b?1:a>b?-1:0);
+  let html=''; dates.forEach(d=>{html+=`<div class="admin-date-header">${d}</div>`;Object.keys(byDate[d]).sort().forEach(eng=>{html+=`<div class="admin-engineer-header">${eng}</div>`;byDate[d][eng].forEach(t=>{html+=renderAdminTripCard(t);});});});
+  el.innerHTML=html;
+}
+$('financeTripsList').addEventListener('click',(e)=>{const img=e.target.closest('.audit-thumb');if(!img)return;openLightbox(img.src,img.dataset.full);});
+
 
 async function adminFetch(action, extra){
     const res = await fetch(settings.scriptUrl, {
@@ -1194,40 +1295,11 @@ async function adminFetch(action, extra){
   return data;
 }
 
-async function loadAdminRate(){
-  if (!adminAuthed) return;
-  try {
-    const data = await adminFetch('adminGetRate');
-    $('adminRate').value = Number(data.ratePerKm || 0).toFixed(3);
-    $('adminRateStatus').textContent = 'Current configured rate: ' + Number(data.ratePerKm || 0).toFixed(3) + ' EGP/KM';
-  } catch (err) {
-    $('adminRateStatus').textContent = '❌ ' + adminErrorMessage(err);
-  }
-}
-
-$('adminSaveRateBtn').onclick = async () => {
-  const rate = parseFloat($('adminRate').value);
-  if (!isFinite(rate) || rate <= 0) return toast('Enter a valid rate greater than 0');
-  $('adminSaveRateBtn').disabled = true;
-  $('adminSaveRateBtn').textContent = 'Saving…';
-  try {
-    const data = await adminFetch('adminSetRate', { ratePerKm: rate });
-    $('adminRate').value = Number(data.ratePerKm).toFixed(3);
-    $('adminRateStatus').textContent = '✅ Rate updated to ' + Number(data.ratePerKm).toFixed(3) + ' EGP/KM';
-    toast('Rate updated');
-  } catch (err) {
-    $('adminRateStatus').textContent = '❌ ' + adminErrorMessage(err);
-  }
-  $('adminSaveRateBtn').disabled = false;
-  $('adminSaveRateBtn').textContent = '💾 Save Rate';
-};
-
 function adminErrorMessage(err){
   const code = String(err && err.message || 'server-error');
   const messages = {
     'invalid-admin-pin': '❌ Wrong admin PIN',
     'invalid-token': '❌ Invalid Sync token',
-    'invalid-rate': 'Enter a valid rate greater than 0',
     'engineer-required': 'Engineer is required',
     'invalid-engineer': 'Engineer is not registered in Config',
     'invalid-date': 'Invalid date',
@@ -1266,7 +1338,6 @@ $('adminLoginTabBtn').onclick = async () => {
     populateAdminEngineerFilter();
     populateAdminSolfaEngineer();
     $('adminSolfaDate').value = adminTodayISO();
-    await loadAdminRate();
     await loadAdminSummary();
     await loadAdminTrips();
     await loadAdminRentTrips();
@@ -1299,7 +1370,6 @@ async function restoreAdminSession(){
     populateAdminEngineerFilter();
     populateAdminSolfaEngineer();
     $('adminSolfaDate').value = adminTodayISO();
-    await loadAdminRate();
     await loadAdminSummary();
     await loadAdminTrips();
     await loadAdminRentTrips();
@@ -1320,7 +1390,6 @@ async function loadAdminSummary(){
 }
 $('adminRefreshTabBtn').onclick = async () => {
   try {
-    await loadAdminRate();
     await loadAdminSummary();
     await loadAdminTrips();
     populateAdminSolfaEngineer();
@@ -1459,6 +1528,7 @@ $('adminRentUploadBtn').onclick=async()=>{
 
 $('adminBalanceMonth').value = new Date().toISOString().slice(0,7);
 $('adminFilterMonth').value = new Date().toISOString().slice(0,7);
+$('financeFilterMonth').value = new Date().toISOString().slice(0,7);
 $('adminBalanceMonth').addEventListener('change', () => loadAdminSummary());
 $('adminClearBalanceMonthBtn').onclick = () => { $('adminBalanceMonth').value=''; $('adminBalanceEngineer').value=''; loadAdminSummary(); };
 $('adminBalanceEngineer').addEventListener('change', loadAdminSummary);
@@ -1551,17 +1621,19 @@ function renderAdminTripCard(t){
   return `
     <div class="admin-trip-card">
       <div class="top-row">
-        <span>${t.area||'—'} · ${t.task||'—'}</span>
+        <span>${t.projectName ? t.projectName+' · ' : ''}${t.area||'—'} · ${t.task||'—'}</span>
         <span class="badge ${statusBadge}">${t.status||'—'}</span>
       </div>
       <div class="audit-row">
         <div class="audit-col">
           <div class="audit-lbl">Start KM: <strong>${t.startKm||'—'}</strong></div>
           ${startThumb}
+          <div class="hint">GPS: ${t.startLatitude!=null && t.startLongitude!=null ? t.startLatitude+', '+t.startLongitude : '—'}</div>
         </div>
         <div class="audit-col">
           <div class="audit-lbl">Finish KM: <strong>${t.finishKm||'—'}</strong></div>
           ${finishThumb}
+          <div class="hint">GPS: ${t.finishLatitude!=null && t.finishLongitude!=null ? t.finishLatitude+', '+t.finishLongitude : '—'}</div>
         </div>
       </div>
       <div class="sub-row">${t.totalKm||0} km · ${Number(t.amountSpent||0).toFixed(2)} EGP</div>
@@ -1576,6 +1648,7 @@ flushQueue();
 $('startForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!settings.engineer || !settings.pin) return toast('Please log in first (☰ Menu → Settings)');
+  if (!settings.projectName) return toast('Select a Project Name in Settings first');
   const engineer = settings.engineer;
   const start = $('startKm').value;
   if ($('date').value < todayISO()) return toast('Date cannot be before today');
@@ -1583,6 +1656,7 @@ $('startForm').addEventListener('submit', async (e) => {
   if (!$('task').value.trim()) return toast('Task is required');
   if (!start) return toast('Start KM is required');
   if (!startPhoto) { $('startPhotoMissing').style.display='block'; return toast('Start KM photo is required'); }
+  if (!startPhotoLocation) return toast('📍 Start photo GPS is required. Retake the photo with Location enabled.');
 
   const validNames = validateStartNamesClient();
   if (!validNames.engineer || !validNames.driver) {
@@ -1592,14 +1666,14 @@ $('startForm').addEventListener('submit', async (e) => {
   const canonicalDriver = validNames.driver;
   const tripId = genId();
   const trip = {
-    tripId, engineer: canonicalEngineer, driver: canonicalDriver,
+    tripId, engineer: canonicalEngineer, driver: canonicalDriver, projectName: settings.projectName || '',
     date: $('date').value, day: $('day').value,
     area: $('area').value.trim(), task: $('task').value.trim(),
     startKm: parseFloat(start), startedAt: new Date().toISOString(),
     rate: undefined,
     lastForthBack: 0,
   };
-  const payload = { action: 'start', ...trip, startPhoto };
+  const payload = { action: 'start', ...trip, startPhoto, startLatitude: startPhotoLocation.latitude, startLongitude: startPhotoLocation.longitude };
   const display = `${trip.engineer} · ${trip.area||'—'} · Start ${trip.startKm}km`;
 
   // Do not switch to Finish yet. The server must first calculate and return the
@@ -1663,6 +1737,7 @@ $('startForm').addEventListener('submit', async (e) => {
 function resetStartForm(){
   $('area').value=''; $('task').value=''; $('startKm').value='';
   startPhoto = null;
+  startPhotoLocation = null;
   const thumb = document.getElementById('startThumb'); if (thumb) thumb.remove();
   $('startPhotoBtn').textContent = 'Take photo';
   $('startPhotoBtn').classList.remove('retake');
@@ -1674,12 +1749,14 @@ function resetStartForm(){
 $('finishForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!settings.engineer || !settings.pin) return toast('Please log in first (☰ Menu → Settings)');
+  if (!settings.projectName) return toast('Select a Project Name in Settings first');
   const tripId = $('openTripSelect').value;
   const trip = openTripsCache.find(t => t.tripId === tripId);
   if (!trip) return toast('Select which trip you are finishing');
   const finish = $('finishKm').value;
   if (!finish) return toast('Finish KM is required');
   if (!finishPhoto) { $('finishPhotoMissing').style.display='block'; return toast('Finish KM photo is required'); }
+  if (!finishPhotoLocation) return toast('📍 Finish photo GPS is required. Retake the photo with Location enabled.');
   if (parseFloat(finish) < parseFloat(trip.startKm)) return toast('Finish KM must be ≥ Start KM (' + trip.startKm + ')');
 
   const payload = {
@@ -1693,7 +1770,7 @@ $('finishForm').addEventListener('submit', async (e) => {
     rate: (isFinite(parseFloat(trip.rate)) ? parseFloat(trip.rate) : 0),
     staticKm: parseFloat($('staticKm').value)||0,
     overNightStay: $('overNightStay').checked,
-    finishPhoto, finishedAt: new Date().toISOString(),
+    finishPhoto, startLatitude: trip.startLatitude, startLongitude: trip.startLongitude, finishLatitude: finishPhotoLocation.latitude, finishLongitude: finishPhotoLocation.longitude, finishedAt: new Date().toISOString(),
   };
   const display = `${trip.engineer} · ${trip.area||'—'} · ${$('totalOut').textContent}km total`;
   const engineerForLog = trip.engineer || settings.engineer;
@@ -1731,6 +1808,7 @@ $('finishForm').addEventListener('submit', async (e) => {
 function resetFinishForm(){
   $('finishKm').value=''; $('staticKm').value='0'; $('overNightStay').checked=false;
   finishPhoto = null;
+  finishPhotoLocation = null;
   const thumb = document.getElementById('finishThumb'); if (thumb) thumb.remove();
   $('finishPhotoBtn').textContent = 'Take photo';
   $('finishPhotoBtn').classList.remove('retake');
@@ -1804,7 +1882,7 @@ function renderHistory(data){
     return `
       <div class="admin-trip-card history-trip-card">
         <div class="top-row">
-          <strong>${t.date || '—'} · ${t.area || 'No area'} · ${t.task || 'No task'}</strong>
+          <strong>${t.date || '—'} · ${t.projectName ? t.projectName+' · ' : ''}${t.area || 'No area'} · ${t.task || 'No task'}</strong>
           <span class="badge ${statusBadge}">${t.status || '—'}</span>
         </div>
         <div class="sub-row" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px;text-align:center;">
