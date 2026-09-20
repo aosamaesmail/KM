@@ -45,6 +45,12 @@
   .photo-btn::before{content:'📷';font-size:16px;}
   .photo-btn.retake{background:var(--card-alt);color:var(--teal);border:1px solid var(--teal);}
   .photo-missing{color:var(--danger);font-size:12px;margin-top:6px;}
+  .camera-modal{align-items:center;justify-content:center;padding:16px;}
+  .camera-modal .modal{border-radius:16px;max-width:520px;max-height:94vh;padding:14px;}
+  .camera-preview{width:100%;aspect-ratio:3/4;background:#000;border-radius:12px;object-fit:cover;display:block;}
+  .camera-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
+  .camera-actions button{margin-top:0;}
+  .camera-status{font-size:12px;color:var(--muted);text-align:center;margin-top:8px;}
   .computed{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;}
   .computed div{background:rgba(207,54,145,.12);border-radius:10px;padding:10px;text-align:center;}
   .computed .num{font-size:18px;font-weight:700;color:var(--teal-dark);}
@@ -341,7 +347,6 @@
         <input type="number" id="startKm" inputmode="numeric" placeholder="Odometer reading" required>
         <div id="startPhotoBlock">
           <button type="button" class="photo-btn" id="startPhotoBtn">Take photo</button>
-          <input type="file" accept="image/*" capture="environment" id="startPhotoInput" hidden>
         </div>
       </div>
       <div class="photo-missing" id="startPhotoMissing">Required — photo of the dashboard right now</div>
@@ -365,7 +370,6 @@
         <input type="number" id="finishKm" inputmode="numeric" placeholder="Odometer reading" required>
         <div id="finishPhotoBlock">
           <button type="button" class="photo-btn" id="finishPhotoBtn">Take photo</button>
-          <input type="file" accept="image/*" capture="environment" id="finishPhotoInput" hidden>
         </div>
       </div>
       <div class="photo-missing" id="finishPhotoMissing">Required — photo of the dashboard right now</div>
@@ -606,6 +610,19 @@
     <h2 id="resultTitle" style="text-align:center;">Success</h2>
     <p id="resultMessage" style="text-align:center;color:var(--muted);"></p>
     <button type="button" class="save-btn" id="resultOkBtn">OK</button>
+  </div>
+</div>
+
+<div class="modal-bg camera-modal" id="cameraModal" style="display:none;">
+  <div class="modal">
+    <button class="close" id="closeCamera">✕</button>
+    <h2 id="cameraTitle">Take photo</h2>
+    <video id="cameraPreview" class="camera-preview" autoplay playsinline muted></video>
+    <div class="camera-status" id="cameraStatus">Use the rear mobile camera to capture the dashboard.</div>
+    <div class="camera-actions">
+      <button type="button" class="save-btn" id="capturePhotoBtn">📷 Capture</button>
+      <button type="button" class="save-btn" style="background:#374151;" id="cancelCameraBtn">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -1073,21 +1090,16 @@ populateEngineerList(cachedAtStart.engineers, settings.engineer);
 populateDefaultDriverList(cachedAtStart.drivers, settings.defaultDriver);
 refreshLists(true);
 
-// ---------- photo capture (compressed) ----------
+// ---------- mobile camera capture (camera only; no file/gallery picker) ----------
 let startPhoto = null;
 let finishPhoto = null;
 let startPhotoLocation = null;
 let finishPhotoLocation = null;
+let cameraStream = null;
+let activeCameraTarget = null;
 
-function getCurrentPhotoLocation(){
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) return reject(new Error('geolocation-not-supported'));
-    navigator.geolocation.getCurrentPosition(
-      pos => resolve({ latitude: Number(pos.coords.latitude.toFixed(7)), longitude: Number(pos.coords.longitude.toFixed(7)), accuracy: pos.coords.accuracy || null }),
-      err => reject(err || new Error('location-denied')),
-      { enableHighAccuracy:true, timeout:15000, maximumAge:0 }
-    );
-  });
+function isMobilePhone(){
+  return !!(navigator.userAgentData?.mobile || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent));
 }
 
 function getCurrentPhotoLocation(){
@@ -1101,36 +1113,77 @@ function getCurrentPhotoLocation(){
   });
 }
 
-function wirePhoto(which, btnId, inputId, missingId, setter, locationSetter){
-  $(btnId).addEventListener('click', () => $(inputId).click());
-  $(inputId).addEventListener('change', async (e) => {
-    const file=e.target.files[0]; if(!file)return;
-    $(btnId).disabled=true; $(btnId).textContent='Getting GPS…';
-    let location;
-    try { location=await getCurrentPhotoLocation(); } catch(err) {
-      $(btnId).disabled=false; $(btnId).textContent='Take photo'; e.target.value='';
-      $(missingId).textContent='Required — photo + GPS location'; $(missingId).style.display='block';
-      toast('📍 Location is required for each photo. Allow Location permission and retake the photo.'); return;
-    }
-    const img=new Image(), reader=new FileReader();
-    reader.onload=(ev)=>{img.src=ev.target.result;};
-    img.onload=()=>{
-      const maxW=1000, scale=Math.min(1,maxW/img.width), canvas=document.createElement('canvas');
-      canvas.width=img.width*scale; canvas.height=img.height*scale;
-      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-      setter(canvas.toDataURL('image/jpeg',0.55)); locationSetter(location);
-      $(missingId).textContent=`GPS captured: ${location.latitude}, ${location.longitude}`;
-      $(missingId).style.display='block'; $(missingId).style.color='var(--ok)';
-      $(btnId).disabled=false; $(btnId).textContent='Retake'; $(btnId).classList.add('retake');
-      let img2=document.getElementById(which+'Thumb');
-      if(!img2){img2=document.createElement('img');img2.id=which+'Thumb';const row=$(btnId).closest('.km-row');(row||$(btnId)).insertAdjacentElement('afterend',img2);}
-      img2.src=canvas.toDataURL('image/jpeg',0.55);
-    };
-    reader.readAsDataURL(file);
-  });
+function stopCamera(){
+  if(cameraStream){ cameraStream.getTracks().forEach(t=>t.stop()); cameraStream=null; }
+  $('cameraPreview').srcObject=null;
+  $('cameraModal').style.display='none';
+  activeCameraTarget=null;
 }
-wirePhoto('start','startPhotoBtn','startPhotoInput','startPhotoMissing', (d)=>startPhoto=d, (p)=>startPhotoLocation=p);
-wirePhoto('finish','finishPhotoBtn','finishPhotoInput','finishPhotoMissing', (d)=>finishPhoto=d, (p)=>finishPhotoLocation=p);
+
+async function openCamera(which, btnId, missingId, setter, locationSetter){
+  if(!isMobilePhone()){
+    toast('📱 Please use the Telecomax app on a mobile phone. Photos can only be taken with the mobile camera.');
+    return;
+  }
+  if(!navigator.mediaDevices?.getUserMedia){
+    toast('📷 Your mobile browser does not support camera access. Please use Chrome/Safari on the phone.');
+    return;
+  }
+  activeCameraTarget={which,btnId,missingId,setter,locationSetter};
+  $('cameraTitle').textContent = which==='start' ? 'Take Start KM photo' : 'Take Finish KM photo';
+  $('cameraStatus').textContent='Allow camera access, point at the dashboard, then press Capture.';
+  $('cameraModal').style.display='flex';
+  try{
+    cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:1280}},audio:false});
+    $('cameraPreview').srcObject=cameraStream;
+    await $('cameraPreview').play();
+  }catch(err){
+    stopCamera();
+    toast('📷 Camera access is required. Please allow Camera permission and try again.');
+  }
+}
+
+async function captureMobilePhoto(){
+  const target=activeCameraTarget;
+  if(!target || !cameraStream) return;
+  const video=$('cameraPreview');
+  if(!video.videoWidth || !video.videoHeight){ toast('Camera is not ready yet.'); return; }
+  const canvas=document.createElement('canvas');
+  const maxW=1000, scale=Math.min(1,maxW/video.videoWidth);
+  canvas.width=Math.round(video.videoWidth*scale); canvas.height=Math.round(video.videoHeight*scale);
+  canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
+  target.setter(canvas.toDataURL('image/jpeg',0.55));
+  $(target.btnId).textContent='Getting GPS…';
+  $(target.btnId).disabled=true;
+  try{
+    const location=await getCurrentPhotoLocation();
+    target.locationSetter(location);
+    $(target.missingId).textContent=`GPS captured: ${location.latitude}, ${location.longitude}`;
+    $(target.missingId).style.display='block';
+    $(target.missingId).style.color='var(--ok)';
+    $(target.btnId).textContent='Retake';
+    $(target.btnId).classList.add('retake');
+    let img2=document.getElementById(target.which+'Thumb');
+    if(!img2){img2=document.createElement('img');img2.id=target.which+'Thumb';const row=$(target.btnId).closest('.km-row');(row||$(target.btnId)).insertAdjacentElement('afterend',img2);}
+    img2.src=canvas.toDataURL('image/jpeg',0.55);
+    stopCamera();
+  }catch(err){
+    target.setter(null);
+    target.locationSetter(null);
+    $(target.btnId).disabled=false;
+    $(target.btnId).textContent='Take photo';
+    $(target.missingId).textContent='Required — photo + GPS location';
+    $(target.missingId).style.display='block';
+    toast('📍 Location is required for each photo. Allow Location permission and retake the photo.');
+  }
+}
+
+$('startPhotoBtn').addEventListener('click',()=>openCamera('start','startPhotoBtn','startPhotoMissing',(d)=>startPhoto=d,(p)=>startPhotoLocation=p));
+$('finishPhotoBtn').addEventListener('click',()=>openCamera('finish','finishPhotoBtn','finishPhotoMissing',(d)=>finishPhoto=d,(p)=>finishPhotoLocation=p));
+$('capturePhotoBtn').addEventListener('click',captureMobilePhoto);
+$('cancelCameraBtn').addEventListener('click',stopCamera);
+$('closeCamera').addEventListener('click',stopCamera);
+$('cameraModal').addEventListener('click',e=>{if(e.target===$('cameraModal'))stopCamera();});
 
 // ---------- open trips (started, not yet finished) ----------
 function getOpenTrips(){ try { return JSON.parse(localStorage.getItem('benzine_open_trips')) || []; } catch(e){ return []; } }
