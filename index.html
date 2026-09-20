@@ -508,10 +508,11 @@
   <!-- FINANCE SECTION -->
   <section class="section" id="financeSection">
     <div class="page-header"><span class="page-header-icon">💳</span><span class="page-header-title">Finance</span></div>
-    <div class="card" id="financeLoginRequired" style="display:none;">
-      <strong>🔒 Admin access required</strong>
-      <div class="hint">Finance uses the same Admin authorization as Photo Audit.</div>
-      <button type="button" class="save-btn" id="financeGoAdminBtn">Open Admin Login</button>
+    <div class="card" id="financeLoginCard">
+      <label>Finance PIN</label>
+      <input type="password" inputmode="numeric" id="financePinInput" placeholder="Finance PIN">
+      <button type="button" class="save-btn" id="financeLoginBtn">🔐 Login as Finance</button>
+      <div class="hint">Finance has separate access and cannot open the Admin section.</div>
     </div>
     <div id="financeDashboard" style="display:none;">
       <div class="card">
@@ -523,6 +524,7 @@
         <div class="row2" style="margin-top:10px;"><button type="button" class="save-btn" id="financeApplyFiltersBtn">Apply Filters</button><button type="button" class="save-btn" style="background:#374151;" id="financeClearFiltersBtn">Clear</button></div>
       </div>
       <div class="card"><div id="financeTripsList"><div class="empty">No trips loaded yet.</div></div></div>
+      <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="financeLogoutBtn">Log out of Finance</button>
     </div>
   </section>
 
@@ -548,8 +550,6 @@
     </div>
     <label>My PIN</label>
     <input type="password" inputmode="numeric" id="loginPin" placeholder="Enter Your Pin">
-    <button type="button" class="save-btn" id="loginBtn">🔐 Login</button>
-    <div class="hint" id="loginStatus">Not logged in yet.</div>
 
     <label style="margin-top:18px;">Project Name</label>
     <select id="projectNameSelect">
@@ -567,6 +567,8 @@
       <div class="search-options" id="defaultDriverOptions"></div>
     </div>
 
+    <button type="button" class="save-btn" id="loginBtn">🔐 Login</button>
+    <div class="hint" id="loginStatus">Not logged in yet.</div>
     <button class="save-btn" id="saveSettings">Save Settings</button>
     <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="enableRemindersBtn">🔔 Enable Finish Reminders</button>
     <div class="hint" id="reminderStatus"></div>
@@ -622,7 +624,7 @@ sideMenuOverlay.onclick = closeSideMenu;
 
 $('menuHomeBtn').onclick = () => { closeSideMenu(); showTab('start'); };
 $('menuHistoryBtn').onclick = () => { closeSideMenu(); showTab('history'); };
-$('menuAdminBtn').onclick = () => { closeSideMenu(); showTab('admin'); };
+$('menuAdminBtn').onclick = () => { closeSideMenu(); if (financeAuthed) return toast('Finance access cannot open Admin'); showTab('admin'); };
 $('menuFinanceBtn').onclick = () => { closeSideMenu(); showTab('finance'); };
 $('menuSettingsBtn').onclick = () => { closeSideMenu(); $('settingsModal').style.display='flex'; };
 
@@ -634,6 +636,8 @@ document.addEventListener('keydown', (e) => {
 function loadSettings(){ try { return JSON.parse(localStorage.getItem('benzine_settings')) || {}; } catch(e){ return {}; } }
 function saveSettingsToStorage(s){ localStorage.setItem('benzine_settings', JSON.stringify(s)); }
 let settings = loadSettings();
+let financeAuthed = false;
+let financePinValue = '';
 settings.scriptUrl = DEFAULT_SCRIPT_URL;
 // Sync token is intentionally blank on a fresh install.
 // Clear only the bundled placeholder from older builds; preserve any real token.
@@ -642,6 +646,8 @@ saveSettingsToStorage(settings);
 
 function fillSettingsForm(){
   $('scriptToken').value = settings.scriptToken || '';
+  $('loginEngineerSelect').value = settings.engineer || '';
+  $('loginPin').value = settings.pin || '';
   $('projectNameSelect').value = settings.projectName || '';
   $('defaultDriver').value = settings.defaultDriver || '';
 }
@@ -655,7 +661,9 @@ function updateLoginStatus(){
   $('startEngineerDisplay').textContent = loggedIn ? settings.engineer : '— not logged in —';
   $('historyWhoami').textContent = loggedIn ? ('Showing history for: ' + settings.engineer) : '';
   $('userRowText').textContent = loggedIn ? (settings.engineer + ' · Engineer') : 'Not logged in';
-  if ($('sideMenuUserName')) $('sideMenuUserName').textContent = loggedIn ? settings.engineer : 'Not logged in';
+  if ($('sideMenuUserName')) $('sideMenuUserName').textContent = loggedIn ? settings.engineer : (financeAuthed ? 'Finance' : 'Not logged in');
+  const roleEl = document.querySelector('.side-menu-role');
+  if (roleEl) roleEl.textContent = financeAuthed ? 'Finance' : 'Engineer';
   $('loginBtn').textContent = loggedIn ? '↪ Log out' : '🔐 Login';
   if (loggedIn) $('loginEngineerSelect').value = settings.engineer;
 }
@@ -665,9 +673,16 @@ $('switchUserBtn').onclick = () => { $('settingsModal').style.display='flex'; };
 $('loginBtn').onclick = async () => {
   const loggedIn = !!(settings.engineer && settings.pin);
   if (loggedIn){
-    delete settings.engineer; delete settings.pin;
+    delete settings.engineer; delete settings.pin; delete settings.scriptToken; delete settings.projectName; delete settings.defaultDriver;
+    financeAuthed = false; financePinValue = '';
+    sessionStorage.removeItem('telecomax_finance_session_pin');
     saveSettingsToStorage(settings);
+    $('scriptToken').value = '';
+    $('projectNameSelect').value = '';
+    $('defaultDriver').value = '';
+    $('loginEngineerSelect').value = '';
     $('loginPin').value = '';
+    $('driver').value = '';
     updateLoginStatus();
     updateLockState();
     renderLog();
@@ -689,9 +704,10 @@ $('loginBtn').onclick = async () => {
     const data = JSON.parse(await res.text());
     if (data.ok){
       settings.scriptUrl = DEFAULT_SCRIPT_URL; settings.scriptToken = scriptToken;
-      settings.engineer = name; settings.pin = pin; settings.projectName = projectName; settings.projectName = projectName;
+      settings.engineer = name; settings.pin = pin; settings.projectName = projectName;
+      settings.defaultDriver = $('defaultDriver').value.trim();
       saveSettingsToStorage(settings);
-      $('loginPin').value = '';
+      $('driver').value = settings.defaultDriver || $('driver').value;
       updateLoginStatus();
       updateLockState();
       renderLog();
@@ -721,24 +737,45 @@ $('enableRemindersBtn').onclick = async () => {
   updateReminderStatus();
   if (perm === 'granted') toast('Reminders enabled');
 };
-$('saveSettings').onclick = () => {
+$('saveSettings').onclick = async () => {
   settings.scriptUrl = DEFAULT_SCRIPT_URL;
   const tokenValue = $('scriptToken').value.trim();
-  if (!tokenValue) return toast('Enter the Sync token sent to you');
+  const engineer = $('loginEngineerSelect').value.trim();
+  const pin = $('loginPin').value.trim();
   const projectName = $('projectNameSelect').value;
+  const driverName = $('defaultDriver').value.trim();
+  if (!tokenValue) return toast('Enter the Sync token sent to you');
+  if (!engineer) return toast('Select your name');
+  if (!pin) return toast('Enter your PIN');
   if (!projectName) return toast('Select a Project Name');
-  settings.scriptToken = tokenValue;
-  settings.projectName = projectName;
-  settings.defaultDriver = $('defaultDriver').value.trim();
-  saveSettingsToStorage(settings);
-  if (settings.defaultDriver) $('driver').value = settings.defaultDriver;
-  recalcFinish();
-  $('settingsModal').style.display='none';
-  toast('Settings saved');
+  $('saveSettings').disabled = true;
+  try {
+    const res = await fetch(DEFAULT_SCRIPT_URL, { method:'POST', body: JSON.stringify({ token: tokenValue, action:'verifyLogin', engineer, pin }) });
+    const data = JSON.parse(await res.text());
+    if (!data.ok) return toast('❌ Wrong PIN for ' + engineer);
+    settings.scriptToken = tokenValue;
+    settings.engineer = engineer;
+    settings.pin = pin;
+    settings.projectName = projectName;
+    settings.defaultDriver = driverName;
+    saveSettingsToStorage(settings);
+    $('driver').value = driverName;
+    updateLoginStatus();
+    updateLockState();
+    renderLog();
+    recalcFinish();
+    $('settingsModal').style.display='none';
+    toast('Settings saved and login verified');
+  } catch (err) {
+    toast('Could not verify — check connection or Sync token');
+  } finally {
+    $('saveSettings').disabled = false;
+  }
 };
 
 // ---------- tabs ----------
 function showTab(which, skipFinishLoad = false){
+  if (which==='admin' && financeAuthed) { toast('Finance access cannot open Admin'); return; }
   if (which==='start' && $('tabStartBtn').disabled) which = 'finish';
   if (which==='finish' && $('tabFinishBtn').disabled) which = 'start';
   const mainWorkflow = which==='start' || which==='finish';
@@ -1243,18 +1280,52 @@ $('adminPhotoAuditTabBtn').onclick=()=>showAdminPanel('photos');
 $('adminSolfaTabBtn').onclick=()=>{ $('adminSolfaDate').value=adminTodayISO(); showAdminPanel('solfa'); };
 $('adminRentTabBtn').onclick=()=>showAdminPanel('rent');
 
+function updateFinanceUI(){
+  const roleEl = document.querySelector('.side-menu-role');
+  if (roleEl) roleEl.textContent = financeAuthed ? 'Finance' : 'Engineer';
+  $('financeLoginCard').style.display = financeAuthed ? 'none' : 'block';
+  $('financeDashboard').style.display = financeAuthed ? 'block' : 'none';
+  if ($('menuAdminBtn')) $('menuAdminBtn').style.display = financeAuthed ? 'none' : '';
+}
+
 function showFinanceSection(){
-  if (!adminAuthed) {
-    $('financeLoginRequired').style.display='block';
-    $('financeDashboard').style.display='none';
-    return;
-  }
-  $('financeLoginRequired').style.display='none';
-  $('financeDashboard').style.display='block';
+  updateFinanceUI();
+  if (!financeAuthed) return;
   populateFinanceEngineerFilter();
   loadFinanceTrips();
 }
-$('financeGoAdminBtn').onclick=()=>showTab('admin');
+$('financeLoginBtn').onclick = async () => {
+  const pin = $('financePinInput').value.trim();
+  if (!pin) return toast('Enter the finance PIN');
+  $('financeLoginBtn').disabled = true; $('financeLoginBtn').textContent = 'Checking…';
+  try {
+    const res = await fetch(settings.scriptUrl, { method:'POST', body: JSON.stringify({ token: settings.scriptToken, action:'financeVerify', financePin: pin }) });
+    const data = JSON.parse(await res.text());
+    if (!data.ok) return toast(adminErrorMessage(new Error(data.error || 'invalid-finance-pin')));
+    financeAuthed = true; financePinValue = pin;
+    sessionStorage.setItem('telecomax_finance_session_pin', pin);
+    // Finance and Admin are mutually exclusive in the same browser session.
+    adminAuthed = false; adminPinValue = '';
+    sessionStorage.removeItem('telecomax_admin_session_pin');
+    $('adminLoginCard').style.display = 'block'; $('adminDashboard').style.display = 'none';
+    updateFinanceUI();
+    showTab('finance');
+    toast('✅ Logged in as Finance');
+    await loadFinanceTrips();
+  } catch (err) {
+    toast(adminErrorMessage(err));
+  } finally {
+    $('financeLoginBtn').disabled = false; $('financeLoginBtn').textContent = '🔐 Login as Finance';
+  }
+};
+$('financeLogoutBtn').onclick = () => {
+  financeAuthed = false; financePinValue = '';
+  sessionStorage.removeItem('telecomax_finance_session_pin');
+  $('financePinInput').value = '';
+  updateFinanceUI();
+  showTab('start');
+  toast('Finance logged out');
+};
 $('financeFilterEngineer').addEventListener('change', loadFinanceTrips);
 $('financeApplyFiltersBtn').onclick=()=>loadFinanceTrips();
 $('financeClearFiltersBtn').onclick=()=>{ $('financeFilterEngineer').value=''; $('financeFilterMonth').value=''; loadFinanceTrips(); };
@@ -1264,14 +1335,46 @@ $('financePhotosToggle').onclick=()=>{ financePhotosVisible=!financePhotosVisibl
 applyFinancePhotosVisibility();
 function populateFinanceEngineerFilter(){ const cached=getCachedLists(); populateSearchInput($('financeFilterEngineer'), $('financeFilterEngineerOptions'), cached.engineers||[], $('financeFilterEngineer').value||''); }
 async function loadFinanceTrips(){
-  if(!adminAuthed) return;
+  if(!financeAuthed) return;
   $('financeTripsList').innerHTML='<div class="empty">Loading…</div>';
   try{
-    const data=await adminFetch('adminTrips',{filterEngineer:$('financeFilterEngineer').value,filterMonth:$('financeFilterMonth').value});
+    const data=await financeFetch('financeTrips',{filterEngineer:$('financeFilterEngineer').value,filterMonth:$('financeFilterMonth').value});
     financeTripsCache=data.trips||[];
     renderTripListInto('financeTripsList', financeTripsCache);
   }catch(err){ $('financeTripsList').innerHTML='<div class="empty">Could not load trips — check connection.</div>'; }
 }
+
+async function financeFetch(action, extra){
+  const res = await fetch(settings.scriptUrl, {
+    method: 'POST',
+    body: JSON.stringify({ token: settings.scriptToken, action, financePin: financePinValue, ...(extra||{}) })
+  });
+  const text = await res.text();
+  const data = JSON.parse(text);
+  if (!data.ok) throw new Error(data.error || 'server-error');
+  return data;
+}
+
+async function restoreFinanceSession(){
+  const savedPin = sessionStorage.getItem('telecomax_finance_session_pin');
+  if (!savedPin) { updateFinanceUI(); return; }
+  financePinValue = savedPin;
+  try {
+    const data = await financeFetch('financeVerify');
+    if (!data.ok) throw new Error('invalid-finance-pin');
+    financeAuthed = true;
+    adminAuthed = false; adminPinValue = '';
+    sessionStorage.removeItem('telecomax_admin_session_pin');
+    $('adminLoginCard').style.display = 'block'; $('adminDashboard').style.display = 'none';
+    updateFinanceUI();
+  } catch (err) {
+    financeAuthed = false; financePinValue = '';
+    sessionStorage.removeItem('telecomax_finance_session_pin');
+    updateFinanceUI();
+  }
+}
+restoreFinanceSession();
+
 function renderTripListInto(containerId,trips){
   const el=$(containerId);
   if(!trips.length){el.innerHTML='<div class="empty">No trips match these filters.</div>';return;}
@@ -1299,6 +1402,7 @@ function adminErrorMessage(err){
   const code = String(err && err.message || 'server-error');
   const messages = {
     'invalid-admin-pin': '❌ Wrong admin PIN',
+    'invalid-finance-pin': '❌ Wrong finance PIN',
     'invalid-token': '❌ Invalid Sync token',
     'engineer-required': 'Engineer is required',
     'invalid-engineer': 'Engineer is not registered in Config',
@@ -1323,6 +1427,7 @@ function adminErrorMessage(err){
 }
 
 $('adminLoginTabBtn').onclick = async () => {
+  if (financeAuthed) return toast('Finance access cannot open Admin. Log out of Finance first.');
   const pin = $('adminPinInputTab').value.trim();
   if (!pin) return toast('Enter the admin PIN');
   adminPinValue = pin;
