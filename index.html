@@ -35,6 +35,8 @@
   }
   input::placeholder,textarea::placeholder{color:#5C5C5F;}
   input[type=date]{color-scheme:dark;}
+  .date-display{background:var(--card-alt);color:var(--text);cursor:default;}
+  .date-display:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 2px rgba(20,184,166,.12);}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
   .km-row{display:flex;gap:8px;align-items:stretch;}
   .km-row input{flex:1;font-size:20px;font-weight:700;}
@@ -359,7 +361,7 @@
       <div class="row2">
         <div>
           <label data-i18n="Date *">Date *</label>
-          <input type="date" id="date" required>
+          <input type="text" id="date" class="date-display" readonly aria-readonly="true" required>
         </div>
         <div>
           <label data-i18n="Day">Day</label>
@@ -667,7 +669,13 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
-const todayISO = () => new Date().toISOString().slice(0,10);
+const todayISO = () => {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
 const dayName = (iso) => new Date(iso+'T00:00:00').toLocaleDateString('en-US',{weekday:'long'});
 const genId = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-'+Date.now()+'-'+Math.random().toString(16).slice(2));
 const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyPpI27VQqpIrZHn8mizmONCLHEbp_aJj_wnan6nyYh-0R2bNW_C7qbYuAHQvRgwS5_fg/exec';
@@ -999,13 +1007,14 @@ function updateLockState(){
 }
 
 // ---------- init start form ----------
-$('date').min = todayISO();
-$('date').value = todayISO();
-$('day').value = dayName($('date').value);
-$('date').addEventListener('change', () => {
-  if ($('date').value < todayISO()) { $('date').value = todayISO(); toast('Past dates aren\'t allowed — reset to today'); }
-  $('day').value = dayName($('date').value);
-});
+// Trip Date is always today's local device date. It is display-only (no calendar picker).
+function setTodayDateField(){
+  const today = todayISO();
+  $('date').value = today;
+  $('date').setAttribute('aria-label', `Today's date: ${today}`);
+  $('day').value = dayName(today);
+}
+setTodayDateField();
 if (!settings.engineer || !settings.pin) setTimeout(() => { $('settingsModal').style.display='flex'; toast('Log in with your name and PIN first'); }, 300);
 
 // ---------- engineer/driver dropdown lists ----------
@@ -1955,7 +1964,7 @@ $('startForm').addEventListener('submit', async (e) => {
   if (!settings.projectName) return toast('Select a Project Name in Settings first');
   const engineer = settings.engineer;
   const start = $('startKm').value;
-  if ($('date').value < todayISO()) return toast('Date cannot be before today');
+  setTodayDateField();
   if (!$('area').value.trim()) return toast('Area is required');
   if (!$('task').value.trim()) return toast('Task is required');
   if (!start) return toast('Start KM is required');
@@ -2046,7 +2055,7 @@ function resetStartForm(){
   $('startPhotoBtn').textContent = 'Take photo';
   $('startPhotoBtn').classList.remove('retake');
   if (settings.defaultDriver) $('driver').value = settings.defaultDriver;
-  $('date').min = todayISO(); $('date').value = todayISO(); $('day').value = dayName($('date').value);
+  setTodayDateField();
 }
 
 // ---------- FINISH submit ----------
