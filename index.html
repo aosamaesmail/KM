@@ -512,6 +512,7 @@
           <div class="hint">Compare each odometer photo against the KM the engineer entered, grouped by day and engineer.</div>
           <button type="button" class="save-btn" id="adminPhotosToggle" style="width:auto;padding:8px 12px;margin:8px 0 2px;background:#374151;">Hide Photos</button>
           <label data-i18n="Filter by Engineer">Filter by Engineer</label><div class="search-select admin-filter-control" id="adminFilterEngineerSearchWrap"><input type="text" id="adminFilterEngineer" class="admin-filter-control" placeholder="Search or select engineer" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"><div class="search-options" id="adminFilterEngineerOptions"></div></div>
+          <label>Filter by Driver</label><div class="search-select admin-filter-control" id="adminFilterDriverSearchWrap"><input type="text" id="adminFilterDriver" class="admin-filter-control" placeholder="Search or select driver" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"><div class="search-options" id="adminFilterDriverOptions"></div></div>
           <label>Filter by Month</label><input type="month" id="adminFilterMonth" class="month-input admin-filter-control">
           <div class="row2" style="margin-top:10px;"><button type="button" class="save-btn" id="adminApplyFiltersBtn">Apply Filters</button><button type="button" class="save-btn" style="background:#374151;" id="adminClearFiltersBtn">Clear</button></div>
         </div>
@@ -574,6 +575,7 @@
         <div class="hint">Finance copy of Photo Audit. Review the same trip, odometer and GPS information.</div>
         <button type="button" class="save-btn" id="financePhotosToggle" style="width:auto;padding:8px 12px;margin:8px 0 2px;background:#374151;">Hide Photos</button>
         <label data-i18n="Filter by Engineer">Filter by Engineer</label><div class="search-select admin-filter-control" id="financeFilterEngineerSearchWrap"><input type="text" id="financeFilterEngineer" class="admin-filter-control" placeholder="Search or select engineer" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"><div class="search-options" id="financeFilterEngineerOptions"></div></div>
+        <label>Filter by Driver</label><div class="search-select admin-filter-control" id="financeFilterDriverSearchWrap"><input type="text" id="financeFilterDriver" class="admin-filter-control" placeholder="Search or select driver" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"><div class="search-options" id="financeFilterDriverOptions"></div></div>
         <label>Filter by Month</label><input type="month" id="financeFilterMonth" class="month-input admin-filter-control">
         <div class="row2" style="margin-top:10px;"><button type="button" class="save-btn" id="financeApplyFiltersBtn">Apply Filters</button><button type="button" class="save-btn" style="background:#374151;" id="financeClearFiltersBtn">Clear</button></div>
       </div>
@@ -1528,18 +1530,19 @@ function logoutFinance(){
 }
 $('sideFinanceLogoutBtn').onclick = logoutFinance;
 $('financeFilterEngineer').addEventListener('change', loadFinanceTrips);
+$('financeFilterDriver').addEventListener('change', loadFinanceTrips);
 $('financeApplyFiltersBtn').onclick=()=>loadFinanceTrips();
-$('financeClearFiltersBtn').onclick=()=>{ $('financeFilterEngineer').value=''; $('financeFilterMonth').value=''; loadFinanceTrips(); };
+$('financeClearFiltersBtn').onclick=()=>{ $('financeFilterEngineer').value=''; $('financeFilterDriver').value=''; $('financeFilterMonth').value=''; loadFinanceTrips(); };
 let financePhotosVisible = localStorage.getItem('financePhotosVisible') !== '0';
 function applyFinancePhotosVisibility(){ $('financeTripsList').classList.toggle('finance-photos-hidden', !financePhotosVisible); $('financePhotosToggle').textContent = financePhotosVisible ? 'Hide Photos' : 'Show Photos'; }
 $('financePhotosToggle').onclick=()=>{ financePhotosVisible=!financePhotosVisible; localStorage.setItem('financePhotosVisible', financePhotosVisible?'1':'0'); applyFinancePhotosVisibility(); };
 applyFinancePhotosVisibility();
-function populateFinanceEngineerFilter(){ const cached=getCachedLists(); populateSearchInput($('financeFilterEngineer'), $('financeFilterEngineerOptions'), cached.engineers||[], $('financeFilterEngineer').value||''); }
+function populateFinanceEngineerFilter(){ const cached=getCachedLists(); populateSearchInput($('financeFilterEngineer'), $('financeFilterEngineerOptions'), cached.engineers||[], $('financeFilterEngineer').value||''); populateSearchInput($('financeFilterDriver'), $('financeFilterDriverOptions'), cached.drivers||[], $('financeFilterDriver').value||''); }
 async function loadFinanceTrips(){
   if(!financeAuthed) return;
   $('financeTripsList').innerHTML='<div class="empty">Loading…</div>';
   try{
-    const data=await financeFetch('financeTrips',{filterEngineer:$('financeFilterEngineer').value,filterMonth:$('financeFilterMonth').value});
+    const data=await financeFetch('financeTrips',{filterEngineer:$('financeFilterEngineer').value,filterDriver:$('financeFilterDriver').value,filterMonth:$('financeFilterMonth').value});
     financeTripsCache=data.trips||[];
     renderTripListInto('financeTripsList', financeTripsCache);
   }catch(err){ $('financeTripsList').innerHTML='<div class="empty">Could not load trips — check connection.</div>'; }
@@ -1744,6 +1747,7 @@ function populateAdminEngineerFilter(){
   const cached = getCachedLists();
   const engineers = cached.engineers || [];
   populateSearchInput($('adminFilterEngineer'), $('adminFilterEngineerOptions'), engineers, $('adminFilterEngineer').value || '');
+  populateSearchInput($('adminFilterDriver'), $('adminFilterDriverOptions'), cached.drivers || [], $('adminFilterDriver').value || '');
   populateSearchInput($('adminBalanceEngineer'), $('adminBalanceEngineerOptions'), engineers, $('adminBalanceEngineer').value || '');
 }
 
@@ -1845,6 +1849,7 @@ $('financeFilterMonth').value = new Date().toISOString().slice(0,7);
 $('adminBalanceMonth').addEventListener('change', () => loadAdminSummary());
 $('adminClearBalanceMonthBtn').onclick = () => { $('adminBalanceMonth').value=''; $('adminBalanceEngineer').value=''; loadAdminSummary(); };
 $('adminBalanceEngineer').addEventListener('change', loadAdminSummary);
+$('adminFilterDriver').addEventListener('change', loadAdminTrips);
 let adminPhotosVisible = localStorage.getItem('adminPhotosVisible') !== '0';
 function applyAdminPhotosVisibility(){
   $('adminTripsList').classList.toggle('admin-photos-hidden', !adminPhotosVisible);
@@ -1860,6 +1865,7 @@ applyAdminPhotosVisibility();
 $('adminApplyFiltersBtn').onclick = () => loadAdminTrips();
 $('adminClearFiltersBtn').onclick = () => {
   $('adminFilterEngineer').value = '';
+  $('adminFilterDriver').value = '';
   $('adminFilterMonth').value = '';
   loadAdminTrips();
 };
@@ -1870,6 +1876,7 @@ async function loadAdminTrips(){
   try {
     const data = await adminFetch('adminTrips', {
       filterEngineer: $('adminFilterEngineer').value,
+      filterDriver: $('adminFilterDriver').value,
       filterMonth: $('adminFilterMonth').value,
     });
     adminTripsCache = data.trips || [];
