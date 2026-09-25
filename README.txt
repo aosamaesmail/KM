@@ -70,3 +70,5 @@ V48 Allowance Audit
 - Allowance Audit sheet is created automatically on first audit.
 - Engineer: out-of-base = 80/day; if monthly distinct working days exceed 22, special weekend upgrades = working days - 22, earliest dates first, priority first Friday then Saturdays, then remaining Fridays if required.
 - Driver: out-of-base Sun-Thu 50, Saturday 75, Friday 100.
+
+V49: compact pending-only allowance audit workflow, bulk selection/approval, Final Payable removed.
