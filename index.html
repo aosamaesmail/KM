@@ -370,7 +370,9 @@
       </div>
 
       <label data-i18n="Area *">Area *</label>
-      <input type="text" id="area" name="tmx_area_entry" placeholder="e.g. Sharm El-Sheikh" autocomplete="off" aria-autocomplete="none" data-lpignore="true" autocapitalize="words" autocorrect="off" spellcheck="false" required>
+      <input type="text" id="area" name="tmx_area_entry" list="areaList" placeholder="Search or select city" autocomplete="off" aria-autocomplete="none" data-lpignore="true" autocapitalize="words" autocorrect="off" spellcheck="false" required>
+      <datalist id="areaList"></datalist>
+      <div class="hint">Select a registered city from the Area List.</div>
 
       <label data-i18n="Task *">Task *</label>
       <input type="text" id="task" name="tmx_task_entry" placeholder="e.g. Travel to site / complaint" autocomplete="off" aria-autocomplete="none" data-lpignore="true" autocapitalize="sentences" autocorrect="off" spellcheck="false" required>
@@ -1105,13 +1107,23 @@ function populateSimpleSelect(selectEl, list, currentValue, placeholder){
   if (want && (list || []).includes(want)) selectEl.value = want;
 }
 
+function populateAreaList(list){
+  const dl=$('areaList'); if(!dl)return;
+  dl.innerHTML=''; (list||[]).forEach(a=>{const o=document.createElement('option');o.value=a;dl.appendChild(o)});
+}
+function validAreaClient(){
+  const typed=$('area').value.trim().toLowerCase(), list=(getCachedLists().areas||[]);
+  return list.find(a=>String(a).trim().toLowerCase()===typed)||'';
+}
+
 async function refreshLists(silent){
   if (!settings.scriptUrl) return;
   try {
     const res = await fetch(settings.scriptUrl + '?action=config');
     const data = await res.json();
     if (data.engineers || data.drivers){
-      setCachedLists({ engineers: data.engineers||[], drivers: data.drivers||[], driverDefaults: data.driverDefaults||{} });
+      setCachedLists({ engineers: data.engineers||[], drivers: data.drivers||[], driverDefaults: data.driverDefaults||{}, areas: data.areas||[] });
+      populateAreaList(data.areas||[]);
       populateDriverList(data.drivers||[], settings.defaultDriver);
       populateEngineerList(data.engineers||[], settings.engineer);
       populateDefaultDriverList(data.drivers||[], settings.defaultDriver);
@@ -1973,6 +1985,8 @@ $('startForm').addEventListener('submit', async (e) => {
   const start = $('startKm').value;
   setTodayDateField();
   if (!$('area').value.trim()) return toast('Area is required');
+  const canonicalArea=validAreaClient();
+  if (!canonicalArea) return toast('❌ Please select a valid Area from the registered Area List');
   if (!$('task').value.trim()) return toast('Task is required');
   if (!start) return toast('Start KM is required');
   if (!startPhoto) { $('startPhotoMissing').style.display='block'; return toast('Start KM photo is required'); }
@@ -1988,7 +2002,7 @@ $('startForm').addEventListener('submit', async (e) => {
   const trip = {
     tripId, engineer: canonicalEngineer, driver: canonicalDriver, projectName: settings.projectName || '',
     date: $('date').value, day: $('day').value,
-    area: $('area').value.trim(), task: $('task').value.trim(),
+    area: canonicalArea, task: $('task').value.trim(),
     startKm: parseFloat(start), startedAt: new Date().toISOString(),
     rate: undefined,
     lastForthBack: 0,

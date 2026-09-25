@@ -60,3 +60,13 @@ V45 FINANCE DESKTOP PHOTO AUDIT
 V46: Finance Desktop Portal visual theme changed to a soft light audit theme for reduced eye strain. Functionality remains based on V45.
 
 V47: Added standalone Admin desktop portal at /admin.html with Balances, Photo Audit, Solfa and Rent.
+
+
+V48 Allowance Audit
+- New allowances.html responsive PM portal.
+- Code.gs: set ALLOWANCE_PM_PIN to the PM PIN you want.
+- Config new columns: E Engineer Base City, F Driver Base City, G Area List.
+- Start Trip Area is now restricted to Area List values.
+- Allowance Audit sheet is created automatically on first audit.
+- Engineer: out-of-base = 80/day; if monthly distinct working days exceed 22, special weekend upgrades = working days - 22, earliest dates first, priority first Friday then Saturdays, then remaining Fridays if required.
+- Driver: out-of-base Sun-Thu 50, Saturday 75, Friday 100.
