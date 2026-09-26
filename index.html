@@ -1033,6 +1033,322 @@ input[type="date"][readonly]{
   letter-spacing:.14em!important;
 }
 
+
+
+/* V41 — Stable KM palette in BOTH browser light mode and dark mode */
+:root{
+  color-scheme: dark !important;
+  --km-field-bg:#2b2b2b;
+  --km-field-bg-locked:#101522;
+  --km-field-text:#f7f7fb;
+  --km-field-muted:#a7a9b7;
+  --km-field-border:rgba(255,255,255,.20);
+  --km-card-bg:rgba(4,8,31,.72);
+}
+
+/* Prevent Samsung/Chrome light mode from repainting controls white */
+html, body, input, select, textarea, button{
+  color-scheme:dark !important;
+}
+input, select, textarea{
+  -webkit-appearance:none;
+  appearance:none;
+}
+
+/* All normal editable fields */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+select,
+textarea,
+.combo-input,
+.search-input{
+  background:var(--km-field-bg) !important;
+  color:var(--km-field-text) !important;
+  border-color:var(--km-field-border) !important;
+  -webkit-text-fill-color:var(--km-field-text) !important;
+}
+
+/* Placeholder visibility */
+input::placeholder,
+textarea::placeholder,
+.combo-input::placeholder,
+.search-input::placeholder{
+  color:var(--km-field-muted) !important;
+  opacity:1 !important;
+  -webkit-text-fill-color:var(--km-field-muted) !important;
+}
+
+/* Browser autofill must not turn fields white */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+select:-webkit-autofill{
+  -webkit-text-fill-color:var(--km-field-text) !important;
+  -webkit-box-shadow:0 0 0 1000px var(--km-field-bg) inset !important;
+  box-shadow:0 0 0 1000px var(--km-field-bg) inset !important;
+  caret-color:var(--km-field-text) !important;
+}
+
+/* Readonly/locked values */
+input[readonly],
+input:disabled,
+select:disabled,
+.locked,
+#engineerName{
+  background:var(--km-field-bg-locked) !important;
+  color:var(--km-field-text) !important;
+  -webkit-text-fill-color:var(--km-field-text) !important;
+  opacity:1 !important;
+}
+
+/* Keep date/day controls consistent */
+input[type="date"],
+input[type="time"],
+input[type="number"]{
+  background:var(--km-field-bg) !important;
+  color:var(--km-field-text) !important;
+  -webkit-text-fill-color:var(--km-field-text) !important;
+}
+input[type="date"]::-webkit-calendar-picker-indicator{
+  filter:invert(1);
+  opacity:.82;
+}
+
+/* Native select popup/options */
+select option{
+  background:#202126 !important;
+  color:#f7f7fb !important;
+}
+
+/* Searchable dropdown result panels */
+.dropdown-list,
+.autocomplete-list,
+.suggestions,
+.combo-list,
+.search-results,
+[role="listbox"]{
+  background:#171923 !important;
+  color:#f7f7fb !important;
+  border-color:rgba(255,255,255,.16) !important;
+}
+.dropdown-list *,
+.autocomplete-list *,
+.suggestions *,
+.combo-list *,
+.search-results *,
+[role="listbox"] *{
+  color:#f7f7fb !important;
+}
+.dropdown-list div:hover,
+.autocomplete-list div:hover,
+.suggestions div:hover,
+.combo-list div:hover,
+.search-results div:hover,
+[role="option"]:hover{
+  background:#313866 !important;
+}
+
+/* Settings + main cards keep the same translucent dark treatment */
+.settings-modal,
+.settings-panel,
+.settings-card,
+.card,
+.panel{
+  color-scheme:dark !important;
+}
+
+/* Engineer login controls: identical geometry and stable dark colors */
+#loginEngineerSelect,
+#loginPin,
+#projectNameSelect,
+#defaultDriver{
+  width:100% !important;
+  height:60px !important;
+  min-height:60px !important;
+  padding:0 18px !important;
+  box-sizing:border-box !important;
+  border-radius:14px !important;
+  background:var(--km-field-bg) !important;
+  color:var(--km-field-text) !important;
+  -webkit-text-fill-color:var(--km-field-text) !important;
+  border:1px solid var(--km-field-border) !important;
+}
+
+/* Apply the exact same palette even when OS explicitly requests light mode */
+@media (prefers-color-scheme: light){
+  html, body, input, select, textarea, button{ color-scheme:dark !important; }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  select, textarea, .combo-input, .search-input{
+    background:var(--km-field-bg) !important;
+    color:var(--km-field-text) !important;
+    -webkit-text-fill-color:var(--km-field-text) !important;
+  }
+  input[readonly], input:disabled, select:disabled, .locked, #engineerName{
+    background:var(--km-field-bg-locked) !important;
+    color:var(--km-field-text) !important;
+    -webkit-text-fill-color:var(--km-field-text) !important;
+  }
+}
+
+
+
+/* =========================================================
+   V42 — THEME-INDEPENDENT FORM CONTROLS
+   Keep identical colors in Android/Chrome light & dark mode.
+   ========================================================= */
+:root{
+  color-scheme:dark!important;
+  --v42-field:#2B2B2B;
+  --v42-field-locked:#101522;
+  --v42-text:#F5F4FA;
+  --v42-placeholder:#A6A3B2;
+  --v42-border:rgba(255,255,255,.20);
+  --v42-options:#171923;
+  --v42-option-hover:#313866;
+}
+
+html,body{color-scheme:dark!important}
+
+/* Real inputs in Home + Settings */
+body input[type="text"],
+body input[type="number"],
+body input[type="password"],
+body input[type="date"],
+body input[type="time"],
+body select,
+body textarea,
+body .search-select input,
+body #loginEngineerSelect,
+body #loginPin,
+body #projectNameSelect,
+body #defaultDriver{
+  background-color:var(--v42-field)!important;
+  color:var(--v42-text)!important;
+  -webkit-text-fill-color:var(--v42-text)!important;
+  border-color:var(--v42-border)!important;
+  opacity:1!important;
+  color-scheme:dark!important;
+}
+
+/* Locked/read-only fields */
+body input[readonly],
+body input:disabled,
+body select:disabled,
+body #engineerName{
+  background-color:var(--v42-field-locked)!important;
+  color:var(--v42-text)!important;
+  -webkit-text-fill-color:var(--v42-text)!important;
+  opacity:1!important;
+}
+
+/* Placeholder */
+body input::placeholder,
+body textarea::placeholder,
+body .search-select input::placeholder,
+body #loginEngineerSelect::placeholder,
+body #defaultDriver::placeholder{
+  color:var(--v42-placeholder)!important;
+  -webkit-text-fill-color:var(--v42-placeholder)!important;
+  opacity:1!important;
+}
+
+/* ACTUAL custom searchable dropdown containers */
+body .search-options,
+body #engineerOptions,
+body #defaultDriverOptions,
+body #driverOptions,
+body #areaOptions{
+  background:var(--v42-options)!important;
+  color:var(--v42-text)!important;
+  border-color:var(--v42-border)!important;
+  box-shadow:0 14px 32px rgba(0,0,0,.42)!important;
+}
+
+/* ACTUAL dropdown rows — override legacy white !important rules */
+body .search-options div,
+body .search-options .option,
+body .search-options button,
+body .search-options li,
+body #engineerOptions > *,
+body #defaultDriverOptions > *,
+body #driverOptions > *,
+body #areaOptions > *{
+  background:var(--v42-options)!important;
+  color:var(--v42-text)!important;
+  -webkit-text-fill-color:var(--v42-text)!important;
+  border-color:rgba(255,255,255,.10)!important;
+}
+
+/* Selected / hover result */
+body .search-options div:hover,
+body .search-options .option:hover,
+body .search-options .active,
+body .search-options div[aria-selected="true"],
+body .search-options [aria-selected="true"]{
+  background:var(--v42-option-hover)!important;
+  color:#FFFFFF!important;
+  -webkit-text-fill-color:#FFFFFF!important;
+}
+
+/* Autofill */
+body input:-webkit-autofill,
+body input:-webkit-autofill:hover,
+body input:-webkit-autofill:focus{
+  -webkit-text-fill-color:var(--v42-text)!important;
+  -webkit-box-shadow:0 0 0 1000px var(--v42-field) inset!important;
+  box-shadow:0 0 0 1000px var(--v42-field) inset!important;
+  caret-color:var(--v42-text)!important;
+}
+
+/* Same geometry for login fields */
+body #loginEngineerSelect,
+body #loginPin,
+body #projectNameSelect,
+body #defaultDriver{
+  width:100%!important;
+  height:60px!important;
+  min-height:60px!important;
+  max-height:60px!important;
+  padding:0 18px!important;
+  box-sizing:border-box!important;
+  border-radius:14px!important;
+  font-size:17px!important;
+}
+
+/* Explicitly repeat under OS light preference to defeat Samsung Internet/Chrome UA rules */
+@media (prefers-color-scheme:light){
+  html,body{color-scheme:dark!important}
+  body input[type="text"],
+  body input[type="number"],
+  body input[type="password"],
+  body input[type="date"],
+  body input[type="time"],
+  body select,
+  body textarea,
+  body .search-select input,
+  body #loginEngineerSelect,
+  body #loginPin,
+  body #projectNameSelect,
+  body #defaultDriver{
+    background-color:var(--v42-field)!important;
+    color:var(--v42-text)!important;
+    -webkit-text-fill-color:var(--v42-text)!important;
+  }
+  body .search-options,
+  body #engineerOptions,
+  body #defaultDriverOptions,
+  body #driverOptions,
+  body #areaOptions,
+  body .search-options div,
+  body .search-options .option,
+  body .search-options button,
+  body .search-options li{
+    background:var(--v42-options)!important;
+    color:var(--v42-text)!important;
+    -webkit-text-fill-color:var(--v42-text)!important;
+  }
+}
+
 </style>
 </head>
 <body>
