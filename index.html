@@ -926,6 +926,74 @@ td,th{border-color:rgba(255,255,255,.09)!important}
   }
 }
 
+
+/* =========================================================
+   KM V39.8 — BACKGROUND-BLENDED GLASS CARDS
+   Cards inherit the page's navy/purple glow instead of
+   appearing as separate solid blue blocks.
+   ========================================================= */
+
+/* Main content cards: transparent navy glass */
+.card,.panel,.box,.section,.home-card,.history-card,.settings-card,
+.trip-card,.recent-card,.engineer-login-card,.management-login-card{
+  background:
+    linear-gradient(145deg,
+      rgba(2,8,23,.46) 0%,
+      rgba(7,10,28,.36) 52%,
+      rgba(20,7,25,.30) 100%)!important;
+  border:1px solid rgba(214,51,145,.28)!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.025),
+    0 14px 36px rgba(0,0,0,.13)!important;
+  backdrop-filter:blur(13px) saturate(115%)!important;
+  -webkit-backdrop-filter:blur(13px) saturate(115%)!important;
+}
+
+/* Main Start/Finish workspace should almost disappear into background */
+#home .card,.home-screen .card,
+.main .card,.main-content .card{
+  background:
+    linear-gradient(180deg,
+      rgba(3,8,27,.34) 0%,
+      rgba(5,8,29,.24) 62%,
+      rgba(26,5,30,.22) 100%)!important;
+}
+
+/* Nested cards need even less fill so they do not stack blue rectangles */
+.card .card,.panel .card,.section .card{
+  background:rgba(5,9,23,.26)!important;
+  box-shadow:none!important;
+}
+
+/* Keep controls readable against the faded cards */
+input,select,textarea,
+.card input,.card select,.card textarea,
+.panel input,.panel select,.panel textarea{
+  background:rgba(35,36,37,.92)!important;
+  color:#F7F8FA!important;
+  border-color:rgba(160,166,177,.28)!important;
+}
+
+/* Locked engineer field stays darker */
+input[readonly],#engineerName,.engineer-name,.engineer-display,
+.logged-engineer,.login-locked{
+  background:rgba(2,3,7,.94)!important;
+  color:#fff!important;
+}
+
+/* Date/read-only accent can still pick up the navy theme */
+input[type="date"][readonly]{
+  background:rgba(16,29,91,.72)!important;
+}
+
+/* Softer card edge on mobile */
+@media(max-width:700px){
+  .card,.panel,.box,.section,.home-card,.history-card,.settings-card,
+  .trip-card,.recent-card,.engineer-login-card,.management-login-card{
+    box-shadow:0 10px 28px rgba(0,0,0,.10)!important;
+  }
+}
+
 </style>
 </head>
 <body>
