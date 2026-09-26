@@ -253,9 +253,57 @@
     box-shadow: 0 3px 9px rgba(207,54,145,.24);
 }
 .side-menu-logout:hover .side-menu-icon { background: var(--teal-dark); color: var(--bg); }
+
+/* V39 clean engineer login */
+.engineer-login-card{
+  margin-top:20px;padding:22px;border:1px solid #e5e7eb;border-radius:22px;
+  background:linear-gradient(180deg,#ffffff 0%,#fafafa 100%);
+  box-shadow:0 12px 32px rgba(17,24,39,.07);
+}
+.engineer-login-head{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.engineer-login-icon{
+  width:46px;height:46px;border-radius:14px;display:grid;place-items:center;
+  background:#111827;color:#fff;font-size:21px;flex:0 0 auto
+}
+.engineer-login-title{font-size:18px;font-weight:900;color:#111827;margin:0}
+.engineer-login-sub{font-size:12px;color:#6b7280;margin-top:3px}
+.engineer-login-card label{font-weight:800;color:#374151;margin-top:12px}
+.engineer-login-card input,.engineer-login-card select{min-height:52px;border-radius:13px}
+.engineer-login-btn{
+  width:100%;min-height:54px;margin-top:20px;border:0;border-radius:14px;
+  background:#111827;color:#fff;font-size:15px;font-weight:900;cursor:pointer
+}
+.engineer-login-btn:disabled{opacity:.6;cursor:wait}
+.engineer-login-status{text-align:center;margin-top:12px;font-size:12px;color:#6b7280}
+.connection-details{margin-top:18px;border-top:1px solid #eceff3;padding-top:14px}
+.connection-details summary{cursor:pointer;font-weight:800;color:#6b7280;font-size:12px}
+.login-buffer-overlay{
+  position:fixed;inset:0;z-index:100000;display:none;align-items:center;justify-content:center;
+  background:rgba(15,23,42,.40);backdrop-filter:blur(3px)
+}
+.login-buffer-overlay.show{display:flex}
+.login-buffer-box{
+  min-width:230px;padding:26px 30px;border-radius:20px;background:#fff;text-align:center;
+  box-shadow:0 20px 60px rgba(15,23,42,.25);font-weight:900;color:#111827
+}
+.login-buffer-spinner{
+  width:44px;height:44px;margin:0 auto 14px;border:4px solid #e5e7eb;
+  border-top-color:#d12f8a;border-radius:50%;animation:kmLoginSpin .75s linear infinite
+}
+@keyframes kmLoginSpin{to{transform:rotate(360deg)}}
+
 </style>
 </head>
 <body>
+
+<div id="engineerLoginBuffer" class="login-buffer-overlay" aria-hidden="true">
+  <div class="login-buffer-box" role="status" aria-live="polite">
+    <div class="login-buffer-spinner"></div>
+    <div>Signing you in...</div>
+    <div style="font-size:12px;font-weight:600;color:#6b7280;margin-top:5px">Verifying your Telecomax account</div>
+  </div>
+</div>
+
 
 <header>
   <div class="brand">
@@ -603,36 +651,48 @@
     </select>
     <div class="hint" data-i18n="Choose the app language. The interface will switch between English and Arabic.">Choose the app language. The interface will switch between English and Arabic.</div>
 
-    <label data-i18n="Sync token">Sync token</label>
-    <input type="text" id="scriptToken" placeholder="Enter the Sync token sent to you" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+    <div class="engineer-login-card">
+      <div class="engineer-login-head">
+        <div class="engineer-login-icon">↗</div>
+        <div>
+          <div class="engineer-login-title">Engineer Access</div>
+          <div class="engineer-login-sub">Use the same Engineer Name and PIN as the Custody app.</div>
+        </div>
+      </div>
 
-    <h2 style="font-size:15px;margin-top:22px;">🔐 Engineer Login</h2>
-    <label>My Name</label>
-    <div class="search-select" id="engineerSearchWrap">
-      <input type="text" id="loginEngineerSelect" placeholder="Search or select engineer" autocomplete="off">
-      <div class="search-options" id="engineerOptions"></div>
+      <label>Engineer Name</label>
+      <div class="search-select" id="engineerSearchWrap">
+        <input type="text" id="loginEngineerSelect" placeholder="Search your name" autocomplete="username" autocorrect="off" autocapitalize="none" spellcheck="false">
+        <div class="search-options" id="engineerOptions"></div>
+      </div>
+
+      <label>6-digit PIN</label>
+      <input type="password" inputmode="numeric" maxlength="6" id="loginPin" autocomplete="current-password" placeholder="••••••">
+
+      <label>Project</label>
+      <select id="projectNameSelect">
+        <option value="">Select your project</option>
+        <option value="NSNDT">NSNDT</option>
+        <option value="ETEGYDT">ETEGYDT</option>
+        <option value="VFEGY">VFEGY</option>
+        <option value="Huawei">Huawei</option>
+      </select>
+
+      <label>Default Driver</label>
+      <div class="search-select" id="defaultDriverSearchWrap">
+        <input type="text" id="defaultDriver" placeholder="Search or select driver" autocomplete="off">
+        <div class="search-options" id="defaultDriverOptions"></div>
+      </div>
+
+      <button type="button" class="engineer-login-btn" id="loginBtn">Log in</button>
+      <div class="engineer-login-status" id="loginStatus">Secure employee access</div>
+
+      <details class="connection-details">
+        <summary>Connection settings</summary>
+        <label data-i18n="Sync token">Sync token</label>
+        <input type="text" id="scriptToken" placeholder="Enter the Sync token sent to you" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+      </details>
     </div>
-    <label>My PIN</label>
-    <input type="password" inputmode="numeric" id="loginPin" placeholder="Enter Your Pin">
-
-    <label style="margin-top:18px;">Project Name</label>
-    <select id="projectNameSelect">
-      <option value="">— Select Project —</option>
-      <option value="NSNDT">NSNDT</option>
-      <option value="ETEGYDT">ETEGYDT</option>
-      <option value="VFEGY">VFEGY</option>
-      <option value="Huawei">Huawei</option>
-    </select>
-    <div class="hint">The selected project determines the Benzine rate used for your trips.</div>
-
-    <label style="margin-top:18px;">Default Driver Name</label>
-    <div class="search-select" id="defaultDriverSearchWrap">
-      <input type="text" id="defaultDriver" placeholder="Search or select driver" autocomplete="off">
-      <div class="search-options" id="defaultDriverOptions"></div>
-    </div>
-
-    <button type="button" class="save-btn" id="loginBtn">🔐 Login</button>
-    <div class="hint" id="loginStatus">Not logged in yet.</div>
     <button class="save-btn" id="saveSettings">Save Settings</button>
     <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="enableRemindersBtn">🔔 Enable Finish Reminders</button>
     <div class="hint" id="reminderStatus"></div>
@@ -788,6 +848,9 @@ function setLanguage(lang){ settings.language = lang === 'ar' ? 'ar' : 'en'; sav
 const i18nObserver = new MutationObserver(() => { if ((settings.language || 'en') === 'ar') localizeApp(); });
 i18nObserver.observe(document.body, {subtree:true, childList:true});
 
+function showEngineerLoginBuffer(){const e=$('engineerLoginBuffer');if(e){e.classList.add('show');e.setAttribute('aria-hidden','false')}}
+function hideEngineerLoginBuffer(){const e=$('engineerLoginBuffer');if(e){e.classList.remove('show');e.setAttribute('aria-hidden','true')}}
+
 // ---------- settings ----------
 function loadSettings(){ try { return JSON.parse(localStorage.getItem('benzine_settings')) || {}; } catch(e){ return {}; } }
 function saveSettingsToStorage(s){ localStorage.setItem('benzine_settings', JSON.stringify(s)); }
@@ -823,7 +886,7 @@ function updateLoginStatus(){
   if ($('sideMenuUserName')) $('sideMenuUserName').textContent = loggedIn ? settings.engineer : (financeAuthed ? 'Finance' : 'Not logged in');
   const roleEl = document.querySelector('.side-menu-role');
   if (roleEl) roleEl.textContent = financeAuthed ? 'Finance' : 'Engineer';
-  $('loginBtn').textContent = loggedIn ? '↪ Log out' : '🔐 Login';
+  $('loginBtn').textContent = loggedIn ? 'Log out' : 'Log in';
   if (loggedIn) $('loginEngineerSelect').value = settings.engineer;
 }
 updateLoginStatus();
@@ -858,6 +921,7 @@ $('loginBtn').onclick = async () => {
   if (!projectName) return toast('Select a Project Name');
   if (!name) return toast('Select your name');
   if (!pin) return toast('Enter your PIN');
+  showEngineerLoginBuffer();
   $('loginBtn').disabled = true; $('loginBtn').textContent = 'Checking…';
   try {
     const res = await fetch(DEFAULT_SCRIPT_URL, { method:'POST', body: JSON.stringify({ token: scriptToken, action:'verifyLogin', engineer:name, pin }) });
@@ -881,6 +945,7 @@ $('loginBtn').onclick = async () => {
     toast('Could not verify — check connection or Sync token');
   }
   $('loginBtn').disabled = false;
+  hideEngineerLoginBuffer();
   updateLoginStatus();
 };
 
