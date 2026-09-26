@@ -994,6 +994,45 @@ input[type="date"][readonly]{
   }
 }
 
+
+/* V40 Login field sizing */
+.engineer-login-card #loginEngineerSelect,
+.engineer-login-card #loginPin,
+.engineer-login-card #projectNameSelect,
+.engineer-login-card #defaultDriver{
+  width:100%!important;
+  min-height:58px!important;
+  height:58px!important;
+  box-sizing:border-box!important;
+  padding:0 18px!important;
+  border-radius:14px!important;
+  font-size:17px!important;
+}
+.engineer-login-card #loginPin{
+  letter-spacing:.18em!important;
+}
+
+
+/* V40 final — Engineer Name / PIN / Project use identical dimensions */
+#loginEngineerSelect,
+#loginPin,
+#projectNameSelect{
+  display:block!important;
+  width:100%!important;
+  height:60px!important;
+  min-height:60px!important;
+  max-height:60px!important;
+  padding:0 18px!important;
+  margin:0!important;
+  box-sizing:border-box!important;
+  border-radius:14px!important;
+  font-size:17px!important;
+  line-height:60px!important;
+}
+#loginPin{
+  letter-spacing:.14em!important;
+}
+
 </style>
 </head>
 <body>
@@ -1400,12 +1439,6 @@ input[type="date"][readonly]{
 
       <button type="button" class="engineer-login-btn" id="loginBtn">Log in</button>
       <div class="engineer-login-status" id="loginStatus">Secure employee access</div>
-
-      <details class="connection-details">
-        <summary>Connection settings</summary>
-        <label data-i18n="Sync token">Sync token</label>
-        <input type="text" id="scriptToken" placeholder="Enter the Sync token sent to you" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
-      </details>
     </div>
     <button class="save-btn" id="saveSettings">Save Settings</button>
     <button type="button" class="save-btn" style="background:#374151;margin-top:8px;" id="enableRemindersBtn">🔔 Enable Finish Reminders</button>
@@ -1494,7 +1527,7 @@ const I18N = {
   ar: {
     'Settings':'الإعدادات','Language':'اللغة','English':'English','العربية':'العربية',
     'Choose the app language. The interface will switch between English and Arabic.':'اختر لغة التطبيق. سيتم تغيير واجهة التطبيق بين الإنجليزية والعربية.',
-    'Sync token':'رمز المزامنة','Enter the Sync token sent to you':'أدخل رمز المزامنة المرسل إليك',
+    
     'Engineer Login':'تسجيل دخول المهندس','My Name':'اسمي','Search or select engineer':'ابحث عن المهندس أو اختره',
     'My PIN':'الرقم السري','Enter Your Pin':'أدخل الرقم السري','Project Name':'اسم المشروع','— Select Project —':'— اختر المشروع —',
     'The selected project determines the Benzine rate used for your trips.':'المشروع المختار يحدد سعر البنزين المستخدم في رحلاتك.',
@@ -1526,10 +1559,10 @@ const I18N = {
     'Start typing to search registered drivers.':'ابدأ بالكتابة للبحث عن السائقين المسجلين.',
     'Admin request failed':'فشل طلب المشرف','Server request failed':'فشل طلب الخادم',
     'Select a Project Name':'اختر اسم المشروع','Select your name':'اختر اسمك','Enter your PIN':'أدخل الرقم السري',
-    'Enter the Sync token sent to you':'أدخل رمز المزامنة المرسل إليك','Enter the admin PIN':'أدخل الرقم السري للمشرف',
+'Enter the admin PIN':'أدخل الرقم السري للمشرف',
     'Enter the finance PIN':'أدخل الرقم السري للمالية','Wrong admin PIN':'الرقم السري للمشرف غير صحيح','Wrong finance PIN':'الرقم السري للمالية غير صحيح',
     'Settings saved and login verified':'تم حفظ الإعدادات والتحقق من تسجيل الدخول','Logged out':'تم تسجيل الخروج',
-    'Could not verify — check connection or Sync token':'تعذر التحقق — تحقق من الاتصال أو رمز المزامنة',
+    'Could not verify login — check your connection':'تعذر التحقق — تحقق من الاتصال أو رمز المزامنة',
     'Checking…':'جارٍ التحقق…','Syncing…':'جارٍ المزامنة…','Sync attempt finished':'انتهت محاولة المزامنة',
     'Refresh':'تحديث','Back':'رجوع','Next':'التالي','Required':'مطلوب'
   }
@@ -1577,18 +1610,23 @@ let adminAuthed = false;
 let adminManagementToken = sessionStorage.getItem('tmx_km_app_admin_token') || '';
 let adminManagementName = sessionStorage.getItem('tmx_km_app_admin_name') || '';
 settings.scriptUrl = DEFAULT_SCRIPT_URL;
-// Sync token is intentionally blank on a fresh install.
-// Clear only the bundled placeholder from older builds; preserve any real token.
-if (settings.scriptToken === DEFAULT_SHARED_TOKEN) settings.scriptToken = '';
 saveSettingsToStorage(settings);
+
+let engineerSessionToken = sessionStorage.getItem('tmx_km_engineer_token') || '';
+let engineerSessionName = sessionStorage.getItem('tmx_km_engineer_name') || '';
 
 function fillSettingsForm(){
   $('languageSelect').value = settings.language || 'en';
-  $('scriptToken').value = settings.scriptToken || '';
   $('loginEngineerSelect').value = settings.engineer || '';
   $('loginPin').value = settings.pin || '';
   $('projectNameSelect').value = settings.projectName || '';
   $('defaultDriver').value = settings.defaultDriver || '';
+}
+if (settings.engineer && !engineerSessionToken) {
+  // V40 intentionally requires a fresh Name + PIN login when no valid browser session exists.
+  delete settings.engineer;
+  delete settings.pin;
+  saveSettingsToStorage(settings);
 }
 fillSettingsForm();
 $('languageSelect').addEventListener('change', e => setLanguage(e.target.value));
@@ -1596,7 +1634,7 @@ $('languageSelect').addEventListener('change', e => setLanguage(e.target.value))
 $('closeSettings').onclick = () => { $('settingsModal').style.display='none'; };
 
 function updateLoginStatus(){
-  const loggedIn = !!(settings.engineer && settings.pin);
+  const loggedIn = !!(settings.engineer && engineerSessionToken);
   $('loginStatus').textContent = loggedIn ? ('✅ Logged in as ' + settings.engineer) : 'Not logged in yet.';
   $('startEngineerDisplay').textContent = loggedIn ? settings.engineer : '— not logged in —';
   $('historyWhoami').textContent = loggedIn ? ('Showing history for: ' + settings.engineer) : '';
@@ -1612,14 +1650,14 @@ localizeApp();
 $('switchUserBtn').onclick = () => { $('settingsModal').style.display='flex'; };
 
 $('loginBtn').onclick = async () => {
-  const loggedIn = !!(settings.engineer && settings.pin);
+  const loggedIn = !!(settings.engineer && engineerSessionToken);
   if (loggedIn){
-    delete settings.engineer; delete settings.pin; delete settings.scriptToken; delete settings.projectName; delete settings.defaultDriver;
+    delete settings.engineer; delete settings.pin; delete settings.projectName; delete settings.defaultDriver;
+    engineerSessionToken=''; engineerSessionName=''; sessionStorage.removeItem('tmx_km_engineer_token'); sessionStorage.removeItem('tmx_km_engineer_name');
     financeAuthed = false; financeManagementToken = ''; financeManagementName = '';
     sessionStorage.removeItem('tmx_km_app_finance_token');
     sessionStorage.removeItem('tmx_km_app_finance_name');
     saveSettingsToStorage(settings);
-    $('scriptToken').value = '';
     $('projectNameSelect').value = '';
     $('defaultDriver').value = '';
     $('loginEngineerSelect').value = '';
@@ -1634,8 +1672,6 @@ $('loginBtn').onclick = async () => {
 
   const name = $('loginEngineerSelect').value;
   const pin = $('loginPin').value.trim();
-  const scriptToken = $('scriptToken').value.trim();
-  if (!scriptToken) return toast('Enter the Sync token sent to you');
   const projectName = $('projectNameSelect').value;
   if (!projectName) return toast('Select a Project Name');
   if (!name) return toast('Select your name');
@@ -1643,11 +1679,15 @@ $('loginBtn').onclick = async () => {
   showEngineerLoginBuffer();
   $('loginBtn').disabled = true; $('loginBtn').textContent = 'Checking…';
   try {
-    const res = await fetch(DEFAULT_SCRIPT_URL, { method:'POST', body: JSON.stringify({ token: scriptToken, action:'verifyLogin', engineer:name, pin }) });
+    const res = await fetch(DEFAULT_SCRIPT_URL, { method:'POST', body: JSON.stringify({ action:'engineerLogin', engineer:name, pin }) });
     const data = JSON.parse(await res.text());
     if (data.ok){
-      settings.scriptUrl = DEFAULT_SCRIPT_URL; settings.scriptToken = scriptToken;
-      settings.engineer = name; settings.pin = pin; settings.projectName = projectName;
+      settings.scriptUrl = DEFAULT_SCRIPT_URL;
+      settings.engineer = name; settings.projectName = projectName;
+      engineerSessionToken = data.engineerToken || '';
+      engineerSessionName = data.engineer || name;
+      sessionStorage.setItem('tmx_km_engineer_token', engineerSessionToken);
+      sessionStorage.setItem('tmx_km_engineer_name', engineerSessionName);
       settings.defaultDriver = $('defaultDriver').value.trim();
       settings.language = $('languageSelect').value || settings.language || 'en';
       saveSettingsToStorage(settings);
@@ -1661,7 +1701,7 @@ $('loginBtn').onclick = async () => {
       toast('❌ Wrong PIN for ' + name);
     }
   } catch (err) {
-    toast('Could not verify — check connection or Sync token');
+    toast('Could not verify login — check your connection');
   }
   $('loginBtn').disabled = false;
   hideEngineerLoginBuffer();
@@ -1684,24 +1724,24 @@ $('enableRemindersBtn').onclick = async () => {
 };
 $('saveSettings').onclick = async () => {
   settings.scriptUrl = DEFAULT_SCRIPT_URL;
-  const tokenValue = $('scriptToken').value.trim();
   const engineer = $('loginEngineerSelect').value.trim();
   const pin = $('loginPin').value.trim();
   const projectName = $('projectNameSelect').value;
   const driverName = $('defaultDriver').value.trim();
   const language = $('languageSelect').value || 'en';
-  if (!tokenValue) return toast('Enter the Sync token sent to you');
   if (!engineer) return toast('Select your name');
   if (!pin) return toast('Enter your PIN');
   if (!projectName) return toast('Select a Project Name');
   $('saveSettings').disabled = true;
   try {
-    const res = await fetch(DEFAULT_SCRIPT_URL, { method:'POST', body: JSON.stringify({ token: tokenValue, action:'verifyLogin', engineer, pin }) });
+    const res = await fetch(DEFAULT_SCRIPT_URL, { method:'POST', body: JSON.stringify({ action:'engineerLogin', engineer, pin }) });
     const data = JSON.parse(await res.text());
     if (!data.ok) return toast('❌ Wrong PIN for ' + engineer);
-    settings.scriptToken = tokenValue;
     settings.engineer = engineer;
-    settings.pin = pin;
+    engineerSessionToken = data.engineerToken || '';
+    engineerSessionName = data.engineer || engineer;
+    sessionStorage.setItem('tmx_km_engineer_token', engineerSessionToken);
+    sessionStorage.setItem('tmx_km_engineer_name', engineerSessionName);
     settings.projectName = projectName;
     settings.defaultDriver = driverName;
     settings.language = language;
@@ -1714,7 +1754,7 @@ $('saveSettings').onclick = async () => {
     $('settingsModal').style.display='none';
     toast('Settings saved and login verified');
   } catch (err) {
-    toast('Could not verify — check connection or Sync token');
+    toast('Could not verify login — check your connection');
   } finally {
     $('saveSettings').disabled = false;
   }
@@ -1777,7 +1817,7 @@ function localOpenTripsForCurrentUser(){
 let deferFinishNavigation = false;
 
 function updateLockState(){
-  const loggedIn = !!(settings.engineer && settings.pin);
+  const loggedIn = !!(settings.engineer && engineerSessionToken);
   const hasOpen = localOpenTripsForCurrentUser().length > 0;
   $('tabStartBtn').disabled = !loggedIn || hasOpen;
   $('tabFinishBtn').disabled = !loggedIn || !hasOpen;
@@ -2213,7 +2253,7 @@ renderLog();
 async function trySend(payload){
     const res = await fetch(settings.scriptUrl, {
     method: 'POST',
-    body: JSON.stringify({ token: settings.scriptToken, engineer: settings.engineer, pin: settings.pin, ...payload })
+    body: JSON.stringify({ engineerToken: engineerSessionToken, engineer: settings.engineer, ...payload })
   });
   const text = await res.text();
   let json; try { json = JSON.parse(text); } catch(e){ throw new Error('bad-response'); }
@@ -2419,7 +2459,6 @@ function adminErrorMessage(err){
   const messages = {
     'invalid-admin-pin': '❌ Wrong admin PIN',
     'invalid-finance-pin': '❌ Wrong finance PIN',
-    'invalid-token': '❌ Invalid Sync token',
     'admin-session-required': 'Admin session expired. Please log in again.',
     'finance-session-required': 'Finance session expired. Please log in again.',
     'invalid-management-login': 'Wrong name or PIN.',
