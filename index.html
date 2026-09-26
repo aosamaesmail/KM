@@ -1297,6 +1297,9 @@ settings.language = settings.language || 'en';
 let financeAuthed = false;
 let financeManagementToken = sessionStorage.getItem('tmx_km_app_finance_token') || '';
 let financeManagementName = sessionStorage.getItem('tmx_km_app_finance_name') || '';
+let adminAuthed = false;
+let adminManagementToken = sessionStorage.getItem('tmx_km_app_admin_token') || '';
+let adminManagementName = sessionStorage.getItem('tmx_km_app_admin_name') || '';
 settings.scriptUrl = DEFAULT_SCRIPT_URL;
 // Sync token is intentionally blank on a fresh install.
 // Clear only the bundled placeholder from older builds; preserve any real token.
@@ -1324,7 +1327,7 @@ function updateLoginStatus(){
   $('userRowText').textContent = loggedIn ? (settings.engineer + ' · Engineer') : 'Not logged in';
   if ($('sideMenuUserName')) $('sideMenuUserName').textContent = adminAuthed ? (adminManagementName||'Admin') : (financeAuthed ? (financeManagementName||'Finance') : (loggedIn ? settings.engineer : 'Not logged in'));
   const roleEl = document.querySelector('.side-menu-role');
-  if (roleEl) roleEl.textContent = financeAuthed ? 'Finance' : 'Engineer';
+  if (roleEl) roleEl.textContent = adminAuthed ? 'Admin' : (financeAuthed ? 'Finance' : 'Engineer');
   $('loginBtn').textContent = loggedIn ? 'Log out' : 'Log in';
   if (loggedIn) $('loginEngineerSelect').value = settings.engineer;
 }
@@ -1971,9 +1974,7 @@ async function flushQueue(){
 $('syncNowBtn').onclick = async () => { toast('Syncing…'); await flushQueue(); toast('Sync attempt finished'); };
 
 // ---------- admin tab ----------
-let adminAuthed = false;
-let adminManagementToken = sessionStorage.getItem('tmx_km_app_admin_token') || '';
-let adminManagementName = sessionStorage.getItem('tmx_km_app_admin_name') || '';
+
 let adminTripsCache = [];
 let financeTripsCache = [];
 
