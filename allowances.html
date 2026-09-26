@@ -102,10 +102,11 @@ $('exportExcel').onclick=()=>{
   <table><caption>Cover</caption><thead><tr><th>Name</th><th>Total Allowances Amount</th><th>Project Code</th></tr></thead><tbody>${cover.map(x=>row([x.name,x.total,x.project])).join('')}</tbody></table>
   <table><caption>In Details</caption><thead><tr><th>Type</th><th>Name</th><th>Date</th><th>Day</th><th>Area</th><th>Base City</th><th>Project Code</th><th>Allowance Amount</th><th>Status</th></tr></thead><tbody>${details.map(row).join('')}</tbody></table>
   </body></html>`;
-  const blob=new Blob(['\ufeff',html],{type:'application/vnd.ms-excel;charset=utf-8'});
-  const url=URL.createObjectURL(blob),a=document.createElement('a');
-  a.href=url;a.download=`Allowance-Audit-${$('month').value||'All'}-${typeView}.xls`;
-  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+  const a=document.createElement('a');
+  const excelData='data:application/vnd.ms-excel;charset=utf-8,'+encodeURIComponent('\ufeff'+html);
+  a.href=excelData;
+  a.download=`Allowance-Audit-${$('month').value||'All'}-${typeView}.xls`;
+  a.style.display='none';document.body.appendChild(a);a.click();a.remove();
   toast('Excel export created.');
  }catch(err){console.error(err);toast('Excel export failed: '+(err.message||err))}
 };
