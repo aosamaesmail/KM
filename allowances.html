@@ -80,34 +80,57 @@ $('clearSelection').onclick=()=>{document.querySelectorAll('.rowCheck').forEach(
 $('approveSelected').onclick=async()=>{let items=selectedRecords();if(!items.length){toast('Select at least one pending day.');return}if(!confirm(`Approve ${items.length} selected allowance day(s)?`))return;let b=$('approveSelected');b.disabled=true;b.textContent='Approving...';try{for(const r of items)await post('allowanceAudit',{type:r.type,name:r.name,date:r.date,calculatedAmount:r.amount,status:'Approved',reason:''});toast(`${items.length} day(s) approved.`);await load()}catch(e){toast(e.message)}finally{b.disabled=false;b.textContent='Approve Selected'}}
 function esc(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'")}
 async function audit(type,name,date,amount,status,reason=''){try{await post('allowanceAudit',{type,name,date,calculatedAmount:amount,status,reason});await load()}catch(e){toast(e.message)}}function rejectDay(type,name,date,amount){let reason=prompt('Reason for rejection (optional):','');if(reason===null)return;audit(type,name,date,amount,'Rejected',reason)}
+function xlsxEsc(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function xlsxCol(n){let s='';while(n){n--;s=String.fromCharCode(65+n%26)+s;n=Math.floor(n/26)}return s}
+function xlsxSheet(rows){
+ let xmlRows=rows.map((row,ri)=>'<row r="'+(ri+1)+'">'+row.map((v,ci)=>{
+   let ref=xlsxCol(ci+1)+(ri+1);
+   if(typeof v==='number'&&isFinite(v))return '<c r="'+ref+'"><v>'+v+'</v></c>';
+   return '<c r="'+ref+'" t="inlineStr"><is><t>'+xlsxEsc(v)+'</t></is></c>';
+ }).join('')+'</row>').join('');
+ return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'+xmlRows+'</sheetData></worksheet>';
+}
+function crc32(bytes){
+ let table=crc32.table||(crc32.table=(()=>{let t=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=(c&1)?0xedb88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})());
+ let c=0xffffffff;for(let b of bytes)c=table[(c^b)&255]^(c>>>8);return (c^0xffffffff)>>>0;
+}
+function u16(n){return [n&255,(n>>>8)&255]} function u32(n){return [n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255]}
+function makeZip(files){
+ const enc=new TextEncoder(),parts=[],central=[];let offset=0;
+ for(const f of files){
+  const name=enc.encode(f.name),data=enc.encode(f.data),crc=crc32(data);
+  const local=new Uint8Array([...u32(0x04034b50),...u16(20),...u16(0),...u16(0),...u16(0),...u16(0),...u32(crc),...u32(data.length),...u32(data.length),...u16(name.length),...u16(0),...name,...data]);
+  parts.push(local);
+  const cen=new Uint8Array([...u32(0x02014b50),...u16(20),...u16(20),...u16(0),...u16(0),...u16(0),...u16(0),...u32(crc),...u32(data.length),...u32(data.length),...u16(name.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(offset),...name]);
+  central.push(cen);offset+=local.length;
+ }
+ const csize=central.reduce((a,b)=>a+b.length,0),end=new Uint8Array([...u32(0x06054b50),...u16(0),...u16(0),...u16(files.length),...u16(files.length),...u32(csize),...u32(offset),...u16(0)]);
+ return new Blob([...parts,...central,end],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
 $('exportExcel').onclick=()=>{
  try{
   const rows=(data.records||[]).filter(r=>(typeView==='All'||r.type===typeView)&&r.status==='Approved');
   if(!rows.length){toast('No approved allowances to export for the current filters.');return}
-  const escx=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const groups={};
   rows.forEach(r=>(r.projects&&r.projects.length?r.projects:['—']).forEach(pr=>{
-    const k=r.type+'|'+r.name+'|'+pr;
-    if(!groups[k])groups[k]={name:r.name,project:pr,total:0};
-    groups[k].total+=Number(r.amount)||0;
+   const k=r.type+'|'+r.name+'|'+pr;if(!groups[k])groups[k]={name:r.name,project:pr,total:0};groups[k].total+=Number(r.amount)||0;
   }));
-  const cover=Object.values(groups);
-  const row=a=>'<tr>'+a.map(v=>'<td>'+escx(v)+'</td>').join('')+'</tr>';
-  const details=rows.flatMap(r=>(r.projects&&r.projects.length?r.projects:['—']).map(pr=>[
-    r.type,r.name,r.date,r.day,r.area,r.baseCity||'',pr,Number(r.amount)||0,r.status
-  ]));
-  const html=`<!doctype html><html><head><meta charset="utf-8"><style>
-    table{border-collapse:collapse;margin-bottom:28px}th,td{border:1px solid #999;padding:7px 10px}th{background:#eee;font-weight:bold}caption{text-align:left;font-size:18px;font-weight:bold;margin:8px 0}
-  </style></head><body>
-  <table><caption>Cover</caption><thead><tr><th>Name</th><th>Total Allowances Amount</th><th>Project Code</th></tr></thead><tbody>${cover.map(x=>row([x.name,x.total,x.project])).join('')}</tbody></table>
-  <table><caption>In Details</caption><thead><tr><th>Type</th><th>Name</th><th>Date</th><th>Day</th><th>Area</th><th>Base City</th><th>Project Code</th><th>Allowance Amount</th><th>Status</th></tr></thead><tbody>${details.map(row).join('')}</tbody></table>
-  </body></html>`;
-  const a=document.createElement('a');
-  const excelData='data:application/vnd.ms-excel;charset=utf-8,'+encodeURIComponent('\ufeff'+html);
-  a.href=excelData;
-  a.download=`Allowance-Audit-${$('month').value||'All'}-${typeView}.xls`;
-  a.style.display='none';document.body.appendChild(a);a.click();a.remove();
-  toast('Excel export created.');
+  const cover=[['Engineer Name','Total Allowances Amount','Project Code'],...Object.values(groups).map(x=>[x.name,x.total,x.project])];
+  const details=[['Type','Name','Date','Day','Area','Base City','Project Code','Allowance Amount','Status'],
+   ...rows.flatMap(r=>(r.projects&&r.projects.length?r.projects:['—']).map(pr=>[r.type,r.name,r.date,r.day,r.area,r.baseCity||'',pr,Number(r.amount)||0,r.status]))];
+  const files=[
+   {name:'[Content_Types].xml',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>'},
+   {name:'_rels/.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'},
+   {name:'xl/workbook.xml',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Cover" sheetId="1" r:id="rId1"/><sheet name="In Details" sheetId="2" r:id="rId2"/></sheets></workbook>'},
+   {name:'xl/_rels/workbook.xml.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/></Relationships>'},
+   {name:'xl/worksheets/sheet1.xml',data:xlsxSheet(cover)},
+   {name:'xl/worksheets/sheet2.xml',data:xlsxSheet(details)}
+  ];
+  const blob=makeZip(files);
+  const reader=new FileReader();
+  reader.onload=()=>{const a=document.createElement('a');a.href=reader.result;a.download=`Allowance-Audit-${$('month').value||'All'}-${typeView}.xlsx`;a.style.display='none';document.body.appendChild(a);a.click();a.remove();toast('Excel workbook created with Cover and In Details tabs.')};
+  reader.onerror=()=>toast('Could not create Excel workbook.');
+  reader.readAsDataURL(blob);
  }catch(err){console.error(err);toast('Excel export failed: '+(err.message||err))}
 };
 $('apply').onclick=load;$('clear').onclick=()=>{selectedEngineers=[];selectedDrivers=[];$('engineer').value='';$('driver').value='';$('project').value='';$('status').value='Pending';refreshAllCombos();load()};document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');typeView=b.dataset.type;render()});
