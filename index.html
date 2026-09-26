@@ -707,6 +707,17 @@ main .card,
   }
 }
 
+
+/* V39.6 Management login inside app */
+.management-login-card{max-width:560px;margin:18px auto!important;padding:22px!important;background:#3B4278!important}
+.management-login-head{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.management-login-icon{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(145deg,#50409A,#964EC2);font-size:21px}
+.management-login-card strong,.management-login-card label{color:#fff!important}
+.management-login-card .hint{color:#D7D8E8!important}
+.management-login-card input{background:#fff!important;color:#27233A!important;border:1px solid #D8D9E3!important;min-height:52px}
+.management-login-card input::placeholder{color:#9697A5!important}
+.management-login-card .save-btn{background:linear-gradient(90deg,#50409A,#964EC2)!important;color:#fff!important}
+
 </style>
 </head>
 <body>
@@ -940,10 +951,16 @@ main .card,
   <!-- ADMIN SECTION -->
   <section class="section" id="adminSection">
     <div class="page-header"><span class="page-header-icon">🛡</span><span class="page-header-title">Admin</span></div>
-    <div class="card" id="adminLoginCard">
-      <label data-i18n="Admin PIN">Admin PIN</label>
-      <input type="password" inputmode="numeric" id="adminPinInputTab" placeholder="Admin PIN">
-      <button type="button" class="save-btn" id="adminLoginTabBtn">🔐 Login as Admin</button>
+    <div class="card management-login-card" id="adminLoginCard">
+      <div class="management-login-head">
+        <div class="management-login-icon">🛡</div>
+        <div><strong>Admin Access</strong><div class="hint">Use your management Name + 6-digit PIN.</div></div>
+      </div>
+      <label>Name</label>
+      <input type="text" id="adminNameInputTab" placeholder="Enter your name" autocomplete="username">
+      <label>6-digit PIN</label>
+      <input type="password" inputmode="numeric" maxlength="6" id="adminPinInputTab" placeholder="••••••" autocomplete="current-password">
+      <button type="button" class="save-btn" id="adminLoginTabBtn">Log in</button>
     </div>
 
     <div id="adminDashboard" style="display:none;">
@@ -1028,11 +1045,17 @@ main .card,
   <!-- FINANCE SECTION -->
   <section class="section" id="financeSection">
     <div class="page-header"><span class="page-header-icon">💳</span><span class="page-header-title">Finance</span></div>
-    <div class="card" id="financeLoginCard">
-      <label data-i18n="Finance PIN">Finance PIN</label>
-      <input type="password" inputmode="numeric" id="financePinInput" placeholder="Finance PIN">
-      <button type="button" class="save-btn" id="financeLoginBtn">🔐 Login as Finance</button>
-      <div class="hint">Finance has separate access and cannot open the Admin section.</div>
+    <div class="card management-login-card" id="financeLoginCard">
+      <div class="management-login-head">
+        <div class="management-login-icon">💳</div>
+        <div><strong>Finance Access</strong><div class="hint">Use your management Name + 6-digit PIN.</div></div>
+      </div>
+      <label>Name</label>
+      <input type="text" id="financeNameInput" placeholder="Enter your name" autocomplete="username">
+      <label>6-digit PIN</label>
+      <input type="password" inputmode="numeric" maxlength="6" id="financePinInput" placeholder="••••••" autocomplete="current-password">
+      <button type="button" class="save-btn" id="financeLoginBtn">Log in</button>
+      <div class="hint">Finance credentials cannot open the Admin section.</div>
     </div>
     <div id="financeDashboard" style="display:none;">
       <div class="card">
@@ -1272,7 +1295,8 @@ function saveSettingsToStorage(s){ localStorage.setItem('benzine_settings', JSON
 let settings = loadSettings();
 settings.language = settings.language || 'en';
 let financeAuthed = false;
-let financePinValue = '';
+let financeManagementToken = sessionStorage.getItem('tmx_km_app_finance_token') || '';
+let financeManagementName = sessionStorage.getItem('tmx_km_app_finance_name') || '';
 settings.scriptUrl = DEFAULT_SCRIPT_URL;
 // Sync token is intentionally blank on a fresh install.
 // Clear only the bundled placeholder from older builds; preserve any real token.
@@ -1298,7 +1322,7 @@ function updateLoginStatus(){
   $('startEngineerDisplay').textContent = loggedIn ? settings.engineer : '— not logged in —';
   $('historyWhoami').textContent = loggedIn ? ('Showing history for: ' + settings.engineer) : '';
   $('userRowText').textContent = loggedIn ? (settings.engineer + ' · Engineer') : 'Not logged in';
-  if ($('sideMenuUserName')) $('sideMenuUserName').textContent = loggedIn ? settings.engineer : (financeAuthed ? 'Finance' : 'Not logged in');
+  if ($('sideMenuUserName')) $('sideMenuUserName').textContent = adminAuthed ? (adminManagementName||'Admin') : (financeAuthed ? (financeManagementName||'Finance') : (loggedIn ? settings.engineer : 'Not logged in'));
   const roleEl = document.querySelector('.side-menu-role');
   if (roleEl) roleEl.textContent = financeAuthed ? 'Finance' : 'Engineer';
   $('loginBtn').textContent = loggedIn ? 'Log out' : 'Log in';
@@ -1312,8 +1336,9 @@ $('loginBtn').onclick = async () => {
   const loggedIn = !!(settings.engineer && settings.pin);
   if (loggedIn){
     delete settings.engineer; delete settings.pin; delete settings.scriptToken; delete settings.projectName; delete settings.defaultDriver;
-    financeAuthed = false; financePinValue = '';
-    sessionStorage.removeItem('telecomax_finance_session_pin');
+    financeAuthed = false; financeManagementToken = ''; financeManagementName = '';
+    sessionStorage.removeItem('tmx_km_app_finance_token');
+    sessionStorage.removeItem('tmx_km_app_finance_name');
     saveSettingsToStorage(settings);
     $('scriptToken').value = '';
     $('projectNameSelect').value = '';
@@ -1947,7 +1972,8 @@ $('syncNowBtn').onclick = async () => { toast('Syncing…'); await flushQueue();
 
 // ---------- admin tab ----------
 let adminAuthed = false;
-let adminPinValue = '';
+let adminManagementToken = sessionStorage.getItem('tmx_km_app_admin_token') || '';
+let adminManagementName = sessionStorage.getItem('tmx_km_app_admin_name') || '';
 let adminTripsCache = [];
 let financeTripsCache = [];
 
@@ -1988,32 +2014,46 @@ function showFinanceSection(){
   loadFinanceTrips();
 }
 $('financeLoginBtn').onclick = async () => {
+  const name = $('financeNameInput').value.trim();
   const pin = $('financePinInput').value.trim();
-  if (!pin) return toast('Enter the finance PIN');
+  if (!name || !pin) return toast('Enter your name and 6-digit PIN');
+  showEngineerLoginBuffer();
   $('financeLoginBtn').disabled = true; $('financeLoginBtn').textContent = 'Checking…';
   try {
-    const res = await fetch(settings.scriptUrl, { method:'POST', body: JSON.stringify({ action:'financeVerify', financePin: pin }) });
+    const res = await fetch(settings.scriptUrl, { method:'POST', body: JSON.stringify({ action:'managementLogin', name, pin, portalRole:'Finance' }) });
     const data = JSON.parse(await res.text());
-    if (!data.ok) return toast(adminErrorMessage(new Error(data.error || 'invalid-finance-pin')));
-    financeAuthed = true; financePinValue = pin;
-    sessionStorage.setItem('telecomax_finance_session_pin', pin);
-    // Finance and Admin are mutually exclusive in the same browser session.
-    adminAuthed = false; adminPinValue = '';
-    sessionStorage.removeItem('telecomax_admin_session_pin');
+    if (!data.ok) throw new Error(data.error || 'finance-session-required');
+    financeAuthed = true;
+    financeManagementToken = data.token;
+    financeManagementName = data.name || name;
+    sessionStorage.setItem('tmx_km_app_finance_token', financeManagementToken);
+    sessionStorage.setItem('tmx_km_app_finance_name', financeManagementName);
+
+    adminAuthed = false; adminManagementToken = ''; adminManagementName = '';
+    sessionStorage.removeItem('tmx_km_app_admin_token');
+    sessionStorage.removeItem('tmx_km_app_admin_name');
     $('adminLoginCard').style.display = 'block'; $('adminDashboard').style.display = 'none';
+
     updateFinanceUI();
     showTab('finance');
-    toast('✅ Logged in as Finance');
+    toast('Logged in as ' + financeManagementName);
     await loadFinanceTrips();
   } catch (err) {
+    financeAuthed = false; financeManagementToken = ''; financeManagementName = '';
     toast(adminErrorMessage(err));
   } finally {
-    $('financeLoginBtn').disabled = false; $('financeLoginBtn').textContent = '🔐 Login as Finance';
+    $('financeLoginBtn').disabled = false; $('financeLoginBtn').textContent = 'Log in';
+    hideEngineerLoginBuffer();
   }
 };
+$('financeNameInput').addEventListener('keydown',e=>{if(e.key==='Enter')$('financePinInput').focus()});
+$('financePinInput').addEventListener('keydown',e=>{if(e.key==='Enter')$('financeLoginBtn').click()});
+
 function logoutFinance(){
-  financeAuthed = false; financePinValue = '';
-  sessionStorage.removeItem('telecomax_finance_session_pin');
+  financeAuthed = false; financeManagementToken = ''; financeManagementName = '';
+  sessionStorage.removeItem('tmx_km_app_finance_token');
+  sessionStorage.removeItem('tmx_km_app_finance_name');
+  $('financeNameInput').value = '';
   $('financePinInput').value = '';
   updateFinanceUI();
   showTab('start');
@@ -2037,13 +2077,16 @@ async function loadFinanceTrips(){
     const data=await financeFetch('financeTrips',{filterEngineer:$('financeFilterEngineer').value,filterDriver:$('financeFilterDriver').value,filterMonth:$('financeFilterMonth').value});
     financeTripsCache=data.trips||[];
     renderTripListInto('financeTripsList', financeTripsCache);
-  }catch(err){ $('financeTripsList').innerHTML='<div class="empty">Could not load trips — check connection.</div>'; }
+  }catch(err){
+    if(String(err.message)==='finance-session-required') logoutFinance();
+    $('financeTripsList').innerHTML='<div class="empty">Could not load trips — check connection.</div>';
+  }
 }
 
 async function financeFetch(action, extra){
   const res = await fetch(settings.scriptUrl, {
     method: 'POST',
-    body: JSON.stringify({ action, financePin: financePinValue, ...(extra||{}) })
+    body: JSON.stringify({ action, managementToken: financeManagementToken, ...(extra||{}) })
   });
   const text = await res.text();
   const data = JSON.parse(text);
@@ -2052,20 +2095,20 @@ async function financeFetch(action, extra){
 }
 
 async function restoreFinanceSession(){
-  const savedPin = sessionStorage.getItem('telecomax_finance_session_pin');
-  if (!savedPin) { updateFinanceUI(); return; }
-  financePinValue = savedPin;
+  if (!financeManagementToken) { updateFinanceUI(); return; }
+  if ($('financeNameInput')) $('financeNameInput').value = financeManagementName;
   try {
-    const data = await financeFetch('financeVerify');
-    if (!data.ok) throw new Error('invalid-finance-pin');
+    await financeFetch('financeFilterOptions');
     financeAuthed = true;
-    adminAuthed = false; adminPinValue = '';
-    sessionStorage.removeItem('telecomax_admin_session_pin');
+    adminAuthed = false; adminManagementToken = ''; adminManagementName = '';
+    sessionStorage.removeItem('tmx_km_app_admin_token');
+    sessionStorage.removeItem('tmx_km_app_admin_name');
     $('adminLoginCard').style.display = 'block'; $('adminDashboard').style.display = 'none';
     updateFinanceUI();
   } catch (err) {
-    financeAuthed = false; financePinValue = '';
-    sessionStorage.removeItem('telecomax_finance_session_pin');
+    financeAuthed = false; financeManagementToken = ''; financeManagementName = '';
+    sessionStorage.removeItem('tmx_km_app_finance_token');
+    sessionStorage.removeItem('tmx_km_app_finance_name');
     updateFinanceUI();
   }
 }
@@ -2086,7 +2129,7 @@ $('financeTripsList').addEventListener('click',(e)=>{const img=e.target.closest(
 async function adminFetch(action, extra){
     const res = await fetch(settings.scriptUrl, {
     method: 'POST',
-    body: JSON.stringify({ action, adminPin: adminPinValue, ...(extra||{}) })
+    body: JSON.stringify({ action, managementToken: adminManagementToken, ...(extra||{}) })
   });
   const text = await res.text();
   const data = JSON.parse(text);
@@ -2100,6 +2143,11 @@ function adminErrorMessage(err){
     'invalid-admin-pin': '❌ Wrong admin PIN',
     'invalid-finance-pin': '❌ Wrong finance PIN',
     'invalid-token': '❌ Invalid Sync token',
+    'admin-session-required': 'Admin session expired. Please log in again.',
+    'finance-session-required': 'Finance session expired. Please log in again.',
+    'invalid-management-login': 'Wrong name or PIN.',
+    'management-user-inactive': 'This management account is inactive.',
+    'management-role-denied': 'Your account does not have access to this section.',
     'engineer-required': 'Engineer is required',
     'invalid-engineer': 'Engineer is not registered in Config',
     'invalid-date': 'Invalid date',
@@ -2124,37 +2172,53 @@ function adminErrorMessage(err){
 
 $('adminLoginTabBtn').onclick = async () => {
   if (financeAuthed) return toast('Finance access cannot open Admin. Log out of Finance first.');
+  const name = $('adminNameInputTab').value.trim();
   const pin = $('adminPinInputTab').value.trim();
-  if (!pin) return toast('Enter the admin PIN');
-  adminPinValue = pin;
+  if (!name || !pin) return toast('Enter your name and 6-digit PIN');
+  showEngineerLoginBuffer();
   $('adminLoginTabBtn').disabled = true; $('adminLoginTabBtn').textContent = 'Checking…';
   try {
-    // Verify the Admin PIN separately from loading the Admin dashboard data.
-    // This prevents a temporary Sheet/summary problem from looking like a login failure.
-    await adminFetch('adminVerify');
+    const res = await fetch(settings.scriptUrl, { method:'POST', body: JSON.stringify({ action:'managementLogin', name, pin, portalRole:'Admin' }) });
+    const data = JSON.parse(await res.text());
+    if (!data.ok) throw new Error(data.error || 'admin-session-required');
     adminAuthed = true;
-    sessionStorage.setItem('telecomax_admin_session_pin', adminPinValue);
+    adminManagementToken = data.token;
+    adminManagementName = data.name || name;
+    sessionStorage.setItem('tmx_km_app_admin_token', adminManagementToken);
+    sessionStorage.setItem('tmx_km_app_admin_name', adminManagementName);
+
+    financeAuthed = false; financeManagementToken = ''; financeManagementName = '';
+    sessionStorage.removeItem('tmx_km_app_finance_token');
+    sessionStorage.removeItem('tmx_km_app_finance_name');
+
     updateFinanceUI();
     $('adminLoginCard').style.display = 'none';
     $('adminDashboard').style.display = 'block';
     populateAdminEngineerFilter();
     populateAdminSolfaEngineer();
     $('adminSolfaDate').value = adminTodayISO();
+    toast('Logged in as ' + adminManagementName);
     await loadAdminSummary();
     await loadAdminTrips();
     await loadAdminRentTrips();
   } catch (err) {
-    adminAuthed = false;
-    adminPinValue = '';
-    sessionStorage.removeItem('telecomax_admin_session_pin');
+    adminAuthed = false; adminManagementToken = ''; adminManagementName = '';
+    sessionStorage.removeItem('tmx_km_app_admin_token');
+    sessionStorage.removeItem('tmx_km_app_admin_name');
     toast(adminErrorMessage(err));
+  } finally {
+    $('adminLoginTabBtn').disabled = false; $('adminLoginTabBtn').textContent = 'Log in';
+    hideEngineerLoginBuffer();
   }
-  $('adminLoginTabBtn').disabled = false; $('adminLoginTabBtn').textContent = '🔐 Login as Admin';
 };
+$('adminNameInputTab').addEventListener('keydown',e=>{if(e.key==='Enter')$('adminPinInputTab').focus()});
+$('adminPinInputTab').addEventListener('keydown',e=>{if(e.key==='Enter')$('adminLoginTabBtn').click()});
 
 function logoutAdmin(){
-  adminAuthed = false; adminPinValue = '';
-  sessionStorage.removeItem('telecomax_admin_session_pin');
+  adminAuthed = false; adminManagementToken = ''; adminManagementName = '';
+  sessionStorage.removeItem('tmx_km_app_admin_token');
+  sessionStorage.removeItem('tmx_km_app_admin_name');
+  $('adminNameInputTab').value = '';
   $('adminPinInputTab').value = '';
   $('adminLoginCard').style.display = 'block';
   $('adminDashboard').style.display = 'none';
@@ -2166,11 +2230,10 @@ function logoutAdmin(){
 $('sideAdminLogoutBtn').onclick = logoutAdmin;
 
 async function restoreAdminSession(){
-  const savedPin = sessionStorage.getItem('telecomax_admin_session_pin');
-  if (!savedPin) return;
-  adminPinValue = savedPin;
+  if (!adminManagementToken) return;
+  if ($('adminNameInputTab')) $('adminNameInputTab').value = adminManagementName;
   try {
-    await adminFetch('adminVerify');
+    await adminFetch('adminSummary', {});
     adminAuthed = true;
     updateFinanceUI();
     $('adminLoginCard').style.display = 'none';
@@ -2178,13 +2241,12 @@ async function restoreAdminSession(){
     populateAdminEngineerFilter();
     populateAdminSolfaEngineer();
     $('adminSolfaDate').value = adminTodayISO();
-    await loadAdminSummary();
     await loadAdminTrips();
     await loadAdminRentTrips();
   } catch (err) {
-    adminAuthed = false;
-    adminPinValue = '';
-    sessionStorage.removeItem('telecomax_admin_session_pin');
+    adminAuthed = false; adminManagementToken = ''; adminManagementName = '';
+    sessionStorage.removeItem('tmx_km_app_admin_token');
+    sessionStorage.removeItem('tmx_km_app_admin_name');
     $('adminLoginCard').style.display = 'block';
     $('adminDashboard').style.display = 'none';
   }
