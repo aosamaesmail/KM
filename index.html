@@ -1931,6 +1931,22 @@ saveSettingsToStorage(settings);
 let engineerSessionToken = sessionStorage.getItem('tmx_km_engineer_token') || '';
 let engineerSessionName = sessionStorage.getItem('tmx_km_engineer_name') || '';
 
+function clearEngineerSession_(){
+  engineerSessionToken = '';
+  engineerSessionName = '';
+  sessionStorage.removeItem('tmx_km_engineer_token');
+  sessionStorage.removeItem('tmx_km_engineer_name');
+}
+function engineerSessionError_(data){
+  if (data && data.error === 'engineer-session-required'){
+    clearEngineerSession_();
+    toast('Session expired. Please log in again from Menu → Settings.');
+    return true;
+  }
+  return false;
+}
+
+
 function fillSettingsForm(){
   $('languageSelect').value = settings.language || 'en';
   $('loginEngineerSelect').value = settings.engineer || '';
@@ -2159,7 +2175,7 @@ function setTodayDateField(){
   $('day').value = dayName(today);
 }
 setTodayDateField();
-if (!settings.engineer || !settings.pin) setTimeout(() => { $('settingsModal').style.display='flex'; toast('Log in with your name and PIN first'); }, 300);
+if (!settings.engineer || !engineerSessionToken) setTimeout(() => { $('settingsModal').style.display='flex'; toast('Log in with your name and PIN first'); }, 300);
 
 // ---------- engineer/driver dropdown lists ----------
 function getCachedLists(){ try { return JSON.parse(localStorage.getItem('benzine_lists')) || {engineers:[],drivers:[],driverDefaults:{}}; } catch(e){ return {engineers:[],drivers:[],driverDefaults:{}}; } }
@@ -2390,7 +2406,7 @@ let openTripsCache = [];
 async function loadOpenTripsForFinish(){
   const sel = $('openTripSelect');
   $('tripSummary').style.display = 'none';
-  if (!settings.engineer || !settings.pin){
+  if (!settings.engineer || !engineerSessionToken){
     sel.innerHTML = '<option value="">— Select an open trip —</option>';
     openTripsCache = [];
     $('noOpenTrips').style.display = 'block';
@@ -3153,7 +3169,7 @@ flushQueue();
 // ---------- START submit ----------
 $('startForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  if (!settings.engineer || !settings.pin) return toast('Please log in first (☰ Menu → Settings)');
+  if (!settings.engineer || !engineerSessionToken) return toast('Please log in first (☰ Menu → Settings)');
   if (!settings.projectName) return toast('Select a Project Name in Settings first');
   const engineer = settings.engineer;
   const start = $('startKm').value;
@@ -3256,7 +3272,7 @@ function resetStartForm(){
 // ---------- FINISH submit ----------
 $('finishForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  if (!settings.engineer || !settings.pin) return toast('Please log in first (☰ Menu → Settings)');
+  if (!settings.engineer || !engineerSessionToken) return toast('Please log in first (☰ Menu → Settings)');
   if (!settings.projectName) return toast('Select a Project Name in Settings first');
   const tripId = $('openTripSelect').value;
   const trip = openTripsCache.find(t => t.tripId === tripId);
@@ -3325,7 +3341,7 @@ function resetFinishForm(){
 
 // ---------- history / balance ----------
 async function loadHistory(){
-  if (!settings.engineer || !settings.pin){
+  if (!settings.engineer || !engineerSessionToken){
     $('balanceGrid').style.display='none';
     $('historyHint').style.display='block';
     $('historyHint').textContent='Log in from ☰ Menu → Settings to view your history and balance.';
