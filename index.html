@@ -1361,6 +1361,15 @@ body #defaultDriver{
 .sso-status-box{max-width:430px;width:100%;padding:24px;border-radius:20px;background:#0b1020;border:1px solid rgba(255,255,255,.15);color:#fff;text-align:center}
 .sso-status-box b{display:block;font-size:20px;margin-bottom:8px}.sso-status-box span{color:#aab4c4}
 </style>
+<script>
+if(location.hash.indexOf('sso=')>=0){
+ document.documentElement.classList.add('portal-sso-pending');
+}
+</script>
+<style>
+html.portal-sso-pending body{visibility:hidden!important}
+html.portal-sso-pending body::before{content:'Signing you in…';visibility:visible!important;position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;background:#020817;color:#fff;font:700 20px Arial,sans-serif}
+</style>
 </head>
 <body>
 
@@ -3706,7 +3715,7 @@ function toast(msg){
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(()=>{});
 </script>
 <script>
-function portalSSOStatus_(title,detail){
+function portalSSOStatus_(title,detail){ document.documentElement.classList.remove('portal-sso-pending');
  let x=document.getElementById('portalSsoStatus');
  if(!x){x=document.createElement('div');x.id='portalSsoStatus';x.className='sso-status';document.body.appendChild(x)}
  x.innerHTML='<div class="sso-status-box"><b>'+title+'</b><span>'+detail+'</span></div>';
@@ -3721,7 +3730,11 @@ function portalSSOStatus_(title,detail){
   settings.engineer=engineerSessionName;
   sessionStorage.setItem('tmx_km_engineer_token',engineerSessionToken);
   sessionStorage.setItem('tmx_km_engineer_name',engineerSessionName);
-  saveSettingsToStorage(settings); fillSettingsForm(); updateLoginState(); location.reload();
+  saveSettingsToStorage(settings);
+  fillSettingsForm();
+  const x=document.getElementById('portalSsoStatus'); if(x)x.remove();
+  document.documentElement.classList.remove('portal-sso-pending');
+  location.reload();
  }catch(e){portalSSOStatus_('Single Sign-On connection error',String(e&&e.message||e));console.error('Portal SSO failed',e)}
 })();
 </script>
