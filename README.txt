@@ -72,3 +72,12 @@ V48 Allowance Audit
 - Driver: out-of-base Sun-Thu 50, Saturday 75, Friday 100.
 
 V49: compact pending-only allowance audit workflow, bulk selection/approval, Final Payable removed.
+
+
+V58 applied to the user-supplied KM-main source:
+- Config H = Vehicle ID list.
+- Vehicle ID required in Start Trip; F&B keyed by vehicle, not driver.
+- Rate display supports Amount / KM unit.
+- PM/Admin and Finance Photo Audit: Edit KM, Deduct, Reject, bulk approval.
+- KM Audit sheet tracks PM and Finance approval separately.
+- Summary shows rows approved by both and exports XLSX Cover + In Details.
