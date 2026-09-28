@@ -210,8 +210,8 @@ function portalSSOStatus_(title,detail){ document.documentElement.classList.remo
   managementToken=d.token; managementName=d.name||'';
   sessionStorage.setItem('tmx_km_pm_token',managementToken);
   sessionStorage.setItem('tmx_km_pm_name',managementName);
-  // Confirm the freshly-created PM session before exposing the audit page.
-  await post('allowanceData',{});
+  // portalSso already validated the portal token and created this PM session.
+  // Do not call allowanceData here: that API requires a month.
   const x=document.getElementById('portalSsoStatus'); if(x)x.remove();
   $('name').value=managementName;
   auth(true);
