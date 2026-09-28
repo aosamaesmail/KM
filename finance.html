@@ -28,7 +28,9 @@
 .login-buffer-text{font-size:15px}
 @keyframes loginSpin{to{transform:rotate(360deg)}}
 
-.audit-actions,.bulkbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 14px}.audit-actions{border-top:1px solid var(--line)}.bulkbar{position:sticky;bottom:8px;background:#fff;border:1px solid var(--line);border-radius:12px;justify-content:flex-end;z-index:5}.summary-table{width:100%;border-collapse:collapse;background:#fff}.summary-table th,.summary-table td{padding:9px;border-bottom:1px solid var(--line);text-align:left;font-size:12px}.danger{border-color:#e6b4b4;color:#a52a2a}.audit[data-dirty="1"]{outline:2px solid #d29b2d}.deduction-note{font-weight:700;color:#a35a00}</style>
+.audit-actions,.bulkbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 14px}.audit-actions{border-top:1px solid var(--line)}.bulkbar{position:sticky;bottom:8px;background:#fff;border:1px solid var(--line);border-radius:12px;justify-content:flex-end;z-index:5}.summary-table{width:100%;border-collapse:collapse;background:#fff}.summary-table th,.summary-table td{padding:9px;border-bottom:1px solid var(--line);text-align:left;font-size:12px}.danger{border-color:#e6b4b4;color:#a52a2a}.audit[data-dirty="1"]{outline:2px solid #d29b2d}.deduction-note{font-weight:700;color:#a35a00}
+.photo-title{display:flex!important;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}.photo-km{font-weight:900;color:#172b43;background:#fff;border:1px solid #d9e1e8;border-radius:8px;padding:3px 9px}.edited-km{display:block;font-size:11px;color:#147a45;margin-top:3px;font-weight:800}.audit-dialog-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:none;align-items:center;justify-content:center;padding:18px}.audit-dialog-bg.open{display:flex}.audit-dialog{width:min(100%,440px);background:#fff;border-radius:18px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.25)}.audit-dialog h3{margin:0 0 8px}.audit-dialog p{color:#667085;margin:0 0 15px}.audit-dialog .dlg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.audit-dialog input,.audit-dialog textarea{width:100%;box-sizing:border-box;padding:11px;border:1px solid #d6dde5;border-radius:10px;margin:5px 0 10px}.audit-dialog textarea{min-height:80px;resize:vertical}.audit-dialog-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:8px}
+</style>
 </head>
 <body>
 
@@ -43,7 +45,7 @@
 <main class="wrap">
 <section id="loginView" class="login"><h1>Finance Login</h1><div class="muted">Use your management Name + 6-digit PIN.</div><label>Name</label><input id="name" class="input" autocomplete="username" placeholder="Enter your name"><label>PIN</label><input id="pin" class="input" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password" placeholder="6-digit PIN"><button id="loginBtn" class="btn primary" style="width:100%;margin-top:16px">Login to Finance</button></section>
 <section id="dash" class="dashboard"><div style="display:flex;gap:8px;margin-bottom:14px"><button id="photoTab" class="btn primary">Photo Audit</button><button id="summaryTab" class="btn">Summary</button></div><div id="photoView"><div class="heading"><div><h1>Photo Audit</h1><div class="muted">Desktop workspace for reviewing trip odometers, large photos and GPS.</div></div></div>
-<div class="filters"><div class="field"><label>Engineer</label><div class="search"><input id="engineer" class="input" autocomplete="off" placeholder="Search or select engineer"><div id="engineerOpts" class="opts"></div></div></div><div class="field"><label>Driver</label><div class="search"><input id="driver" class="input" autocomplete="off" placeholder="Search or select driver"><div id="driverOpts" class="opts"></div></div></div><div class="field"><label>Project</label><div class="search"><input id="project" class="input" autocomplete="off" placeholder="Search or select project"><div id="projectOpts" class="opts"></div></div></div><div class="field"><label>Month</label><input id="month" class="input" type="month"></div><div class="filter-buttons"><button id="apply" class="btn primary">Apply Filters</button><button id="clear" class="btn">Clear</button></div></div>
+<div class="filters"><div class="field"><label>Engineer</label><div class="search"><input id="engineer" class="input" autocomplete="off" placeholder="Search or select engineer"><div id="engineerOpts" class="opts"></div></div></div><div class="field"><label>Driver</label><div class="search"><input id="driver" class="input" autocomplete="off" placeholder="Search or select driver"><div id="driverOpts" class="opts"></div></div></div><div class="field"><label>Project</label><div class="search"><input id="project" class="input" autocomplete="off" placeholder="Search or select project"><div id="projectOpts" class="opts"></div></div></div><div class="field"><label>Month</label><input id="month" class="input" type="month"></div><div class="field"><label>Paid By</label><input id="paidBy" class="input" placeholder="Search payer"></div><div class="field"><label>Status</label><select id="auditStatus" class="input"><option>Pending</option><option>Approved</option><option>Rejected</option></select></div><div class="filter-buttons"><button id="apply" class="btn primary">Apply Filters</button><button id="clear" class="btn">Clear</button></div></div>
 <div class="stats"><div class="stat"><div class="k">Trips found</div><div id="tripCount" class="v">0</div></div><div class="stat"><div class="k">Trip KM</div><div id="tripKm" class="v">0</div></div><div class="stat"><div class="k">Total KM</div><div id="totalKm" class="v">0</div></div><div class="stat accent"><div class="k">Amount Spent</div><div id="amount" class="v">0.00 EGP</div></div></div>
 <div class="audit-head"><h2>Audit Records <span id="matched" class="count"></span></h2><div class="right"><button id="photosBtn" class="btn">Hide Photos</button><button id="refreshBtn" class="btn">Refresh</button></div></div>
 <div id="tableWrap" class="table-wrap"><div class="empty">Apply filters or refresh to load trips.</div></div><div class="bulkbar"><span id="pendingChanges" class="muted">No unsaved changes</span><button id="selectAllAudit" class="btn">Select All</button><button id="saveAudit" class="btn">Save Changes</button><button id="approveAudit" class="btn primary">Approve Selected</button></div></div><div id="summaryView" style="display:none"><div class="heading"><h1>Approved Summary</h1></div><div class="filters"><div class="field"><label>Engineer</label><input id="sEngineer" class="input"></div><div class="field"><label>Driver</label><input id="sDriver" class="input"></div><div class="field"><label>Project</label><input id="sProject" class="input"></div><div class="field"><label>Month</label><input id="sMonth" class="input" type="month"></div><div class="filter-buttons"><button id="sApply" class="btn primary">Apply</button><button id="sExport" class="btn">Export Excel</button></div></div><div id="summaryRows" style="margin-top:16px"></div></div></section>
@@ -100,7 +102,7 @@ $('loginBtn').onclick=async()=>{const name=$('name').value.trim(),pin=$('pin').v
 $('name').addEventListener('keydown',e=>{if(e.key==='Enter')$('pin').focus()});
 $('pin').addEventListener('keydown',e=>{if(e.key==='Enter')$('loginBtn').click()});
 $('logoutBtn').onclick=()=>{managementToken='';managementName='';sessionStorage.removeItem('tmx_km_finance_token');sessionStorage.removeItem('tmx_km_finance_name');$('name').value='';$('pin').value='';setAuthed(false)};
-async function loadTrips(){if(!managementToken)return;$('tableWrap').innerHTML='<div class="empty">Loading audit records…</div>';try{const d=await post('financeTrips',{filterEngineer:$('engineer').value.trim(),filterDriver:$('driver').value.trim(),filterProject:$('project').value.trim(),filterMonth:$('month').value});trips=d.trips||[];render(d.totalMatched??trips.length)}catch(e){if(e.message==='finance-session-required'){managementToken='';managementName='';sessionStorage.removeItem('tmx_km_finance_token');sessionStorage.removeItem('tmx_km_finance_name');setAuthed(false)}else $('tableWrap').innerHTML='<div class="empty">Could not load trips — check connection.</div>'}}
+async function loadTrips(){if(!managementToken)return;$('tableWrap').innerHTML='<div class="empty">Loading audit records…</div>';try{const d=await post('financeTrips',{filterEngineer:$('engineer').value.trim(),filterDriver:$('driver').value.trim(),filterProject:$('project').value.trim(),filterMonth:$('month').value,filterPaidBy:$('paidBy').value.trim(),filterAuditStatus:$('auditStatus').value,auditRole:'Finance'});trips=d.trips||[];render(d.totalMatched??trips.length)}catch(e){if(e.message==='finance-session-required'){managementToken='';managementName='';sessionStorage.removeItem('tmx_km_finance_token');sessionStorage.removeItem('tmx_km_finance_name');setAuthed(false)}else $('tableWrap').innerHTML='<div class="empty">Could not load trips — check connection.</div>'}}
 function render(totalMatched){
   $('tripCount').textContent=trips.length;
   $('tripKm').textContent=trips.reduce((a,t)=>a+num(t.tripKm),0).toFixed(0);
@@ -127,8 +129,8 @@ function render(totalMatched){
     </div>
     <div class="audit-actions"><input class="audit-check" type="checkbox" data-trip="${esc(t.tripId)}" ${t.financeStatus==='Approved'||t.financeStatus==='Rejected'?'disabled':''}><b>Finance: ${esc(t.financeStatus||'Pending')}</b><span>PM: ${esc(t.pmStatus||'Pending')}</span><button class="btn edit-km" data-trip="${esc(t.tripId)}" data-start="${t.startKm}" data-finish="${t.finishKm}">Edit KM</button><button class="btn deduct" data-trip="${esc(t.tripId)}">Deduct</button><button class="btn danger reject" data-trip="${esc(t.tripId)}">Reject</button></div>
     <div class="photo-pair">
-      ${photoPanel(t.startPhotoThumb,t.startPhoto,t.startLatitude,t.startLongitude,'Start Photo')}
-      ${photoPanel(t.finishPhotoThumb,t.finishPhoto,t.finishLatitude,t.finishLongitude,'Finish Photo')}
+      ${photoPanel(t.startPhotoThumb,t.startPhoto,t.startLatitude,t.startLongitude,'Start Photo',t.startKm,'start')}
+      ${photoPanel(t.finishPhotoThumb,t.finishPhoto,t.finishLatitude,t.finishLongitude,'Finish Photo',t.finishKm,'finish')}
     </div>
   </article>`).join('');
   $('tableWrap').innerHTML='<div class="audit-list">'+cards+'</div>';
@@ -136,37 +138,30 @@ function render(totalMatched){
 }
 function summary(label,value){return `<div class="summary-item"><div class="summary-label">${label}</div><div class="summary-value">${value}</div></div>`}
 function metric(label,value,cls=''){return `<div class="metric ${cls}"><div class="k">${label}</div><div class="v">${value}</div></div>`}
-function photoPanel(thumb,full,lat,lng,label){
+function photoPanel(thumb,full,lat,lng,label,km,kind){
   const src=thumb||full||'';
   const fullSrc=full||thumb||'';
   const media=src?`<img class="audit-photo" src="${esc(src)}" data-full="${esc(fullSrc)}" alt="${esc(label)}">`:'<div class="photo-missing">No photo available</div>';
-  return `<section class="photo-panel"><div class="photo-title">${esc(label)}</div><div class="photo-frame">${media}</div><div class="gps">GPS: ${lat!==''&&lat!=null&&lng!==''&&lng!=null?esc(lat)+', '+esc(lng):'—'}</div></section>`;
+  return `<section class="photo-panel"><div class="photo-title">${esc(label)} <span class="photo-km" data-photo-km="${kind}">${esc(km||'—')}</span></div><div class="photo-frame">${media}</div><div class="gps">GPS: ${lat!==''&&lat!=null&&lng!==''&&lng!=null?esc(lat)+', '+esc(lng):'—'}</div></section>`;
 }
-$('tableWrap').addEventListener('click',e=>{const i=e.target.closest('.audit-photo');if(!i)return;$('lightboxImg').src=i.dataset.full||i.src;$('lightbox').classList.add('open')});$('closeLightbox').onclick=()=>$('lightbox').classList.remove('open');$('lightbox').onclick=e=>{if(e.target===$('lightbox'))$('lightbox').classList.remove('open')};
-function applyPhotos(){$('tableWrap').classList.toggle('hide-photos',!photosVisible);$('photosBtn').textContent=photosVisible?'Hide Photos':'Show Photos'}$('photosBtn').onclick=()=>{photosVisible=!photosVisible;localStorage.setItem('finance_portal_photos',photosVisible?'1':'0');applyPhotos()};$('apply').onclick=loadTrips;$('refreshBtn').onclick=loadTrips;$('clear').onclick=()=>{$('engineer').value='';$('driver').value='';$('project').value='';$('month').value='';loadTrips()};
-
-const stagedAudit={};
-function stagedCount(){return Object.keys(stagedAudit).length}
-function updatePendingLabel(){$('pendingChanges').textContent=stagedCount()?stagedCount()+' unsaved change(s)':'No unsaved changes'}
-function stageTrip(id,patch){stagedAudit[id]=Object.assign(stagedAudit[id]||{tripId:id},patch);updatePendingLabel();let c=auditCard(id);if(c)c.dataset.dirty='1'}
-function auditCard(id){return [...document.querySelectorAll('[data-audit-trip]')].find(x=>String(x.dataset.auditTrip)===String(id))||null}
-function markLocalStatus(id,status){let c=auditCard(id);if(!c)return;let b=[...c.querySelectorAll('.audit-actions b')][0];if(b)b.textContent='Finance: '+status;let cb=c.querySelector('.audit-check');if(cb&&status==='Rejected'){cb.checked=false;cb.disabled=true}}
-async function saveStagedAudit(showToast=true){
- const updates=Object.values(stagedAudit);if(!updates.length){if(showToast)toast('No changes to save');return true}
- try{let r=await post('financeSaveAuditBatch',{updates});if(!r.ok)throw new Error(r.error||'Save failed');Object.keys(stagedAudit).forEach(k=>delete stagedAudit[k]);document.querySelectorAll('[data-dirty="1"]').forEach(c=>delete c.dataset.dirty);updatePendingLabel();if(showToast)toast('Changes saved');return true}catch(e){toast('Could not save changes');return false}
-}
-$('selectAllAudit').onclick=()=>document.querySelectorAll('.audit-check:not(:disabled)').forEach(x=>x.checked=true);
-$('saveAudit').onclick=()=>saveStagedAudit(true);
-$('approveAudit').onclick=async()=>{
- let ids=[...document.querySelectorAll('.audit-check:checked:not(:disabled)')].map(x=>x.dataset.trip);if(!ids.length)return toast('Select pending trips first');
- let ok=await saveStagedAudit(false);if(!ok)return;
- try{let r=await post('financeSaveAuditBatch',{updates:[],approvals:ids});if(!r.ok)throw new Error(r.error||'Approval failed');ids.forEach(id=>{let c=auditCard(id);if(c)c.remove()});toast(ids.length+' trips approved')}catch(e){toast('Could not approve selected trips')}
-};
-$('tableWrap').addEventListener('click',e=>{
+$('tableWrap').addEventListener('click',async e=>{
  let b=e.target.closest('button');if(!b)return;let id=b.dataset.trip,c=auditCard(id);if(!c)return;
- if(b.classList.contains('reject')){let reason=prompt('Reject reason:');if(reason===null)return;stageTrip(id,{status:'Rejected',reason});markLocalStatus(id,'Rejected');toast('Rejected locally — click Save Changes')}
- else if(b.classList.contains('deduct')){let current=(stagedAudit[id]&&stagedAudit[id].deduction)||0,d=prompt('Deduction amount (EGP):',current);if(d!==null){d=Math.max(0,Number(d)||0);stageTrip(id,{status:'Pending',deduction:d});let note=c.querySelector('.deduction-note');if(!note){note=document.createElement('div');note.className='deduction-note muted';c.querySelector('.audit-actions').prepend(note)}note.textContent='Deduction: '+d.toFixed(2)+' EGP';toast('Deduction staged — click Save Changes')}}
- else if(b.classList.contains('edit-km')){let st=prompt('Start KM:',b.dataset.start),fn=prompt('Finish KM:',b.dataset.finish);if(st===null||fn===null)return;st=Number(st);fn=Number(fn);if(!isFinite(st)||!isFinite(fn)||fn<st)return toast('Invalid KM values');stageTrip(id,{status:'Pending',startKm:st,finishKm:fn});b.dataset.start=st;b.dataset.finish=fn;let ms=[...c.querySelectorAll('.metric')];let set=(name,val)=>{let m=ms.find(x=>x.querySelector('b')?.textContent===name);if(m){let nodes=[...m.childNodes].filter(n=>n.nodeType===3);if(nodes.length)nodes[nodes.length-1].nodeValue=String(val)}};set('Start KM',st);set('Finish KM',fn);set('Trip KM',fn-st);toast('KM edit staged — click Save Changes')}
+ if(b.classList.contains('reject')){
+   let v=await auditDialog('Reject Trip','Enter the reason for rejecting this trip.','<label>Reason</label><textarea data-dlg="reason" placeholder="Rejection reason"></textarea>');if(!v)return;
+   stageTrip(id,{status:'Rejected',reason:v.reason||''});markLocalStatus(id,'Rejected');toast('Rejected locally — click Save Changes');
+ } else if(b.classList.contains('deduct')){
+   let current=(stagedAudit[id]&&stagedAudit[id].deduction)||0;
+   let v=await auditDialog('Deduct Amount','Enter the amount to deduct from this trip.','<label>Deduction (EGP)</label><input data-dlg="deduction" type="number" min="0" step="0.01" value="'+current+'">');if(!v)return;
+   let d=Math.max(0,Number(v.deduction)||0);stageTrip(id,{status:'Pending',deduction:d});let note=c.querySelector('.deduction-note');if(!note){note=document.createElement('div');note.className='deduction-note muted';c.querySelector('.audit-actions').prepend(note)}note.textContent='Deduction: '+d.toFixed(2)+' EGP';toast('Deduction staged — click Save Changes');
+ } else if(b.classList.contains('edit-km')){
+   let v=await auditDialog('Edit KM','Correct the Start KM and/or Finish KM.','<div class="dlg-grid"><div><label>Start KM</label><input data-dlg="start" type="number" value="'+b.dataset.start+'"></div><div><label>Finish KM</label><input data-dlg="finish" type="number" value="'+b.dataset.finish+'"></div></div>');if(!v)return;
+   let oldStart=Number(b.dataset.start),oldFinish=Number(b.dataset.finish),st=Number(v.start),fn=Number(v.finish);if(!isFinite(st)||!isFinite(fn)||fn<st)return toast('Invalid KM values');
+   stageTrip(id,{status:'Pending',startKm:st,finishKm:fn});b.dataset.start=st;b.dataset.finish=fn;
+   let ms=[...c.querySelectorAll('.metric')];let set=(name,val,old)=>{let m=ms.find(x=>x.querySelector('b')?.textContent===name);if(m){let existing=m.querySelector('.edited-km');if(existing)existing.remove();let e=document.createElement('span');e.className='edited-km';e.textContent='Edited: '+val;m.appendChild(e)}};
+   set('Start KM',st,oldStart);set('Finish KM',fn,oldFinish);set('Trip KM',fn-st);
+   let sk=c.querySelector('[data-photo-km="start"]'),fk=c.querySelector('[data-photo-km="finish"]');if(sk)sk.textContent=st;if(fk)fk.textContent=fn;
+   toast('KM edit staged — click Save Changes');
+ }
 });
 let approvedRows=[];
 async function loadApproved(){let d=await post('financeSummary',{filterEngineer:$('sEngineer').value.trim(),filterDriver:$('sDriver').value.trim(),filterProject:$('sProject').value.trim(),filterMonth:$('sMonth').value});approvedRows=d.trips||[];$('summaryRows').innerHTML=approvedRows.length?'<table class="summary-table"><thead><tr><th>Date</th><th>Engineer</th><th>Driver</th><th>Vehicle</th><th>Project</th><th>Rate</th><th>Deduction</th><th>Final Amount</th></tr></thead><tbody>'+approvedRows.map(t=>`<tr><td>${esc(t.date)}</td><td>${esc(t.engineer)}</td><td>${esc(t.driver)}</td><td>${esc(t.vehicle||'—')}</td><td>${esc(t.projectName)}</td><td>${esc(t.rateDisplay)}</td><td>${num(t.deduction).toFixed(2)}</td><td>${num(t.finalAmount).toFixed(2)}</td></tr>`).join('')+'</tbody></table>':'<div class="empty">No fully approved records.</div>'}
@@ -184,4 +179,4 @@ function exportApprovedXlsx(rows){
  for(let [n,d] of f){let nb=enc.encode(n),db=enc.encode(d),c=crc(db),l=new Uint8Array([...u32(0x04034b50),...u16(20),0,0,0,0,0,0,0,0,...u32(c),...u32(db.length),...u32(db.length),...u16(nb.length),0,0,...nb,...db]);parts.push(l);cen.push(new Uint8Array([...u32(0x02014b50),...u16(20),...u16(20),0,0,0,0,0,0,0,0,...u32(c),...u32(db.length),...u32(db.length),...u16(nb.length),0,0,0,0,0,0,0,0,0,0,0,0,...u32(off),...nb]));off+=l.length}
  let cs=cen.reduce((a,b)=>a+b.length,0),end=new Uint8Array([...u32(0x06054b50),0,0,0,0,...u16(f.length),...u16(f.length),...u32(cs),...u32(off),0,0]),blob=new Blob([...parts,...cen,end],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),fr=new FileReader();fr.onload=()=>{let a=document.createElement('a');a.href=fr.result;a.download='KM-Approved-Summary.xlsx';a.click()};fr.readAsDataURL(blob)
 }
-</script></body></html>
+</script><div id="auditDialogBg" class="audit-dialog-bg"><div class="audit-dialog"><h3 id="auditDialogTitle">Audit Action</h3><p id="auditDialogText"></p><div id="auditDialogFields"></div><div class="audit-dialog-actions"><button id="auditDialogCancel" class="btn">Cancel</button><button id="auditDialogConfirm" class="btn primary">Confirm</button></div></div></div></body></html>
