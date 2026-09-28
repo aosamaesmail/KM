@@ -3715,20 +3715,37 @@ function toast(msg){
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(()=>{});
 </script>
 <script>
-function openRequestedEngineerView(){
- const v=new URLSearchParams(location.search).get('view');
- if(v==='history'){
-   if(typeof showTab==='function') { setTimeout(()=>showTab('history'),0); return; }
-   const b=document.querySelector('[data-tab="history"],[data-page="history"],#historyTab,.history-tab');
-   if(b&&typeof b.click==='function') setTimeout(()=>b.click(),0);
- }else if(v==='start'){
-   if(typeof showTab==='function') { setTimeout(()=>showTab('start'),0); return; }
-   const b=document.querySelector('[data-tab="start"],[data-page="start"],#startTab,.start-tab');
-   if(b&&typeof b.click==='function') setTimeout(()=>b.click(),0);
- }
+function requestedEngineerView_(){
+  const q=new URLSearchParams(location.search).get('view');
+  return q || sessionStorage.getItem('tmx_km_requested_view') || '';
 }
-setTimeout(openRequestedEngineerView,250);
-window.addEventListener('load',()=>setTimeout(openRequestedEngineerView,500));
+function openRequestedEngineerView(){
+  const v=requestedEngineerView_();
+  if(v!=='history' && v!=='start') return false;
+  if(typeof showTab!=='function') return false;
+
+  if(v==='history'){
+    showTab('history');
+    const ok = document.getElementById('historySection')?.classList.contains('active');
+    if(ok) sessionStorage.removeItem('tmx_km_requested_view');
+    return !!ok;
+  }
+
+  showTab('start');
+  const ok = document.getElementById('startSection')?.classList.contains('active');
+  if(ok) sessionStorage.removeItem('tmx_km_requested_view');
+  return !!ok;
+}
+function applyRequestedEngineerView_(){
+  // The KM app performs several asynchronous startup/session operations.
+  // Re-apply the requested destination until the intended section is actually active.
+  let tries=0;
+  const timer=setInterval(()=>{
+    tries++;
+    if(openRequestedEngineerView() || tries>=20) clearInterval(timer);
+  },250);
+}
+window.addEventListener('load',()=>setTimeout(applyRequestedEngineerView_,100));
 function portalSSOStatus_(title,detail){ document.documentElement.classList.remove('portal-sso-pending');
  let x=document.getElementById('portalSsoStatus');
  if(!x){x=document.createElement('div');x.id='portalSsoStatus';x.className='sso-status';document.body.appendChild(x)}
@@ -3744,6 +3761,8 @@ function portalSSOStatus_(title,detail){ document.documentElement.classList.remo
   settings.engineer=engineerSessionName;
   sessionStorage.setItem('tmx_km_engineer_token',engineerSessionToken);
   sessionStorage.setItem('tmx_km_engineer_name',engineerSessionName);
+  const requestedView = new URLSearchParams(location.search).get('view');
+  if(requestedView) sessionStorage.setItem('tmx_km_requested_view', requestedView);
   saveSettingsToStorage(settings); fillSettingsForm(); location.reload();
  }catch(e){portalSSOStatus_('Single Sign-On connection error',String(e&&e.message||e));console.error('Portal SSO failed',e)}
 })();
