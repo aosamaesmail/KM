@@ -2413,7 +2413,7 @@ async function captureMobilePhoto(){
   canvas.width=Math.round(video.videoWidth*scale); canvas.height=Math.round(video.videoHeight*scale);
   canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
   target.setter(canvas.toDataURL('image/jpeg',0.55));
-  if(currentDriverAllowsGallery()){
+  if(currentDriverAllowsGallery(target.which)){
     target.locationSetter(null);
     $(target.missingId).textContent='Photo captured';
     $(target.missingId).style.display='block';
@@ -2455,9 +2455,16 @@ async function captureMobilePhoto(){
   }
 }
 
-function currentDriverAllowsGallery(){
-  const d=String($('driver')?.value||'').trim().toLowerCase();
+function driverAllowsGallery(driverName){
+  const d=String(driverName||'').trim().toLowerCase();
   return d==='rent' || d==='item transfer';
+}
+function currentDriverAllowsGallery(which){
+  if(which==='finish'){
+    const trip=openTripsCache.find(t=>String(t.tripId)===String($('openTripSelect')?.value||''));
+    return driverAllowsGallery(trip?.driver);
+  }
+  return driverAllowsGallery($('driver')?.value);
 }
 let pendingPhotoSource=null;
 function closePhotoSourceDialog(){
@@ -2506,7 +2513,7 @@ function openGalleryForPending(){
 function choosePhotoSource(which,btnId,missingId,setter,locationSetter){
   stopCamera();
   const cfg={which,btnId,missingId,setter,locationSetter};
-  if(!currentDriverAllowsGallery()){
+  if(!currentDriverAllowsGallery(which)){
     return setTimeout(()=>openCamera(which,btnId,missingId,setter,locationSetter),120);
   }
   openPhotoSourceDialog(cfg);
@@ -2597,6 +2604,26 @@ async function loadOpenTripsForFinish(){
   });
   $('noOpenTrips').style.display = merged.length ? 'none' : 'block';
   $('noOpenTrips').textContent = merged.length ? '' : 'No open trips found. Start a trip first.';
+
+  // Never leave Finish on the placeholder while open trips exist.
+  // Preserve a valid current selection; otherwise automatically select the latest open trip.
+  const previousSelection=String(sel.dataset.preferredTripId||sel.value||'');
+  let selectedTrip=merged.find(t=>String(t.tripId)===previousSelection);
+  if(!selectedTrip && merged.length){
+    selectedTrip=[...merged].sort((a,b)=>{
+      const ta=Date.parse(a.startedAt||a.date||0)||0;
+      const tb=Date.parse(b.startedAt||b.date||0)||0;
+      return tb-ta;
+    })[0];
+  }
+  if(selectedTrip){
+    sel.value=String(selectedTrip.tripId);
+    sel.dataset.preferredTripId=String(selectedTrip.tripId);
+    sel.dispatchEvent(new Event('change'));
+  }else{
+    sel.value='';
+    delete sel.dataset.preferredTripId;
+  }
   if (!serverOk && merged.length) toast('Showing locally saved trips — could not refresh from the Sheet');
 }
 
@@ -2656,6 +2683,7 @@ setInterval(checkOverdueTrips, 5 * 60 * 1000); // re-check every 5 min while app
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkOverdueTrips(); });
 updateLockState();
 $('openTripSelect').addEventListener('change', () => {
+  if($('openTripSelect').value) $('openTripSelect').dataset.preferredTripId=$('openTripSelect').value;
   const trip = openTripsCache.find(t => t.tripId === $('openTripSelect').value);
   if (trip){
     $('tripSummary').style.display='block';
@@ -3320,7 +3348,7 @@ $('startForm').addEventListener('submit', async (e) => {
   if (!$('task').value.trim()) return toast('Task is required');
   if (!start) return toast('Start KM is required');
   if (!startPhoto) { $('startPhotoMissing').style.display='block'; return toast('Start KM photo is required'); }
-  if (!currentDriverAllowsGallery() && !startPhotoLocation) return toast('📍 Start photo GPS is required. Retake the photo with Location enabled.');
+  if (!currentDriverAllowsGallery('start') && !startPhotoLocation) return toast('📍 Start photo GPS is required. Retake the photo with Location enabled.');
 
   const validNames = validateStartNamesClient();
   if (!validNames.engineer || !validNames.driver) {
@@ -3393,6 +3421,7 @@ $('startForm').addEventListener('submit', async (e) => {
   updateLockState();
   if (getOpenTrips().some(t => t.tripId === tripId)) {
     showTab('finish', true);
+    if($('openTripSelect')) $('openTripSelect').dataset.preferredTripId=String(tripId);
     await loadOpenTripsForFinish();
     if ($('openTripSelect')) {
       $('openTripSelect').value = tripId;
@@ -3426,7 +3455,7 @@ $('finishForm').addEventListener('submit', async (e) => {
   const finish = $('finishKm').value;
   if (!finish) return toast('Finish KM is required');
   if (!finishPhoto) { $('finishPhotoMissing').style.display='block'; return toast('Finish KM photo is required'); }
-  if (!currentDriverAllowsGallery() && !finishPhotoLocation) return toast('📍 Finish photo GPS is required. Retake the photo with Location enabled.');
+  if (!currentDriverAllowsGallery('finish') && !finishPhotoLocation) return toast('📍 Finish photo GPS is required. Retake the photo with Location enabled.');
   if (parseFloat(finish) < parseFloat(trip.startKm)) return toast('Finish KM must be ≥ Start KM (' + trip.startKm + ')');
 
   const payload = {
