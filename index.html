@@ -1485,8 +1485,10 @@ body #defaultDriver{
       </div>
 
       <label data-i18n="Area *">Area *</label>
-      <input type="text" id="area" name="tmx_area_entry" list="areaList" placeholder="Search or select city" autocomplete="off" aria-autocomplete="none" data-lpignore="true" autocapitalize="words" autocorrect="off" spellcheck="false" required>
-      <datalist id="areaList"></datalist>
+      <div class="search-select" id="areaSearchWrap">
+        <input type="text" id="area" name="tmx_area_entry" placeholder="Search or select city" autocomplete="off" aria-autocomplete="list" data-lpignore="true" autocapitalize="words" autocorrect="off" spellcheck="false" required>
+        <div class="search-options" id="areaOptions"></div>
+      </div>
       <div class="hint">Select a registered city from the Area List.</div>
 
       <label data-i18n="Task *">Task *</label>
@@ -2253,8 +2255,20 @@ function populateSearchInput(inputEl, optionsEl, list, currentValue){
 }
 
 function populateVehicleList(list,currentValue){ populateSearchInput($('vehicle'),$('vehicleOptions'),list,currentValue); }
-$('driver').addEventListener('input',()=>{const c=getCachedLists(),dk=String($('driver').value||'').trim().toLowerCase();$('vehicle').value='';populateVehicleList((c.driverVehicles||{})[dk]||[],'')});
-$('driver').addEventListener('change',()=>{const c=getCachedLists(),dk=String($('driver').value||'').trim().toLowerCase();$('vehicle').value='';populateVehicleList((c.driverVehicles||{})[dk]||[],'')});
+function populateAreaList(list,currentValue){ populateSearchInput($('area'),$('areaOptions'),list,currentValue); }
+function syncVehicleForSelectedDriver(){
+  const c=getCachedLists(),dk=String($('driver').value||'').trim().toLowerCase();
+  const vehicles=(c.driverVehicles||{})[dk]||[];
+  const firstVehicle=vehicles.length ? vehicles[0] : '';
+  populateVehicleList(vehicles,firstVehicle);
+  $('vehicle').value=firstVehicle;
+}
+$('driver').addEventListener('input',()=>{
+  const c=getCachedLists(),dk=String($('driver').value||'').trim().toLowerCase();
+  const exact=(c.drivers||[]).some(d=>String(d).trim().toLowerCase()===dk);
+  if(exact) syncVehicleForSelectedDriver();
+});
+$('driver').addEventListener('change',syncVehicleForSelectedDriver);
 function populateDriverList(list, currentValue){
   populateSearchInput($('driver'), $('driverOptions'), list, currentValue);
 }
@@ -2304,10 +2318,7 @@ function populateSimpleSelect(selectEl, list, currentValue, placeholder){
   if (want && (list || []).includes(want)) selectEl.value = want;
 }
 
-function populateAreaList(list){
-  const dl=$('areaList'); if(!dl)return;
-  dl.innerHTML=''; (list||[]).forEach(a=>{const o=document.createElement('option');o.value=a;dl.appendChild(o)});
-}
+
 function validAreaClient(){
   const typed=$('area').value.trim().toLowerCase(), list=(getCachedLists().areas||[]);
   return list.find(a=>String(a).trim().toLowerCase()===typed)||'';
