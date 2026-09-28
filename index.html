@@ -2331,15 +2331,17 @@ async function refreshLists(silent){
     const data = await res.json();
     if (data.engineers || data.drivers){
       setCachedLists({ engineers: data.engineers||[], drivers: data.drivers||[], driverDefaults: data.driverDefaults||{}, areas: data.areas||[], vehicles:data.vehicles||[], driverVehicles:data.driverVehicles||{} });
-      populateAreaList(data.areas||[]); const dk=String($('driver').value||'').trim().toLowerCase(); populateVehicleList((data.driverVehicles||{})[dk]||[],$('vehicle').value||'');
-      populateDriverList(data.drivers||[], settings.defaultDriver);
+      populateAreaList(data.areas||[]);
+      populateDriverList(data.drivers||[], $('driver').value || settings.defaultDriver);
+      syncVehicleForSelectedDriver();
       populateEngineerList(data.engineers||[], settings.engineer);
       populateDefaultDriverList(data.drivers||[], settings.defaultDriver);
       if (!silent) toast('Engineer/Driver list updated');
     }
   } catch (err) {
     const cached = getCachedLists();
-    populateDriverList(cached.drivers, settings.defaultDriver); populateVehicleList((cached.driverVehicles||{})[String(settings.defaultDriver||'').trim().toLowerCase()]||[],$('vehicle').value||'');
+    populateDriverList(cached.drivers, $('driver').value || settings.defaultDriver);
+    syncVehicleForSelectedDriver();
     populateEngineerList(cached.engineers, settings.engineer);
     populateDefaultDriverList(cached.drivers, settings.defaultDriver);
     if (!silent) toast('Could not refresh — showing last saved list');
@@ -2347,10 +2349,13 @@ async function refreshLists(silent){
 }
 $('refreshListBtn').onclick = () => refreshLists(false);
 const cachedAtStart = getCachedLists();
-populateDriverList(cachedAtStart.drivers, settings.defaultDriver); populateVehicleList((cachedAtStart.driverVehicles||{})[String(settings.defaultDriver||'').trim().toLowerCase()]||[],'');
+populateDriverList(cachedAtStart.drivers, settings.defaultDriver);
+syncVehicleForSelectedDriver(true);
 populateEngineerList(cachedAtStart.engineers, settings.engineer);
 populateDefaultDriverList(cachedAtStart.drivers, settings.defaultDriver);
 refreshLists(true);
+setTimeout(()=>syncVehicleForSelectedDriver(),0);
+setTimeout(()=>syncVehicleForSelectedDriver(),350);
 
 // ---------- mobile camera capture (camera only; no file/gallery picker) ----------
 let startPhoto = null;
