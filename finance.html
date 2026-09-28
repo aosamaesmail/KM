@@ -84,9 +84,15 @@ function relationalOptions(kind,prefix=''){
     }
     return true;
   });
-  let vals=uniqueSorted(rows.map(r=>r[kind]));
-  if(kind==='paidBy') vals=vals.filter(v=>configEngineers.some(e=>String(e).trim().toLowerCase()===String(v).trim().toLowerCase()));
-  return vals;
+  if(kind==='paidBy'){
+    // Paid By master list ALWAYS comes from KM Config Column A.
+    // Only narrow it when another relational filter is actually selected.
+    const hasOtherFilter=['engineer','driver','project'].some(k=>q[k]);
+    if(!hasOtherFilter) return uniqueSorted(configEngineers);
+    const allowed=new Set(rows.map(r=>String(r.paidBy||'').trim().toLowerCase()).filter(Boolean));
+    return uniqueSorted(configEngineers.filter(e=>allowed.has(String(e).trim().toLowerCase())));
+  }
+  return uniqueSorted(rows.map(r=>r[kind]));
 }
 function drawRelOptions(inputId,optsId,kind,prefix=''){
   const inp=$(inputId),box=$(optsId),q=inp.value.trim().toLowerCase();

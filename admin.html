@@ -65,12 +65,19 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
 }
 function related(field,prefix=''){
  const q=relCtx(prefix);
- let vals=uniq(combos.filter(c=>{
+ const rows=combos.filter(c=>{
    for(const k of ['engineer','driver','project','paidBy'])if(k!==field&&q[k]&&String(c[k]||'').trim().toLowerCase()!==q[k])return false;
    return true;
- }).map(c=>c[field]));
- if(field==='paidBy')vals=vals.filter(v=>engineers.some(e=>e.toLowerCase()===String(v).toLowerCase()));
- return vals;
+ });
+ if(field==='paidBy'){
+   // Paid By master list ALWAYS comes from KM Config Column A.
+   // Driver/Engineer/Project selections may narrow that list to actual matching payers.
+   const hasOtherFilter=['engineer','driver','project'].some(k=>q[k]);
+   if(!hasOtherFilter)return uniq(engineers);
+   const allowed=new Set(rows.map(c=>String(c.paidBy||'').trim().toLowerCase()).filter(Boolean));
+   return uniq(engineers.filter(e=>allowed.has(String(e).trim().toLowerCase())));
+ }
+ return uniq(rows.map(c=>c[field]));
 }
 function refreshRelated(changed,prefix=''){
  const ids=prefix?{engineer:'sEng',driver:'sDrv',project:'sProj',paidBy:'sPaidBy'}:{engineer:'eng',driver:'drv',project:'proj',paidBy:'paidBy'};
