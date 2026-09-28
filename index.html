@@ -1539,7 +1539,7 @@ body #defaultDriver{
         <div><div class="num" id="todayTripOut">0</div><div class="lbl">Today's Trip KM</div></div>
         <div><div class="num" id="lastForthBackOut">0</div><div class="lbl">Last Forth & Back KM</div></div>
         <div><div class="num" id="totalOut">0</div><div class="lbl">Today Total KM</div></div>
-        <div class="payment-card">
+        <div class="payment-card" id="engineerPaymentCard" style="display:none;">
           <div class="payment-lbl">Amount to Pay now</div>
           <div class="payment-num" id="amountOut">0.00 EGP</div>
           <div class="payment-note">✓ Final amount — check before paying the driver</div>
@@ -2696,7 +2696,11 @@ $('openTripSelect').addEventListener('change', () => {
 
 // ---------- computed fields (finish) ----------
 function recalcFinish(){
-  const trip = openTripsCache.find(t => t.tripId === $('openTripSelect').value);
+  const trip = openTripsCache.find(t => String(t.tripId) === String($('openTripSelect').value));
+  const selectedDriver=String(trip?.driver||'').trim().toLowerCase();
+  // Show payment to Item Transfer and all normal drivers; hide it only for Rent.
+  const showEngineerPayment=!!trip && selectedDriver!=='rent';
+  $('engineerPaymentCard').style.display=showEngineerPayment ? '' : 'none';
   const start = trip ? parseFloat(trip.startKm) : NaN;
   const finish = parseFloat($('finishKm').value);
   const rate = trip && isFinite(parseFloat(trip.rate)) ? parseFloat(trip.rate) : 0;
