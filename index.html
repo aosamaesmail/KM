@@ -3301,7 +3301,7 @@ $('startForm').addEventListener('submit', async (e) => {
   if (!$('task').value.trim()) return toast('Task is required');
   if (!start) return toast('Start KM is required');
   if (!startPhoto) { $('startPhotoMissing').style.display='block'; return toast('Start KM photo is required'); }
-  if (!startPhotoLocation) return toast('📍 Start photo GPS is required. Retake the photo with Location enabled.');
+  if (!currentDriverAllowsGallery() && !startPhotoLocation) return toast('📍 Start photo GPS is required. Retake the photo with Location enabled.');
 
   const validNames = validateStartNamesClient();
   if (!validNames.engineer || !validNames.driver) {
@@ -3404,7 +3404,7 @@ $('finishForm').addEventListener('submit', async (e) => {
   const finish = $('finishKm').value;
   if (!finish) return toast('Finish KM is required');
   if (!finishPhoto) { $('finishPhotoMissing').style.display='block'; return toast('Finish KM photo is required'); }
-  if (!finishPhotoLocation) return toast('📍 Finish photo GPS is required. Retake the photo with Location enabled.');
+  if (!currentDriverAllowsGallery() && !finishPhotoLocation) return toast('📍 Finish photo GPS is required. Retake the photo with Location enabled.');
   if (parseFloat(finish) < parseFloat(trip.startKm)) return toast('Finish KM must be ≥ Start KM (' + trip.startKm + ')');
 
   const payload = {
