@@ -105,7 +105,7 @@ $('logoutBtn').onclick=()=>{managementToken='';managementName='';sessionStorage.
 async function loadTrips(){if(!managementToken)return;$('tableWrap').innerHTML='<div class="empty">Loading audit records…</div>';try{const d=await post('financeTrips',{filterEngineer:$('engineer').value.trim(),filterDriver:$('driver').value.trim(),filterProject:$('project').value.trim(),filterMonth:$('month').value});
     const paidBy=String($('paidBy').value||'').trim().toLowerCase(), auditStatus=String($('auditStatus').value||'Pending').trim().toLowerCase();
     trips=(d.trips||[]).filter(t=>(!paidBy||String(t.paidBy||'').trim().toLowerCase()===paidBy)&&String(t.financeStatus||'Pending').trim().toLowerCase()===auditStatus);
-    render(trips.length)}catch(e){if(e.message==='finance-session-required'){managementToken='';managementName='';sessionStorage.removeItem('tmx_km_finance_token');sessionStorage.removeItem('tmx_km_finance_name');setAuthed(false)}else {console.error('Photo Audit load failed:',e);$('tableWrap').innerHTML='<div class="empty">Could not load audit records. Please refresh and try again.</div>'}}}
+    render(trips.length)}catch(e){if(e.message==='finance-session-required'){managementToken='';managementName='';sessionStorage.removeItem('tmx_km_finance_token');sessionStorage.removeItem('tmx_km_finance_name');setAuthed(false)}else {console.error('Photo Audit load failed:',e);$('tableWrap').innerHTML='<div class="empty">Could not load audit records: '+esc(e.message||'server-error')+'</div>'}}}
 function render(totalMatched){
   $('tripCount').textContent=trips.length;
   $('tripKm').textContent=trips.reduce((a,t)=>a+num(t.tripKm),0).toFixed(0);
