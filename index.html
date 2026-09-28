@@ -2387,7 +2387,7 @@ async function openCamera(which, btnId, missingId, setter, locationSetter){
   }
   if(cameraStream){cameraStream.getTracks().forEach(t=>t.stop());cameraStream=null;}
   activeCameraTarget={which,btnId,missingId,setter,locationSetter};
-  const trigger=$(btnId); if(trigger) trigger.disabled=true;
+  const trigger=$(btnId); if(trigger){trigger.disabled=false; trigger.dataset.cameraOpening='1';}
   $('cameraTitle').textContent = which==='start' ? 'Take Start KM photo' : 'Take Finish KM photo';
   $('cameraStatus').textContent='Opening camera…';
   $('cameraModal').style.display='flex';
@@ -2413,6 +2413,21 @@ async function captureMobilePhoto(){
   canvas.width=Math.round(video.videoWidth*scale); canvas.height=Math.round(video.videoHeight*scale);
   canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
   target.setter(canvas.toDataURL('image/jpeg',0.55));
+  if(currentDriverAllowsGallery()){
+    target.locationSetter(null);
+    $(target.missingId).textContent='Photo captured';
+    $(target.missingId).style.display='block';
+    $(target.missingId).style.color='var(--ok)';
+    $(target.btnId).disabled=false;
+    $(target.btnId).removeAttribute('data-camera-opening');
+    $(target.btnId).textContent='Retake / Replace';
+    $(target.btnId).classList.add('retake');
+    let img2=document.getElementById(target.which+'Thumb');
+    if(!img2){img2=document.createElement('img');img2.id=target.which+'Thumb';const row=$(target.btnId).closest('.km-row');(row||$(target.btnId)).insertAdjacentElement('afterend',img2);}
+    img2.src=canvas.toDataURL('image/jpeg',0.55);
+    stopCamera();
+    return;
+  }
   $(target.btnId).textContent='Getting GPS…';
   $(target.btnId).disabled=true;
   try{
@@ -2421,7 +2436,9 @@ async function captureMobilePhoto(){
     $(target.missingId).textContent=`GPS captured: ${location.latitude}, ${location.longitude}`;
     $(target.missingId).style.display='block';
     $(target.missingId).style.color='var(--ok)';
-    $(target.btnId).textContent='Retake';
+    $(target.btnId).disabled=false;
+    $(target.btnId).removeAttribute('data-camera-opening');
+    $(target.btnId).textContent='Retake / Replace';
     $(target.btnId).classList.add('retake');
     let img2=document.getElementById(target.which+'Thumb');
     if(!img2){img2=document.createElement('img');img2.id=target.which+'Thumb';const row=$(target.btnId).closest('.km-row');(row||$(target.btnId)).insertAdjacentElement('afterend',img2);}
@@ -2469,6 +2486,8 @@ function openGalleryForPending(){
       $(cfg.missingId).textContent='Photo loaded from gallery';
       $(cfg.missingId).style.display='block';
       $(cfg.missingId).style.color='var(--ok)';
+      $(cfg.btnId).disabled=false;
+      $(cfg.btnId).removeAttribute('data-camera-opening');
       $(cfg.btnId).textContent='Retake / Replace';
       $(cfg.btnId).classList.add('retake');
       let im=document.getElementById(cfg.which+'Thumb');
@@ -3321,8 +3340,10 @@ $('startForm').addEventListener('submit', async (e) => {
     startKm: parseFloat(start), startedAt: new Date().toISOString(),
     rate: undefined,
     lastForthBack: 0,
+    startLatitude: startPhotoLocation ? startPhotoLocation.latitude : '',
+    startLongitude: startPhotoLocation ? startPhotoLocation.longitude : '',
   };
-  const payload = { action: 'start', ...trip, startPhoto, startLatitude: startPhotoLocation.latitude, startLongitude: startPhotoLocation.longitude };
+  const payload = { action: 'start', ...trip, startPhoto, startLatitude: startPhotoLocation ? startPhotoLocation.latitude : '', startLongitude: startPhotoLocation ? startPhotoLocation.longitude : '' };
   const display = `${trip.engineer} · ${trip.area||'—'} · Start ${trip.startKm}km`;
 
   // Do not switch to Finish yet. The server must first calculate and return the
@@ -3419,7 +3440,7 @@ $('finishForm').addEventListener('submit', async (e) => {
     rate: (isFinite(parseFloat(trip.rate)) ? parseFloat(trip.rate) : 0),
     staticKm: parseFloat($('staticKm').value)||0,
     overNightStay: $('overNightStay').checked,
-    finishPhoto, startLatitude: trip.startLatitude, startLongitude: trip.startLongitude, finishLatitude: finishPhotoLocation.latitude, finishLongitude: finishPhotoLocation.longitude, finishedAt: new Date().toISOString(),
+    finishPhoto, startLatitude: trip.startLatitude || '', startLongitude: trip.startLongitude || '', finishLatitude: finishPhotoLocation ? finishPhotoLocation.latitude : '', finishLongitude: finishPhotoLocation ? finishPhotoLocation.longitude : '', finishedAt: new Date().toISOString(),
   };
   const display = `${trip.engineer} · ${trip.area||'—'} · ${$('totalOut').textContent}km total`;
   const engineerForLog = trip.engineer || settings.engineer;
