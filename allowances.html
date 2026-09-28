@@ -170,4 +170,17 @@ $('exportExcel').onclick=()=>{
 };
 $('apply').onclick=load;$('clear').onclick=()=>{$('engineer').value='';$('driver').value='';$('project').value='';$('status').value='';refreshAllCombos();load()};document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');typeView=b.dataset.type;render()});
 if(managementToken){$('name').value=managementName;post('allowanceData',{}).then(()=>auth(true)).catch(()=>{sessionStorage.removeItem('tmx_km_pm_token');sessionStorage.removeItem('tmx_km_pm_name');managementToken='';managementName='';auth(false)});}else auth(false);
-</script></body></html>
+</script><script>
+(async function portalAutoLogin(){
+ const m=location.hash.match(/(?:^|[&#])sso=([^&]+)/); if(!m)return;
+ const portalToken=decodeURIComponent(m[1]); history.replaceState(null,'',location.pathname+location.search);
+ try{
+  const r=await fetch(URL,{method:'POST',body:JSON.stringify({action:'portalSSO',portalToken,portalRole:'PM'})});
+  const d=await r.json(); if(!d.ok||!d.token)return;
+  managementToken=d.token; managementName=d.name||'';
+  sessionStorage.setItem('tmx_km_pm_token',managementToken); sessionStorage.setItem('tmx_km_pm_name',managementName);
+  location.reload();
+ }catch(e){console.error('Portal SSO failed',e)}
+})();
+</script>
+</body></html>

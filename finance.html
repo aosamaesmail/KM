@@ -291,4 +291,17 @@ function exportApprovedXlsx(rows){
  for(let [n,d] of f){let nb=enc.encode(n),db=enc.encode(d),c=crc(db),l=new Uint8Array([...u32(0x04034b50),...u16(20),0,0,0,0,0,0,0,0,...u32(c),...u32(db.length),...u32(db.length),...u16(nb.length),0,0,...nb,...db]);parts.push(l);cen.push(new Uint8Array([...u32(0x02014b50),...u16(20),...u16(20),0,0,0,0,0,0,0,0,...u32(c),...u32(db.length),...u32(db.length),...u16(nb.length),0,0,0,0,0,0,0,0,0,0,0,0,...u32(off),...nb]));off+=l.length}
  let cs=cen.reduce((a,b)=>a+b.length,0),end=new Uint8Array([...u32(0x06054b50),0,0,0,0,...u16(f.length),...u16(f.length),...u32(cs),...u32(off),0,0]),blob=new Blob([...parts,...cen,end],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),fr=new FileReader();fr.onload=()=>{let a=document.createElement('a');a.href=fr.result;a.download='KM-Approved-Summary.xlsx';a.click()};fr.readAsDataURL(blob)
 }
-</script><div id="auditDialogBg" class="audit-dialog-bg"><div class="audit-dialog"><h3 id="auditDialogTitle">Audit Action</h3><p id="auditDialogText"></p><div id="auditDialogFields"></div><div class="audit-dialog-actions"><button id="auditDialogCancel" class="btn">Cancel</button><button id="auditDialogConfirm" class="btn primary">Confirm</button></div></div></div></body></html>
+</script><div id="auditDialogBg" class="audit-dialog-bg"><div class="audit-dialog"><h3 id="auditDialogTitle">Audit Action</h3><p id="auditDialogText"></p><div id="auditDialogFields"></div><div class="audit-dialog-actions"><button id="auditDialogCancel" class="btn">Cancel</button><button id="auditDialogConfirm" class="btn primary">Confirm</button></div></div></div><script>
+(async function portalAutoLogin(){
+ const m=location.hash.match(/(?:^|[&#])sso=([^&]+)/); if(!m)return;
+ const portalToken=decodeURIComponent(m[1]); history.replaceState(null,'',location.pathname+location.search);
+ try{
+  const r=await fetch(URL,{method:'POST',body:JSON.stringify({action:'portalSSO',portalToken,portalRole:'Finance'})});
+  const d=await r.json(); if(!d.ok||!d.token)return;
+  managementToken=d.token; managementName=d.name||'';
+  sessionStorage.setItem('tmx_km_finance_token',managementToken); sessionStorage.setItem('tmx_km_finance_name',managementName);
+  location.reload();
+ }catch(e){console.error('Portal SSO failed',e)}
+})();
+</script>
+</body></html>
