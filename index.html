@@ -2781,6 +2781,18 @@ async function trySend(payload){
   return json;
 }
 
+// If Apps Script committed the row but the browser failed while reading/parsing the
+// response, verify the Trip ID before treating the submission as failed.
+async function confirmTripCommitted(tripId, expectedState){
+  if(!tripId) return false;
+  try{
+    const data=await trySend({action:'openTrips'});
+    const trips=(data && data.trips)||[];
+    const found=trips.some(t=>String(t.tripId||'')===String(tripId));
+    return expectedState==='start' ? found : !found;
+  }catch(e){ return false; }
+}
+
 async function flushQueue(){
   const q = getQueue();
   if (!q.length) return;
@@ -3420,6 +3432,14 @@ $('startForm').addEventListener('submit', async (e) => {
     toast('✅ Trip started — submit Finish later today');
     showResultDialog('success', `${trip.area} - ${trip.task} - ${trip.startKm} KM`);
   } catch (err) {
+    // A fetch/read error does not necessarily mean the write failed. Apps Script can
+    // successfully append the row and the phone can still fail to receive/parse the reply.
+    const committed = await confirmTripCommitted(tripId,'start');
+    if(committed){
+      upsertLogEntry(tripId,{engineer,display,status:'awaiting'});
+      toast('✅ Trip started and confirmed in Google Sheets');
+      showResultDialog('success',`${trip.area} - ${trip.task} - ${trip.startKm} KM`);
+    } else {
     const classified = classifySendError(err);
     if (classified.kind === 'invalid-pin' || classified.kind === 'invalid-engineer-name' || classified.kind === 'invalid-driver-name') {
       // Validation errors must never be queued as uploads. Remove the local trip too,
@@ -3434,6 +3454,7 @@ $('startForm').addEventListener('submit', async (e) => {
       upsertLogEntry(tripId, { engineer, display, status: 'pending' });
       toast(classified.kind === 'offline' ? '📴 No internet — will sync automatically' : '⚠️ Upload failed — will retry automatically');
       showResultDialog(classified.kind === 'offline' ? 'offline' : 'failure', classified.text);
+    }
     }
   }
 
