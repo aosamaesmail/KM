@@ -71,6 +71,13 @@ const URL='https://script.google.com/macros/s/AKfycbyPpI27VQqpIrZHn8mizmONCLHEbp
 function toast(s){$('toast').textContent=s;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',2500)}async function post(action,x={}){let r=await fetch(URL,{method:'POST',body:JSON.stringify({action,managementToken,...x})}),t=await r.text(),d;try{d=JSON.parse(t)}catch(e){throw Error('bad-response')}if(!d.ok)throw Error(d.error||'server-error');return d}function money(n){return (Number(n)||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' EGP'}function today(){let d=new Date(),o=d.getTimezoneOffset();return new Date(d-o*60000).toISOString().slice(0,10)}
 function auth(on){$('login').style.display=on?'none':'block';$('dash').style.display=on?'block':'none';$('logout').style.display=on?'inline-block':'none';if(on){loadConfig();loadBalances();loadRent()}}async function login(){const name=$('name').value.trim(),pin=$('pin').value.trim();if(!name||!pin)return toast('Enter your name and 6-digit PIN');showLoginBuffer('Logging in to Management Portal...');$('loginBtn').disabled=true;try{const d=await post('managementLogin',{name,pin,portalRole:'Admin'});managementToken=d.token;managementName=d.name||name;sessionStorage.setItem('tmx_km_admin_token',managementToken);sessionStorage.setItem('tmx_km_admin_name',managementName);if(d.role==='PM'){sessionStorage.setItem('tmx_km_pm_token',managementToken);sessionStorage.setItem('tmx_km_pm_name',managementName)}auth(true);toast('Logged in as '+managementName)}catch(e){managementToken='';toast(e.message||'Could not log in')}finally{$('loginBtn').disabled=false;hideLoginBuffer()}}$('loginBtn').onclick=login;$('name').onkeydown=e=>{if(e.key==='Enter')$('pin').focus()};$('pin').onkeydown=e=>{if(e.key==='Enter')login()};$('logout').onclick=()=>{managementToken='';managementName='';sessionStorage.removeItem('tmx_km_admin_token');sessionStorage.removeItem('tmx_km_admin_name');sessionStorage.removeItem('tmx_km_pm_token');sessionStorage.removeItem('tmx_km_pm_name');$('name').value='';$('pin').value='';auth(false)};
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===b.dataset.p));if(b.dataset.p==='audit')loadAudit();if(b.dataset.p==='rent')loadRent()});
+function openRequestedAdminView(){
+ const v=new URLSearchParams(location.search).get('view');
+ if(!v)return;
+ const b=[...document.querySelectorAll('.tab')].find(x=>x.dataset.p===v);
+ if(b)setTimeout(()=>b.click(),0);
+}
+
 function wire(id,optsId,source){let inp=$(id),box=$(optsId);function draw(){let q=inp.value.toLowerCase(),arr=source();box.innerHTML=arr.filter(x=>x.toLowerCase().includes(q)).map(x=>`<div class="opt">${esc(x)}</div>`).join('');box.style.display=box.innerHTML?'block':'none';[...box.children].forEach(o=>o.onclick=()=>{inp.value=o.textContent;box.style.display='none';if(['eng','drv','proj'].includes(id))refreshRelated()})}inp.oninput=draw;inp.onfocus=draw;document.addEventListener('click',e=>{if(!inp.parentElement.contains(e.target))box.style.display='none'})}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}function uniq(a){return [...new Set(a.filter(Boolean))].sort((a,b)=>a.localeCompare(b))}function relCtx(prefix=''){
  const ids=prefix?{engineer:'sEng',driver:'sDrv',project:'sProj',paidBy:'sPaidBy'}:{engineer:'eng',driver:'drv',project:'proj',paidBy:'paidBy'};
@@ -200,7 +207,7 @@ function portalSSOStatus_(title,detail){ document.documentElement.classList.remo
   const x=document.getElementById('portalSsoStatus'); if(x)x.remove();
   document.documentElement.classList.remove('portal-sso-pending');
   $('name').value=managementName;
-  auth(true);
+  auth(true); openRequestedAdminView();
  }catch(e){portalSSOStatus_('Single Sign-On connection error',String(e&&e.message||e));console.error('Portal SSO failed',e)}
 })();
 </script>

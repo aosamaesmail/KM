@@ -182,7 +182,16 @@ $('exportExcel').onclick=()=>{
  }catch(err){console.error(err);toast('Excel export failed: '+(err.message||err))}
 };
 $('apply').onclick=load;$('clear').onclick=()=>{$('engineer').value='';$('driver').value='';$('project').value='';$('status').value='';refreshAllCombos();load()};document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');typeView=b.dataset.type;render()});
-if(managementToken){$('name').value=managementName;post('allowanceData',{}).then(()=>auth(true)).catch(()=>{sessionStorage.removeItem('tmx_km_pm_token');sessionStorage.removeItem('tmx_km_pm_name');managementToken='';managementName='';auth(false)});}else auth(false);
+const portalSsoIncoming=/(?:^|[&#])sso=/.test(location.hash);
+if(portalSsoIncoming){
+  // Portal SSO owns authentication. Do not let validation of an older PM token race it.
+}else if(managementToken){
+ $('name').value=managementName;
+ post('allowanceData',{}).then(()=>auth(true)).catch(()=>{
+  sessionStorage.removeItem('tmx_km_pm_token');sessionStorage.removeItem('tmx_km_pm_name');
+  managementToken='';managementName='';auth(false)
+ });
+}else auth(false);
 </script><script>
 function portalSSOStatus_(title,detail){ document.documentElement.classList.remove('portal-sso-pending');
  let x=document.getElementById('portalSsoStatus');
@@ -201,6 +210,8 @@ function portalSSOStatus_(title,detail){ document.documentElement.classList.remo
   managementToken=d.token; managementName=d.name||'';
   sessionStorage.setItem('tmx_km_pm_token',managementToken);
   sessionStorage.setItem('tmx_km_pm_name',managementName);
+  // Confirm the freshly-created PM session before exposing the audit page.
+  await post('allowanceData',{});
   const x=document.getElementById('portalSsoStatus'); if(x)x.remove();
   $('name').value=managementName;
   auth(true);

@@ -3715,6 +3715,15 @@ function toast(msg){
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(()=>{});
 </script>
 <script>
+function openRequestedEngineerView(){
+ const v=new URLSearchParams(location.search).get('view');
+ if(v==='history' && typeof openHistory==='function') setTimeout(()=>openHistory(),0);
+ else if(v==='start'){
+   const b=document.querySelector('[data-tab="start"],#startTab,.start-tab');
+   if(b&&typeof b.click==='function') setTimeout(()=>b.click(),0);
+ }
+}
+setTimeout(openRequestedEngineerView,250);
 function portalSSOStatus_(title,detail){ document.documentElement.classList.remove('portal-sso-pending');
  let x=document.getElementById('portalSsoStatus');
  if(!x){x=document.createElement('div');x.id='portalSsoStatus';x.className='sso-status';document.body.appendChild(x)}
@@ -3730,11 +3739,7 @@ function portalSSOStatus_(title,detail){ document.documentElement.classList.remo
   settings.engineer=engineerSessionName;
   sessionStorage.setItem('tmx_km_engineer_token',engineerSessionToken);
   sessionStorage.setItem('tmx_km_engineer_name',engineerSessionName);
-  saveSettingsToStorage(settings);
-  fillSettingsForm();
-  const x=document.getElementById('portalSsoStatus'); if(x)x.remove();
-  document.documentElement.classList.remove('portal-sso-pending');
-  location.reload();
+  saveSettingsToStorage(settings); fillSettingsForm(); updateLoginState(); location.reload();
  }catch(e){portalSSOStatus_('Single Sign-On connection error',String(e&&e.message||e));console.error('Portal SSO failed',e)}
 })();
 </script>
