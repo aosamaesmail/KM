@@ -35,6 +35,15 @@
 .sso-status-box{max-width:430px;width:100%;padding:24px;border-radius:20px;background:#0b1020;border:1px solid rgba(255,255,255,.15);color:#fff;text-align:center}
 .sso-status-box b{display:block;font-size:20px;margin-bottom:8px}.sso-status-box span{color:#aab4c4}
 </style>
+<script>
+if(location.hash.indexOf('sso=')>=0){
+ document.documentElement.classList.add('portal-sso-pending');
+}
+</script>
+<style>
+html.portal-sso-pending body{visibility:hidden!important}
+html.portal-sso-pending body::before{content:'Signing you in…';visibility:visible!important;position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;background:#020817;color:#fff;font:700 20px Arial,sans-serif}
+</style>
 </head>
 <body>
 
@@ -296,7 +305,7 @@ function exportApprovedXlsx(rows){
  let cs=cen.reduce((a,b)=>a+b.length,0),end=new Uint8Array([...u32(0x06054b50),0,0,0,0,...u16(f.length),...u16(f.length),...u32(cs),...u32(off),0,0]),blob=new Blob([...parts,...cen,end],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),fr=new FileReader();fr.onload=()=>{let a=document.createElement('a');a.href=fr.result;a.download='KM-Approved-Summary.xlsx';a.click()};fr.readAsDataURL(blob)
 }
 </script><div id="auditDialogBg" class="audit-dialog-bg"><div class="audit-dialog"><h3 id="auditDialogTitle">Audit Action</h3><p id="auditDialogText"></p><div id="auditDialogFields"></div><div class="audit-dialog-actions"><button id="auditDialogCancel" class="btn">Cancel</button><button id="auditDialogConfirm" class="btn primary">Confirm</button></div></div></div><script>
-function portalSSOStatus_(title,detail){
+function portalSSOStatus_(title,detail){ document.documentElement.classList.remove('portal-sso-pending');
  let x=document.getElementById('portalSsoStatus');
  if(!x){x=document.createElement('div');x.id='portalSsoStatus';x.className='sso-status';document.body.appendChild(x)}
  x.innerHTML='<div class="sso-status-box"><b>'+title+'</b><span>'+detail+'</span></div>';
@@ -305,11 +314,16 @@ function portalSSOStatus_(title,detail){
  const m=location.hash.match(/(?:^|[&#])sso=([^&]+)/); if(!m)return;
  const portalToken=decodeURIComponent(m[1]); portalSSOStatus_('Signing you in…','Using your Telecomax Operations session.'); history.replaceState(null,'',location.pathname+location.search);
  try{
-  const r=await fetch(URL,{method:'POST',body:JSON.stringify({action:'portalSSO',portalToken,portalRole:'Finance'})});
-  const d=await r.json(); if(!d.ok||!d.token){portalSSOStatus_('Single Sign-On failed',d.error||'The module rejected the portal session.');return;}
+  const r=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'portalSSO',portalToken,portalRole:'Finance'})});
+  const text=await r.text(); let d; try{d=JSON.parse(text)}catch(_){throw Error('KM Finance SSO backend returned a non-JSON response');}
+  if(!d.ok||!d.token){portalSSOStatus_('Single Sign-On failed',d.error||'The module rejected the portal session.');return;}
   managementToken=d.token; managementName=d.name||'';
-  sessionStorage.setItem('tmx_km_finance_token',managementToken); sessionStorage.setItem('tmx_km_finance_name',managementName);
-  location.reload();
+  sessionStorage.setItem('tmx_km_finance_token',managementToken);
+  sessionStorage.setItem('tmx_km_finance_name',managementName);
+  const x=document.getElementById('portalSsoStatus'); if(x)x.remove();
+  document.documentElement.classList.remove('portal-sso-pending');
+  $('name').value=managementName;
+  setAuthed(true);
  }catch(e){portalSSOStatus_('Single Sign-On connection error',String(e&&e.message||e));console.error('Portal SSO failed',e)}
 })();
 </script>
