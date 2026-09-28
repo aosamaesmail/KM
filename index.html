@@ -1463,11 +1463,8 @@ body #defaultDriver{
       </div>
       <div class="hint" id="startDriverHint">Start typing to search registered drivers.</div>
       <label>Vehicle ID</label>
-      <div class="search-select" id="vehicleSearchWrap">
-        <input type="text" id="vehicle" placeholder="Search or select vehicle" autocomplete="off">
-        <div class="search-options" id="vehicleOptions"></div>
-      </div>
-      <div class="hint" id="vehicleHint">Select the registered vehicle currently being used.</div>
+      <div class="search-select"><input type="text" id="vehicle" placeholder="Search or select vehicle" autocomplete="off"><div class="search-options" id="vehicleOptions"></div></div>
+      <div class="hint" id="vehicleHint">Select the vehicle assigned to this driver.</div>
 
       <div class="row2">
         <div>
@@ -2288,9 +2285,7 @@ async function refreshLists(silent){
     const data = await res.json();
     if (data.engineers || data.drivers){
       setCachedLists({ engineers: data.engineers||[], drivers: data.drivers||[], driverDefaults: data.driverDefaults||{}, areas: data.areas||[], vehicles:data.vehicles||[], driverVehicles:data.driverVehicles||{} });
-      populateAreaList(data.areas||[]);
-      const dk=String($('driver').value||'').trim().toLowerCase();
-      populateVehicleList((data.driverVehicles||{})[dk]||[],$('vehicle').value||'');
+      populateAreaList(data.areas||[]); const dk=String($('driver').value||'').trim().toLowerCase(); populateVehicleList((data.driverVehicles||{})[dk]||[],$('vehicle').value||'');
       populateDriverList(data.drivers||[], settings.defaultDriver);
       populateEngineerList(data.engineers||[], settings.engineer);
       populateDefaultDriverList(data.drivers||[], settings.defaultDriver);
@@ -2298,9 +2293,7 @@ async function refreshLists(silent){
     }
   } catch (err) {
     const cached = getCachedLists();
-    populateDriverList(cached.drivers, settings.defaultDriver);
-    const dk=String(settings.defaultDriver||'').trim().toLowerCase();
-    populateVehicleList((cached.driverVehicles||{})[dk]||[],$('vehicle').value||'');
+    populateDriverList(cached.drivers, settings.defaultDriver); populateVehicleList((cached.driverVehicles||{})[String(settings.defaultDriver||'').trim().toLowerCase()]||[],$('vehicle').value||'');
     populateEngineerList(cached.engineers, settings.engineer);
     populateDefaultDriverList(cached.drivers, settings.defaultDriver);
     if (!silent) toast('Could not refresh — showing last saved list');
@@ -2308,9 +2301,7 @@ async function refreshLists(silent){
 }
 $('refreshListBtn').onclick = () => refreshLists(false);
 const cachedAtStart = getCachedLists();
-populateDriverList(cachedAtStart.drivers, settings.defaultDriver);
-const dk0=String(settings.defaultDriver||'').trim().toLowerCase();
-populateVehicleList((cachedAtStart.driverVehicles||{})[dk0]||[],'');
+populateDriverList(cachedAtStart.drivers, settings.defaultDriver); populateVehicleList((cachedAtStart.driverVehicles||{})[String(settings.defaultDriver||'').trim().toLowerCase()]||[],'');
 populateEngineerList(cachedAtStart.engineers, settings.engineer);
 populateDefaultDriverList(cachedAtStart.drivers, settings.defaultDriver);
 refreshLists(true);
@@ -2354,18 +2345,22 @@ async function openCamera(which, btnId, missingId, setter, locationSetter){
     toast('📷 Your mobile browser does not support camera access. Please use Chrome/Safari on the phone.');
     return;
   }
+  if(cameraStream){cameraStream.getTracks().forEach(t=>t.stop());cameraStream=null;}
   activeCameraTarget={which,btnId,missingId,setter,locationSetter};
+  const trigger=$(btnId); if(trigger) trigger.disabled=true;
   $('cameraTitle').textContent = which==='start' ? 'Take Start KM photo' : 'Take Finish KM photo';
-  $('cameraStatus').textContent='Allow camera access, point at the dashboard, then press Capture.';
+  $('cameraStatus').textContent='Opening camera…';
   $('cameraModal').style.display='flex';
   try{
-    cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:1280}},audio:false});
-    $('cameraPreview').srcObject=cameraStream;
-    await $('cameraPreview').play();
+    try{cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:1280}},audio:false});}
+    catch(firstErr){cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});}
+    const video=$('cameraPreview'); video.srcObject=cameraStream;
+    await new Promise((resolve,reject)=>{let done=false;const ok=()=>{if(done)return;done=true;resolve()};video.onloadedmetadata=ok;video.oncanplay=ok;setTimeout(()=>video.videoWidth?ok():reject(new Error('camera-timeout')),6000);video.play().catch(()=>{});});
+    $('cameraStatus').textContent='Camera ready — point at the dashboard, then press Capture.';
   }catch(err){
     stopCamera();
-    toast('📷 Camera access is required. Please allow Camera permission and try again.');
-  }
+    toast('📷 Camera could not start. Check Camera permission, close other apps using the camera, then try again.');
+  }finally{if(trigger) trigger.disabled=false;}
 }
 
 async function captureMobilePhoto(){
@@ -3205,7 +3200,7 @@ $('startForm').addEventListener('submit', async (e) => {
   const canonicalDriver = validNames.driver;
   const _lists=getCachedLists(), _dk=String(canonicalDriver||'').trim().toLowerCase();
   const canonicalVehicle=findRegisteredName($('vehicle').value,((_lists.driverVehicles||{})[_dk]||[]));
-  if(!canonicalVehicle)return toast('❌ Please select a valid Vehicle ID from the registered list');
+  if(!canonicalVehicle)return toast('❌ Please select a valid Vehicle ID for this Driver');
   const tripId = genId();
   const trip = {
     tripId, engineer: canonicalEngineer, driver: canonicalDriver, vehicle: canonicalVehicle, projectName: settings.projectName || '',
@@ -3277,7 +3272,7 @@ $('startForm').addEventListener('submit', async (e) => {
 });
 
 function resetStartForm(){
-  $('area').value=''; $('task').value=''; $('startKm').value=''; $('vehicle').value='';
+  $('area').value=''; $('task').value=''; $('startKm').value='';
   startPhoto = null;
   startPhotoLocation = null;
   const thumb = document.getElementById('startThumb'); if (thumb) thumb.remove();
