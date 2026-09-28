@@ -67,50 +67,52 @@ function showBuffer(message='Loading...'){showLoginBuffer(message)}
 function hideBuffer(){hideLoginBuffer()}
 
 const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyPpI27VQqpIrZHn8mizmONCLHEbp_aJj_wnan6nyYh-0R2bNW_C7qbYuAHQvRgwS5_fg/exec';
-const $=id=>document.getElementById(id); let managementToken=sessionStorage.getItem('tmx_km_finance_token')||'', managementName=sessionStorage.getItem('tmx_km_finance_name')||''; let trips=[]; let filterCombos=[]; let photosVisible=localStorage.getItem('finance_portal_photos')!=='0';
+const $=id=>document.getElementById(id); let managementToken=sessionStorage.getItem('tmx_km_finance_token')||'', managementName=sessionStorage.getItem('tmx_km_finance_name')||''; let trips=[]; let filterCombos=[]; let configEngineers=[]; let photosVisible=localStorage.getItem('finance_portal_photos')!=='0';
 function toast(s){const e=$('toast');e.textContent=s;e.style.display='block';clearTimeout(window._tt);window._tt=setTimeout(()=>e.style.display='none',2600)}
 async function post(action,extra={}){const r=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action,managementToken,...extra})});const text=await r.text();let d;try{d=JSON.parse(text)}catch(e){throw Error('bad-response')}if(!d.ok)throw Error(d.error||'server-error');return d}
 function uniqueSorted(values){return [...new Set(values.filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b)))}
-function currentRelatedOptions(kind){
-  const eng=$('engineer').value.trim().toLowerCase(), drv=$('driver').value.trim().toLowerCase(), prj=$('project').value.trim().toLowerCase();
+function relationContext(prefix=''){
+  const ids=prefix?{engineer:'sEngineer',driver:'sDriver',project:'sProject',paidBy:'sPaidBy'}:{engineer:'engineer',driver:'driver',project:'project',paidBy:'paidBy'};
+  const out={};Object.keys(ids).forEach(k=>out[k]=String($(ids[k])?.value||'').trim().toLowerCase());return out;
+}
+function relationalOptions(kind,prefix=''){
+  const q=relationContext(prefix);
   const rows=filterCombos.filter(r=>{
-    if(kind!=='engineer' && eng && String(r.engineer).toLowerCase()!==eng)return false;
-    if(kind!=='driver' && drv && String(r.driver).toLowerCase()!==drv)return false;
-    if(kind!=='project' && prj && String(r.project).toLowerCase()!==prj)return false;
+    for(const k of ['engineer','driver','project','paidBy']){
+      if(k===kind||!q[k])continue;
+      if(String(r[k]||'').trim().toLowerCase()!==q[k])return false;
+    }
     return true;
   });
-  return uniqueSorted(rows.map(r=>r[kind]));
+  let vals=uniqueSorted(rows.map(r=>r[kind]));
+  if(kind==='paidBy') vals=vals.filter(v=>configEngineers.some(e=>String(e).trim().toLowerCase()===String(v).trim().toLowerCase()));
+  return vals;
 }
-function drawOptions(inputId,optsId){
+function drawRelOptions(inputId,optsId,kind,prefix=''){
   const inp=$(inputId),box=$(optsId),q=inp.value.trim().toLowerCase();
-  const vals=currentRelatedOptions(inputId).filter(x=>!q||String(x).toLowerCase().includes(q)).slice(0,100);
+  const vals=relationalOptions(kind,prefix).filter(x=>!q||String(x).toLowerCase().includes(q)).slice(0,100);
   box.innerHTML=vals.map(x=>`<div class="opt" data-v="${esc(x)}">${esc(x)}</div>`).join('')||'<div class="opt muted">No related matches</div>';box.style.display='block';
 }
-function wireRelatedSearch(inputId,optsId){
+function sanitizeRelational(changedKind,prefix=''){
+  const ids=prefix?{engineer:'sEngineer',driver:'sDriver',project:'sProject',paidBy:'sPaidBy'}:{engineer:'engineer',driver:'driver',project:'project',paidBy:'paidBy'};
+  for(const k of ['engineer','driver','project','paidBy']){
+    if(k===changedKind)continue;const el=$(ids[k]);if(!el||!el.value.trim())continue;
+    const allowed=relationalOptions(k,prefix).map(v=>String(v).trim().toLowerCase());
+    if(!allowed.includes(el.value.trim().toLowerCase()))el.value='';
+  }
+}
+function wireRelationalSearch(inputId,optsId,kind,prefix=''){
   const inp=$(inputId),box=$(optsId);
-  inp.addEventListener('focus',()=>drawOptions(inputId,optsId)); inp.addEventListener('input',()=>drawOptions(inputId,optsId));
-  box.addEventListener('mousedown',e=>{const o=e.target.closest('[data-v]');if(!o)return;inp.value=o.dataset.v;box.style.display='none';sanitizeRelatedFilters(inputId)});
+  const draw=()=>drawRelOptions(inputId,optsId,kind,prefix);
+  inp.addEventListener('focus',draw);inp.addEventListener('input',draw);
+  box.addEventListener('mousedown',e=>{const o=e.target.closest('[data-v]');if(!o)return;inp.value=o.dataset.v;box.style.display='none';sanitizeRelational(kind,prefix)});
   document.addEventListener('click',e=>{if(!e.target.closest('#'+inputId)&&!e.target.closest('#'+optsId))box.style.display='none'});
 }
-function engineerList(){return uniqueSorted(filterCombos.map(r=>r.engineer))}
-function simpleOptionsFor(id){
-  if(id==='paidBy'||id==='sPaidBy'||id==='sEngineer')return engineerList();
-  if(id==='sDriver')return uniqueSorted(filterCombos.map(r=>r.driver));
-  if(id==='sProject')return uniqueSorted(filterCombos.map(r=>r.project));
-  return [];
-}
-function wireSimpleSearch(inputId,optsId){
- const inp=$(inputId),box=$(optsId);
- const draw=()=>{const q=inp.value.trim().toLowerCase(),vals=simpleOptionsFor(inputId).filter(v=>!q||String(v).toLowerCase().includes(q)).slice(0,100);box.innerHTML=vals.map(v=>`<div class="opt" data-v="${esc(v)}">${esc(v)}</div>`).join('')||'<div class="opt muted">No matches</div>';box.style.display='block'};
- inp.addEventListener('focus',draw);inp.addEventListener('input',draw);
- box.addEventListener('mousedown',e=>{const o=e.target.closest('[data-v]');if(!o)return;inp.value=o.dataset.v;box.style.display='none'});
- document.addEventListener('click',e=>{if(!e.target.closest('#'+inputId)&&!e.target.closest('#'+optsId))box.style.display='none'});
-}
-function sanitizeRelatedFilters(changed){
-  const ids=['engineer','driver','project'];
-  ids.filter(id=>id!==changed).forEach(id=>{const val=$(id).value.trim();if(!val)return;const allowed=currentRelatedOptions(id).map(x=>String(x).toLowerCase());if(!allowed.includes(val.toLowerCase()))$(id).value=''});
-}
-async function loadLists(){try{const d=await post('financeFilterOptions');filterCombos=d.combinations||[];['engineer','driver','project'].forEach(id=>wireRelatedSearch(id,id+'Opts'));wireSimpleSearch('paidBy','paidByOpts');[['sEngineer','sEngineerOpts'],['sDriver','sDriverOpts'],['sProject','sProjectOpts'],['sPaidBy','sPaidByOpts']].forEach(x=>wireSimpleSearch(x[0],x[1]))}catch(e){toast('Could not load filter lists')}}
+async function loadLists(){try{const d=await post('financeFilterOptions');filterCombos=d.combinations||[];configEngineers=d.engineers||[];
+  [['engineer','engineerOpts','engineer',''],['driver','driverOpts','driver',''],['project','projectOpts','project',''],['paidBy','paidByOpts','paidBy',''],
+   ['sEngineer','sEngineerOpts','engineer','s'],['sDriver','sDriverOpts','driver','s'],['sProject','sProjectOpts','project','s'],['sPaidBy','sPaidByOpts','paidBy','s']]
+   .forEach(x=>wireRelationalSearch(x[0],x[1],x[2],x[3]));
+}catch(e){toast('Could not load filter lists')}}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function num(v){const n=Number(v);return Number.isFinite(n)?n:0}
 function setAuthed(on){$('loginView').style.display=on?'none':'block';$('dash').style.display=on?'block':'none';$('logoutBtn').style.display=on?'inline-block':'none';$('sessionLabel').textContent=on?'Finance':' ';if(on){loadLists();loadTrips()}}
