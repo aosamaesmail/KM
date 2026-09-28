@@ -23,6 +23,10 @@
 
 .audit-actions,.bulkbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 14px}.audit-actions{border-top:1px solid var(--line)}.bulkbar{position:sticky;bottom:8px;background:#fff;border:1px solid var(--line);border-radius:12px;justify-content:flex-end}.summary-table{width:100%;border-collapse:collapse}.summary-table th,.summary-table td{padding:9px;border-bottom:1px solid var(--line);text-align:left;font-size:12px}.danger{border-color:#e6b4b4;color:#a52a2a}.audit[data-dirty="1"]{outline:2px solid #d29b2d}.deduction-note{font-weight:700;color:#a35a00}
 .photo-title{display:flex!important;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}.photo-km{font-weight:900;color:#172b43;background:#fff;border:1px solid #d9e1e8;border-radius:8px;padding:3px 9px}.edited-km{display:block;font-size:11px;color:#147a45;margin-top:3px;font-weight:800}.audit-dialog-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:none;align-items:center;justify-content:center;padding:18px}.audit-dialog-bg.open{display:flex}.audit-dialog{width:min(100%,440px);background:#fff;border-radius:18px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.25)}.audit-dialog h3{margin:0 0 8px}.audit-dialog p{color:#667085;margin:0 0 15px}.audit-dialog .dlg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.audit-dialog input,.audit-dialog textarea{width:100%;box-sizing:border-box;padding:11px;border:1px solid #d6dde5;border-radius:10px;margin:5px 0 10px}.audit-dialog textarea{min-height:80px;resize:vertical}.audit-dialog-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:8px}
+
+.sso-status{position:fixed;inset:0;z-index:999999;background:rgba(2,8,23,.92);display:flex;align-items:center;justify-content:center;padding:24px}
+.sso-status-box{max-width:430px;width:100%;padding:24px;border-radius:20px;background:#0b1020;border:1px solid rgba(255,255,255,.15);color:#fff;text-align:center}
+.sso-status-box b{display:block;font-size:20px;margin-bottom:8px}.sso-status-box span{color:#aab4c4}
 </style></head><body>
 
 <div id="loginBuffer" class="login-buffer-overlay" aria-hidden="true">
@@ -165,16 +169,21 @@ function exportApprovedXlsx(rows){
  let cs=cen.reduce((a,b)=>a+b.length,0),end=new Uint8Array([...u32(0x06054b50),0,0,0,0,...u16(f.length),...u16(f.length),...u32(cs),...u32(off),0,0]),blob=new Blob([...parts,...cen,end],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),fr=new FileReader();fr.onload=()=>{let a=document.createElement('a');a.href=fr.result;a.download='KM-Approved-Summary.xlsx';a.click()};fr.readAsDataURL(blob)
 }
 </script><div id="auditDialogBg" class="audit-dialog-bg"><div class="audit-dialog"><h3 id="auditDialogTitle">Audit Action</h3><p id="auditDialogText"></p><div id="auditDialogFields"></div><div class="audit-dialog-actions"><button id="auditDialogCancel" class="btn">Cancel</button><button id="auditDialogConfirm" class="btn primary">Confirm</button></div></div></div><script>
+function portalSSOStatus_(title,detail){
+ let x=document.getElementById('portalSsoStatus');
+ if(!x){x=document.createElement('div');x.id='portalSsoStatus';x.className='sso-status';document.body.appendChild(x)}
+ x.innerHTML='<div class="sso-status-box"><b>'+title+'</b><span>'+detail+'</span></div>';
+}
 (async function portalAutoLogin(){
  const m=location.hash.match(/(?:^|[&#])sso=([^&]+)/); if(!m)return;
- const portalToken=decodeURIComponent(m[1]); history.replaceState(null,'',location.pathname+location.search);
+ const portalToken=decodeURIComponent(m[1]); portalSSOStatus_('Signing you in…','Using your Telecomax Operations session.'); history.replaceState(null,'',location.pathname+location.search);
  try{
   const r=await fetch(URL,{method:'POST',body:JSON.stringify({action:'portalSSO',portalToken,portalRole:'Admin'})});
-  const d=await r.json(); if(!d.ok||!d.token)return;
+  const d=await r.json(); if(!d.ok||!d.token){portalSSOStatus_('Single Sign-On failed',d.error||'The module rejected the portal session.');return;}
   managementToken=d.token; managementName=d.name||'';
   sessionStorage.setItem('tmx_km_admin_token',managementToken); sessionStorage.setItem('tmx_km_admin_name',managementName);
   location.reload();
- }catch(e){console.error('Portal SSO failed',e)}
+ }catch(e){portalSSOStatus_('Single Sign-On connection error',String(e&&e.message||e));console.error('Portal SSO failed',e)}
 })();
 </script>
 </body></html>

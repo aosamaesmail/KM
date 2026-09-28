@@ -1356,6 +1356,10 @@ body #defaultDriver{
 .photo-source-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:17px}.photo-source-kicker{font-size:11px;font-weight:900;letter-spacing:.16em;color:#ef4fa5;margin-bottom:5px}.photo-source-head h3{margin:0;font-size:22px}.photo-source-head p{margin:5px 0 0;color:#9298aa;font-size:14px}.photo-source-x{width:38px;height:38px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:#202231;color:#fff;font-size:26px;line-height:1;cursor:pointer}
 .photo-source-actions{display:grid;gap:11px}.photo-source-choice{width:100%;display:grid;grid-template-columns:48px 1fr 24px;align-items:center;gap:12px;text-align:left;padding:14px;border-radius:17px;border:1px solid rgba(255,255,255,.1);background:#171a28;color:#fff;cursor:pointer;min-height:76px}.photo-source-choice:active{transform:scale(.99);background:#202438}.photo-source-icon{display:grid;place-items:center;width:48px;height:48px;border-radius:14px;background:rgba(210,24,119,.16);font-size:24px}.photo-source-choice b{display:block;font-size:17px;margin-bottom:3px}.photo-source-choice small{display:block;color:#9ba1b2;font-size:13px}.photo-source-arrow{font-size:30px;color:#e33992;text-align:right}.photo-source-cancel{width:100%;margin-top:12px;padding:14px;border:0;border-radius:15px;background:#292c38;color:#fff;font-weight:800;font-size:15px;cursor:pointer}
 @media(min-width:700px){.photo-source-modal{align-items:center}.photo-source-box{margin-bottom:0}}
+
+.sso-status{position:fixed;inset:0;z-index:999999;background:rgba(2,8,23,.92);display:flex;align-items:center;justify-content:center;padding:24px}
+.sso-status-box{max-width:430px;width:100%;padding:24px;border-radius:20px;background:#0b1020;border:1px solid rgba(255,255,255,.15);color:#fff;text-align:center}
+.sso-status-box b{display:block;font-size:20px;margin-bottom:8px}.sso-status-box span{color:#aab4c4}
 </style>
 </head>
 <body>
@@ -3702,18 +3706,23 @@ function toast(msg){
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(()=>{});
 </script>
 <script>
+function portalSSOStatus_(title,detail){
+ let x=document.getElementById('portalSsoStatus');
+ if(!x){x=document.createElement('div');x.id='portalSsoStatus';x.className='sso-status';document.body.appendChild(x)}
+ x.innerHTML='<div class="sso-status-box"><b>'+title+'</b><span>'+detail+'</span></div>';
+}
 (async function portalAutoLogin(){
  const m=location.hash.match(/(?:^|[&#])sso=([^&]+)/); if(!m)return;
- const portalToken=decodeURIComponent(m[1]); history.replaceState(null,'',location.pathname+location.search);
+ const portalToken=decodeURIComponent(m[1]); portalSSOStatus_('Signing you in…','Using your Telecomax Operations session.'); history.replaceState(null,'',location.pathname+location.search);
  try{
   const r=await fetch(DEFAULT_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'portalSSO',portalToken,portalRole:'Engineer'})});
-  const d=await r.json(); if(!d.ok||!d.engineerToken)return;
+  const d=await r.json(); if(!d.ok||!d.engineerToken){portalSSOStatus_('Single Sign-On failed',d.error||'The KM module rejected the portal session.');return;}
   engineerSessionToken=d.engineerToken; engineerSessionName=d.name||'';
   settings.engineer=engineerSessionName;
   sessionStorage.setItem('tmx_km_engineer_token',engineerSessionToken);
   sessionStorage.setItem('tmx_km_engineer_name',engineerSessionName);
   saveSettingsToStorage(settings); fillSettingsForm(); updateLoginState(); location.reload();
- }catch(e){console.error('Portal SSO failed',e)}
+ }catch(e){portalSSOStatus_('Single Sign-On connection error',String(e&&e.message||e));console.error('Portal SSO failed',e)}
 })();
 </script>
 </body>
