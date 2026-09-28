@@ -45,10 +45,10 @@
 <main class="wrap">
 <section id="loginView" class="login"><h1>Finance Login</h1><div class="muted">Use your management Name + 6-digit PIN.</div><label>Name</label><input id="name" class="input" autocomplete="username" placeholder="Enter your name"><label>PIN</label><input id="pin" class="input" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password" placeholder="6-digit PIN"><button id="loginBtn" class="btn primary" style="width:100%;margin-top:16px">Login to Finance</button></section>
 <section id="dash" class="dashboard"><div style="display:flex;gap:8px;margin-bottom:14px"><button id="photoTab" class="btn primary">Photo Audit</button><button id="summaryTab" class="btn">Summary</button></div><div id="photoView"><div class="heading"><div><h1>Photo Audit</h1><div class="muted">Desktop workspace for reviewing trip odometers, large photos and GPS.</div></div></div>
-<div class="filters"><div class="field"><label>Engineer</label><div class="search"><input id="engineer" class="input" autocomplete="off" placeholder="Search or select engineer"><div id="engineerOpts" class="opts"></div></div></div><div class="field"><label>Driver</label><div class="search"><input id="driver" class="input" autocomplete="off" placeholder="Search or select driver"><div id="driverOpts" class="opts"></div></div></div><div class="field"><label>Project</label><div class="search"><input id="project" class="input" autocomplete="off" placeholder="Search or select project"><div id="projectOpts" class="opts"></div></div></div><div class="field"><label>Month</label><input id="month" class="input" type="month"></div><div class="field"><label>Paid By</label><input id="paidBy" class="input" placeholder="Search payer"></div><div class="field"><label>Status</label><select id="auditStatus" class="input"><option>Pending</option><option>Approved</option><option>Rejected</option></select></div><div class="filter-buttons"><button id="apply" class="btn primary">Apply Filters</button><button id="clear" class="btn">Clear</button></div></div>
+<div class="filters"><div class="field"><label>Engineer</label><div class="search"><input id="engineer" class="input" autocomplete="off" placeholder="Search or select engineer"><div id="engineerOpts" class="opts"></div></div></div><div class="field"><label>Driver</label><div class="search"><input id="driver" class="input" autocomplete="off" placeholder="Search or select driver"><div id="driverOpts" class="opts"></div></div></div><div class="field"><label>Project</label><div class="search"><input id="project" class="input" autocomplete="off" placeholder="Search or select project"><div id="projectOpts" class="opts"></div></div></div><div class="field"><label>Month</label><input id="month" class="input" type="month"></div><div class="field"><label>Paid By</label><div class="search"><input id="paidBy" class="input" autocomplete="off" placeholder="Search or select payer"><div id="paidByOpts" class="opts"></div></div></div><div class="field"><label>Status</label><select id="auditStatus" class="input"><option>Pending</option><option>Approved</option><option>Rejected</option></select></div><div class="filter-buttons"><button id="apply" class="btn primary">Apply Filters</button><button id="clear" class="btn">Clear</button></div></div>
 <div class="stats"><div class="stat"><div class="k">Trips found</div><div id="tripCount" class="v">0</div></div><div class="stat"><div class="k">Trip KM</div><div id="tripKm" class="v">0</div></div><div class="stat"><div class="k">Total KM</div><div id="totalKm" class="v">0</div></div><div class="stat accent"><div class="k">Amount Spent</div><div id="amount" class="v">0.00 EGP</div></div></div>
 <div class="audit-head"><h2>Audit Records <span id="matched" class="count"></span></h2><div class="right"><button id="photosBtn" class="btn">Hide Photos</button><button id="refreshBtn" class="btn">Refresh</button></div></div>
-<div id="tableWrap" class="table-wrap"><div class="empty">Apply filters or refresh to load trips.</div></div><div class="bulkbar"><span id="pendingChanges" class="muted">No unsaved changes</span><button id="selectAllAudit" class="btn">Select All</button><button id="saveAudit" class="btn">Save Changes</button><button id="approveAudit" class="btn primary">Approve Selected</button></div></div><div id="summaryView" style="display:none"><div class="heading"><h1>Approved Summary</h1></div><div class="filters"><div class="field"><label>Engineer</label><input id="sEngineer" class="input"></div><div class="field"><label>Driver</label><input id="sDriver" class="input"></div><div class="field"><label>Project</label><input id="sProject" class="input"></div><div class="field"><label>Month</label><input id="sMonth" class="input" type="month"></div><div class="filter-buttons"><button id="sApply" class="btn primary">Apply</button><button id="sExport" class="btn">Export Excel</button></div></div><div id="summaryRows" style="margin-top:16px"></div></div></section>
+<div id="tableWrap" class="table-wrap"><div class="empty">Apply filters or refresh to load trips.</div></div><div class="bulkbar"><span id="pendingChanges" class="muted">No unsaved changes</span><button id="selectAllAudit" class="btn">Select All</button><button id="saveAudit" class="btn">Save Changes</button><button id="approveAudit" class="btn primary">Approve Selected</button></div></div><div id="summaryView" style="display:none"><div class="heading"><h1>Approved Summary</h1></div><div class="filters"><div class="field"><label>Engineer</label><div class="search"><input id="sEngineer" class="input" autocomplete="off" placeholder="Search or select engineer"><div id="sEngineerOpts" class="opts"></div></div></div><div class="field"><label>Driver</label><div class="search"><input id="sDriver" class="input" autocomplete="off" placeholder="Search or select driver"><div id="sDriverOpts" class="opts"></div></div></div><div class="field"><label>Project</label><div class="search"><input id="sProject" class="input" autocomplete="off" placeholder="Search or select project"><div id="sProjectOpts" class="opts"></div></div></div><div class="field"><label>Month</label><input id="sMonth" class="input" type="month"></div><div class="field"><label>Paid By</label><div class="search"><input id="sPaidBy" class="input" autocomplete="off" placeholder="Search or select payer"><div id="sPaidByOpts" class="opts"></div></div></div><div class="filter-buttons"><button id="sApply" class="btn primary">Apply</button><button id="sExport" class="btn">Export Excel</button></div></div><div id="summaryRows" style="margin-top:16px"></div></div></section>
 </main></div>
 <div id="lightbox" class="lightbox"><button id="closeLightbox" class="btn">Close</button><img id="lightboxImg" alt="Odometer photo"></div><div id="toast" class="toast"></div>
 <script>
@@ -63,6 +63,8 @@ function hideLoginBuffer(){
   const box=document.getElementById('loginBuffer');
   if(box){box.classList.remove('show');box.setAttribute('aria-hidden','true');}
 }
+function showBuffer(message='Loading...'){showLoginBuffer(message)}
+function hideBuffer(){hideLoginBuffer()}
 
 const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyPpI27VQqpIrZHn8mizmONCLHEbp_aJj_wnan6nyYh-0R2bNW_C7qbYuAHQvRgwS5_fg/exec';
 const $=id=>document.getElementById(id); let managementToken=sessionStorage.getItem('tmx_km_finance_token')||'', managementName=sessionStorage.getItem('tmx_km_finance_name')||''; let trips=[]; let filterCombos=[]; let photosVisible=localStorage.getItem('finance_portal_photos')!=='0';
@@ -90,11 +92,25 @@ function wireRelatedSearch(inputId,optsId){
   box.addEventListener('mousedown',e=>{const o=e.target.closest('[data-v]');if(!o)return;inp.value=o.dataset.v;box.style.display='none';sanitizeRelatedFilters(inputId)});
   document.addEventListener('click',e=>{if(!e.target.closest('#'+inputId)&&!e.target.closest('#'+optsId))box.style.display='none'});
 }
+function engineerList(){return uniqueSorted(filterCombos.map(r=>r.engineer))}
+function simpleOptionsFor(id){
+  if(id==='paidBy'||id==='sPaidBy'||id==='sEngineer')return engineerList();
+  if(id==='sDriver')return uniqueSorted(filterCombos.map(r=>r.driver));
+  if(id==='sProject')return uniqueSorted(filterCombos.map(r=>r.project));
+  return [];
+}
+function wireSimpleSearch(inputId,optsId){
+ const inp=$(inputId),box=$(optsId);
+ const draw=()=>{const q=inp.value.trim().toLowerCase(),vals=simpleOptionsFor(inputId).filter(v=>!q||String(v).toLowerCase().includes(q)).slice(0,100);box.innerHTML=vals.map(v=>`<div class="opt" data-v="${esc(v)}">${esc(v)}</div>`).join('')||'<div class="opt muted">No matches</div>';box.style.display='block'};
+ inp.addEventListener('focus',draw);inp.addEventListener('input',draw);
+ box.addEventListener('mousedown',e=>{const o=e.target.closest('[data-v]');if(!o)return;inp.value=o.dataset.v;box.style.display='none'});
+ document.addEventListener('click',e=>{if(!e.target.closest('#'+inputId)&&!e.target.closest('#'+optsId))box.style.display='none'});
+}
 function sanitizeRelatedFilters(changed){
   const ids=['engineer','driver','project'];
   ids.filter(id=>id!==changed).forEach(id=>{const val=$(id).value.trim();if(!val)return;const allowed=currentRelatedOptions(id).map(x=>String(x).toLowerCase());if(!allowed.includes(val.toLowerCase()))$(id).value=''});
 }
-async function loadLists(){try{const d=await post('financeFilterOptions');filterCombos=d.combinations||[];['engineer','driver','project'].forEach(id=>wireRelatedSearch(id,id+'Opts'))}catch(e){toast('Could not load filter lists')}}
+async function loadLists(){try{const d=await post('financeFilterOptions');filterCombos=d.combinations||[];['engineer','driver','project'].forEach(id=>wireRelatedSearch(id,id+'Opts'));wireSimpleSearch('paidBy','paidByOpts');[['sEngineer','sEngineerOpts'],['sDriver','sDriverOpts'],['sProject','sProjectOpts'],['sPaidBy','sPaidByOpts']].forEach(x=>wireSimpleSearch(x[0],x[1]))}catch(e){toast('Could not load filter lists')}}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function num(v){const n=Number(v);return Number.isFinite(n)?n:0}
 function setAuthed(on){$('loginView').style.display=on?'none':'block';$('dash').style.display=on?'block':'none';$('logoutBtn').style.display=on?'inline-block':'none';$('sessionLabel').textContent=on?'Finance':' ';if(on){loadLists();loadTrips()}}
@@ -102,10 +118,10 @@ $('loginBtn').onclick=async()=>{const name=$('name').value.trim(),pin=$('pin').v
 $('name').addEventListener('keydown',e=>{if(e.key==='Enter')$('pin').focus()});
 $('pin').addEventListener('keydown',e=>{if(e.key==='Enter')$('loginBtn').click()});
 $('logoutBtn').onclick=()=>{managementToken='';managementName='';sessionStorage.removeItem('tmx_km_finance_token');sessionStorage.removeItem('tmx_km_finance_name');$('name').value='';$('pin').value='';setAuthed(false)};
-async function loadTrips(){if(!managementToken)return;$('tableWrap').innerHTML='<div class="empty">Loading audit records…</div>';try{const d=await post('financeTrips',{filterEngineer:$('engineer').value.trim(),filterDriver:$('driver').value.trim(),filterProject:$('project').value.trim(),filterMonth:$('month').value});
+async function loadTrips(){if(!managementToken)return;showBuffer('Applying filters...');$('tableWrap').innerHTML='<div class="empty">Loading audit records…</div>';try{const d=await post('financeTrips',{filterEngineer:$('engineer').value.trim(),filterDriver:$('driver').value.trim(),filterProject:$('project').value.trim(),filterMonth:$('month').value});
     const paidBy=String($('paidBy').value||'').trim().toLowerCase(), auditStatus=String($('auditStatus').value||'Pending').trim().toLowerCase();
     trips=(d.trips||[]).filter(t=>(!paidBy||String(t.paidBy||'').trim().toLowerCase()===paidBy)&&String(t.financeStatus||'Pending').trim().toLowerCase()===auditStatus);
-    render(trips.length)}catch(e){if(e.message==='finance-session-required'){managementToken='';managementName='';sessionStorage.removeItem('tmx_km_finance_token');sessionStorage.removeItem('tmx_km_finance_name');setAuthed(false)}else {console.error('Photo Audit load failed:',e);$('tableWrap').innerHTML='<div class="empty">Could not load audit records: '+esc(e.message||'server-error')+'</div>'}}}
+    render(trips.length)}catch(e){if(e.message==='finance-session-required'){managementToken='';managementName='';sessionStorage.removeItem('tmx_km_finance_token');sessionStorage.removeItem('tmx_km_finance_name');setAuthed(false)}else {console.error('Photo Audit load failed:',e);$('tableWrap').innerHTML='<div class="empty">Could not load audit records: '+esc(e.message||'server-error')+'</div>'}}finally{hideBuffer()}}
 function render(totalMatched){
   $('tripCount').textContent=trips.length;
   $('tripKm').textContent=trips.reduce((a,t)=>a+num(t.tripKm),0).toFixed(0);
@@ -184,12 +200,14 @@ function markLocalStatus(id,status){
 async function saveStagedAudit(showToast=true){
  const updates=Object.values(stagedAudit);
  if(!updates.length){if(showToast)toast('No changes to save');return true}
+ showBuffer('Saving changes...');
  try{
    let r=await post('financeSaveAuditBatch',{updates});if(!r.ok)throw new Error(r.error||'Save failed');
    Object.keys(stagedAudit).forEach(k=>delete stagedAudit[k]);
    document.querySelectorAll('[data-dirty="1"]').forEach(c=>delete c.dataset.dirty);
    updatePendingLabel();if(showToast)toast('Changes saved');return true
  }catch(e){console.error(e);toast('Could not save changes: '+(e.message||'server error'));return false}
+ finally{hideBuffer()}
 }
 $('selectAllAudit').onclick=()=>document.querySelectorAll('.audit-check:not(:disabled)').forEach(x=>x.checked=true);
 $('saveAudit').onclick=()=>saveStagedAudit(true);
@@ -197,10 +215,12 @@ $('approveAudit').onclick=async()=>{
  let ids=[...document.querySelectorAll('.audit-check:checked:not(:disabled)')].map(x=>x.dataset.trip);
  if(!ids.length)return toast('Select pending trips first');
  let ok=await saveStagedAudit(false);if(!ok)return;
+ showBuffer('Approving selected trips...');
  try{
    let r=await post('financeSaveAuditBatch',{updates:[],approvals:ids});if(!r.ok)throw new Error(r.error||'Approval failed');
    toast(ids.length+' trips approved');await loadTrips();
  }catch(e){toast('Could not approve selected trips: '+(e.message||'server error'))}
+ finally{hideBuffer()}
 };
 
 function applyPhotos(){
@@ -247,8 +267,9 @@ $('tableWrap').addEventListener('click',async e=>{
  }
 });
 let approvedRows=[];
-async function loadApproved(){let d=await post('financeSummary',{filterEngineer:$('sEngineer').value.trim(),filterDriver:$('sDriver').value.trim(),filterProject:$('sProject').value.trim(),filterMonth:$('sMonth').value});approvedRows=d.trips||[];$('summaryRows').innerHTML=approvedRows.length?'<table class="summary-table"><thead><tr><th>Date</th><th>Engineer</th><th>Driver</th><th>Vehicle</th><th>Project</th><th>Rate</th><th>Deduction</th><th>Final Amount</th></tr></thead><tbody>'+approvedRows.map(t=>`<tr><td>${esc(t.date)}</td><td>${esc(t.engineer)}</td><td>${esc(t.driver)}</td><td>${esc(t.vehicle||'—')}</td><td>${esc(t.projectName)}</td><td>${esc(t.rateDisplay)}</td><td>${num(t.deduction).toFixed(2)}</td><td>${num(t.finalAmount).toFixed(2)}</td></tr>`).join('')+'</tbody></table>':'<div class="empty">No fully approved records.</div>'}
-$('photoTab').onclick=()=>{$('photoView').style.display='block';$('summaryView').style.display='none'};$('summaryTab').onclick=()=>{$('photoView').style.display='none';$('summaryView').style.display='block';loadApproved()};$('sApply').onclick=loadApproved;$('sExport').onclick=()=>exportApprovedXlsx(approvedRows);
+async function loadApproved(){showBuffer('Loading summary...');try{let d=await post('financeSummary',{filterEngineer:$('sEngineer').value.trim(),filterDriver:$('sDriver').value.trim(),filterProject:$('sProject').value.trim(),filterMonth:$('sMonth').value});let payer=String($('sPaidBy').value||'').trim().toLowerCase();approvedRows=(d.trips||[]).filter(t=>!payer||String(t.paidBy||'').trim().toLowerCase()===payer);$('summaryRows').innerHTML=approvedRows.length?'<table class="summary-table"><thead><tr><th>Date</th><th>Engineer</th><th>Driver</th><th>Vehicle</th><th>Project</th><th>Rate</th><th>Deduction</th><th>Final Amount</th></tr></thead><tbody>'+approvedRows.map(t=>`<tr><td>${esc(t.date)}</td><td>${esc(t.engineer)}</td><td>${esc(t.driver)}</td><td>${esc(t.vehicle||'—')}</td><td>${esc(t.projectName)}</td><td>${esc(t.rateDisplay)}</td><td>${num(t.deduction).toFixed(2)}</td><td>${num(t.finalAmount).toFixed(2)}</td></tr>`).join('')+'</tbody></table>':'<div class="empty">No fully approved records.</div>' }finally{hideBuffer()}}
+function setFinanceTab(tab){const photo=tab==='photo';$('photoView').style.display=photo?'block':'none';$('summaryView').style.display=photo?'none':'block';$('photoTab').classList.toggle('primary',photo);$('summaryTab').classList.toggle('primary',!photo)}
+$('photoTab').onclick=()=>setFinanceTab('photo');$('summaryTab').onclick=()=>{setFinanceTab('summary');loadApproved()};$('sApply').onclick=loadApproved;$('sExport').onclick=()=>exportApprovedXlsx(approvedRows);
 (async()=>{if(managementToken){$('name').value=managementName;try{await post('financeFilterOptions');setAuthed(true)}catch(e){managementToken='';managementName='';sessionStorage.removeItem('tmx_km_finance_token');sessionStorage.removeItem('tmx_km_finance_name');setAuthed(false)}}else setAuthed(false)})();
 
 function exportApprovedXlsx(rows){
