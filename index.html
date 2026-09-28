@@ -3370,7 +3370,7 @@ $('startForm').addEventListener('submit', async (e) => {
     date: $('date').value, day: $('day').value,
     area: canonicalArea, task: $('task').value.trim(),
     startKm: parseFloat(start), startedAt: new Date().toISOString(),
-    rate: undefined,
+    rate: 2.225,
     lastForthBack: 0,
     startLatitude: startPhotoLocation ? startPhotoLocation.latitude : '',
     startLongitude: startPhotoLocation ? startPhotoLocation.longitude : '',
@@ -3392,7 +3392,9 @@ $('startForm').addEventListener('submit', async (e) => {
       const updatedOpenTrips = getOpenTrips().map(t =>
         t.tripId === tripId ? Object.assign({}, t, {
           lastForthBack: Number(autoForthBack.forthBack) || 0,
-          rate: isFinite(parseFloat(autoForthBack.ratePerKm)) ? Number(autoForthBack.ratePerKm) : t.rate
+          rate: isFinite(parseFloat(data.ratePerKm))
+            ? Number(data.ratePerKm)
+            : (isFinite(parseFloat(autoForthBack.ratePerKm)) ? Number(autoForthBack.ratePerKm) : t.rate)
         }) : t
       );
       setOpenTrips(updatedOpenTrips);
