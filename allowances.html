@@ -5,7 +5,13 @@
 body{overflow-x:hidden}header{padding:11px 12px}.brand{font-size:17px}main{padding:10px;width:100%;max-width:100%}.card{padding:12px;border-radius:13px;margin-bottom:10px}.filters{grid-template-columns:1fr;gap:9px}.filters .field>input,.filters .field>select{height:44px;width:100%}.chips{position:static;margin-top:4px}.summary{grid-template-columns:1fr 1fr;gap:7px}.metric{padding:8px 9px;border-radius:10px}.metric b{font-size:17px}.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}.tabs .btn{padding:9px 5px}.bulkbar{display:grid;grid-template-columns:1fr 1fr;gap:6px}.bulkbar .spacer{display:none}.bulkbar #selectedCount{grid-column:1/-1;margin:0;text-align:center}.bulkbar .btn{width:100%;padding:9px 7px}.records{border:0;background:transparent;overflow:visible}.audit-table{min-width:0}.audit-table,.audit-table tbody,.audit-table tr,.audit-table td{display:block;width:100%}.audit-table thead{display:none}.audit-table tr{background:#fff;border:1px solid var(--line);border-radius:10px;margin-bottom:7px;padding:6px}.audit-table td{border:0;padding:4px 6px;display:flex;justify-content:space-between;gap:10px;overflow-wrap:anywhere}.audit-table td:before{content:attr(data-label);font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;flex:0 0 34%}.audit-table td.select-cell{justify-content:flex-start}.audit-table td.select-cell:before{content:'Select'}.actions{justify-content:flex-end}.combo-list{position:fixed;left:10px;right:10px;top:auto;max-height:45vh;z-index:100}}
 .buffer{position:fixed;inset:0;background:rgba(245,248,250,.72);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;z-index:9999}.buffer.show{display:flex}.buffer-box{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 50px #26323b25;padding:20px 28px;min-width:220px;text-align:center;font-weight:800}.spinner{width:34px;height:34px;border:4px solid #eadde5;border-top-color:var(--brand);border-radius:50%;margin:0 auto 11px;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}</style></head><body><header><div class="brand"><span>TELECOMAX</span> · Allowance Audit</div><button id="logout" class="btn ghost" style="display:none">Logout</button></header><main>
 <section id="login" class="card login"><h2>PM Login</h2><p class="note">Use your management Name + 6-digit PIN.</p><div class="field"><label>Name</label><input id="name" autocomplete="username" placeholder="Enter your name"></div><br><div class="field"><label>PIN</label><input id="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password" placeholder="6-digit PIN"></div><br><button id="loginBtn" class="btn primary">Login</button></section>
-<section id="app" style="display:none"><div class="card"><div class="section-title"><div><h2 style="margin:0">Monthly Allowance Audit</h2></div></div><br><div class="filters"><div class="field"><label>Month</label><input id="month" type="month"></div><div class="field combo" id="engineerCombo"><label>Engineer</label><input id="engineer" autocomplete="off" placeholder="Search / select Engineers"><div id="engineerChips" class="chips"></div><div id="engineerList" class="combo-list"></div></div><div class="field combo" id="driverCombo"><label>Driver</label><input id="driver" autocomplete="off" placeholder="Search / select Drivers"><div id="driverChips" class="chips"></div><div id="driverList" class="combo-list"></div></div><div class="field combo" id="projectCombo"><label>Project</label><input id="project" autocomplete="off" placeholder="All Projects"><div id="projectList" class="combo-list"></div></div><div class="field"><label>Status</label><select id="status"><option value="">All Statuses</option><option selected>Pending</option><option>Approved</option><option>Rejected</option></select></div><button id="apply" class="btn primary">Apply</button><button id="clear" class="btn ghost">Clear</button></div></div>
+<section id="app" style="display:none"><div class="card"><div class="section-title"><div><h2 style="margin:0">Monthly Allowance Audit</h2></div></div><br><div class="filters">
+<div class="field"><label>Month</label><input id="month" type="month"></div>
+<div class="field combo" id="engineerCombo"><label>Engineer</label><input id="engineer" autocomplete="off" placeholder="Search or select engineer"><div id="engineerList" class="combo-list"></div></div>
+<div class="field combo" id="driverCombo"><label>Driver</label><input id="driver" autocomplete="off" placeholder="Search or select driver"><div id="driverList" class="combo-list"></div></div>
+<div class="field combo" id="projectCombo"><label>Project</label><input id="project" autocomplete="off" placeholder="Search or select project"><div id="projectList" class="combo-list"></div></div>
+<div class="field"><label>Status</label><select id="status"><option value="" selected>All Statuses</option><option>Pending</option><option>Approved</option><option>Rejected</option></select></div>
+<button id="apply" class="btn primary">Apply</button><button id="clear" class="btn ghost">Clear</button></div></div>
 <div class="summary"><div class="metric"><small>Calculated</small><b id="calculated">0 EGP</b></div><div class="metric"><small>Approved</small><b id="approved">0 EGP</b></div><div class="metric"><small>Pending</small><b id="pending">0 EGP</b></div><div class="metric"><small>Rejected</small><b id="rejected">0 EGP</b></div></div><br>
 <div class="card"><div class="tabs"><button class="btn tab active" data-type="All">All</button><button class="btn tab" data-type="Engineer">Engineers</button><button class="btn tab" data-type="Driver">Drivers</button></div>
 <div class="bulkbar"><button id="selectAll" class="btn ghost">Select All</button><button id="clearSelection" class="btn ghost">Clear Selection</button><div class="spacer"></div><span id="selectedCount" class="note">0 selected</span><button id="approveSelected" class="btn primary">Approve Selected</button><button id="exportExcel" class="btn ghost">Export Excel</button></div>
@@ -20,45 +26,51 @@ const URL='https://script.google.com/macros/s/AKfycbyPpI27VQqpIrZHn8mizmONCLHEbp
 function toast(s){$('toast').textContent=s;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',2500)}function showBuffer(t='Loading...'){const b=$('buffer'),x=$('bufferText');if(x)x.textContent=t;if(b)b.classList.add('show')}function hideBuffer(){const b=$('buffer');if(b)b.classList.remove('show')}function money(n){return (Number(n)||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' EGP'}async function post(action,x={}){const r=await fetch(URL,{method:'POST',body:JSON.stringify({action,managementToken,...x})}),d=await r.json();if(!d.ok)throw Error(d.error||'Server error');return d}function auth(on){$('login').style.display=on?'none':'block';$('app').style.display=on?'block':'none';$('logout').style.display=on?'block':'none';if(on)load()}
 function monthNow(){let d=new Date(),o=d.getTimezoneOffset();return new Date(d-o*60000).toISOString().slice(0,7)}$('month').value=monthNow();
 $('loginBtn').onclick=async()=>{const name=$('name').value.trim(),pin=$('pin').value.trim();if(!name||!pin)return toast('Enter your name and 6-digit PIN');showBuffer('Logging in...');try{const d=await post('managementLogin',{name,pin,portalRole:'PM'});managementToken=d.token;managementName=d.name||name;sessionStorage.setItem('tmx_km_pm_token',managementToken);sessionStorage.setItem('tmx_km_pm_name',managementName);auth(true);toast('Logged in as '+managementName)}catch(e){managementToken='';toast(e.message||'Could not log in')}finally{hideBuffer()}};$('name').onkeydown=e=>{if(e.key==='Enter')$('pin').focus()};$('pin').onkeydown=e=>{if(e.key==='Enter')$('loginBtn').click()};$('logout').onclick=()=>{managementToken='';managementName='';sessionStorage.removeItem('tmx_km_pm_token');sessionStorage.removeItem('tmx_km_pm_name');$('name').value='';$('pin').value='';auth(false)};
-let selectedEngineers=[],selectedDrivers=[];
-function uniq(a){return [...new Set(a.filter(Boolean))].sort((x,y)=>x.localeCompare(y))}
+function uniq(a){return [...new Set((a||[]).filter(Boolean))].sort((x,y)=>x.localeCompare(y))}
 function eq(a,b){return String(a||'').trim().toLowerCase()===String(b||'').trim().toLowerCase()}
-function selectedFor(k){return k==='engineer'?selectedEngineers:k==='driver'?selectedDrivers:[$('project').value.trim()].filter(Boolean)}
+function filterState(){return {engineer:$('engineer').value.trim(),driver:$('driver').value.trim(),project:$('project').value.trim()}}
 function relationalOptions(kind){
- const p=$('project').value.trim(), combos=(data.combos||[]).filter(c=>{
-   if(kind!=='engineer'&&selectedEngineers.length&&!selectedEngineers.some(x=>eq(c.engineer,x)))return false;
-   if(kind!=='driver'&&selectedDrivers.length&&!selectedDrivers.some(x=>eq(c.driver,x)))return false;
-   if(kind!=='project'&&p&&!eq(c.project,p))return false;
+ const q=filterState();
+ const rows=(data.combos||[]).filter(c=>{
+   for(const k of ['engineer','driver','project']){
+     if(k===kind||!q[k])continue;
+     if(!eq(c[k],q[k]))return false;
+   }
    return true;
  });
- if(kind==='engineer')return uniq(combos.map(c=>c.engineer));
- if(kind==='driver')return uniq(combos.map(c=>c.driver).filter(x=>String(x).toLowerCase()!=='rent'));
- return uniq(combos.map(c=>c.project));
-}
-function drawChips(kind){
- const arr=kind==='engineer'?selectedEngineers:selectedDrivers, el=$(kind+'Chips');
- el.innerHTML=arr.map((x,i)=>`<span class="chip">${x} <b data-kind="${kind}" data-i="${i}" style="cursor:pointer">×</b></span>`).join('');
- el.querySelectorAll('b').forEach(b=>b.onclick=e=>{e.stopPropagation();let a=b.dataset.kind==='engineer'?selectedEngineers:selectedDrivers;a.splice(+b.dataset.i,1);refreshAllCombos()});
+ if(kind==='engineer'){
+   const vals=uniq(rows.map(c=>c.engineer));
+   // Config Column A remains the allowed engineer source.
+   const cfg=uniq(data.engineers||[]);
+   return vals.length?cfg.filter(e=>vals.some(v=>eq(v,e))):cfg;
+ }
+ if(kind==='driver'){
+   const vals=uniq(rows.map(c=>c.driver).filter(x=>String(x).toLowerCase()!=='rent'));
+   const cfg=uniq((data.drivers||[]).filter(x=>String(x).toLowerCase()!=='rent'));
+   return vals.length?cfg.filter(d=>vals.some(v=>eq(v,d))):cfg;
+ }
+ return uniq(rows.map(c=>c.project));
 }
 function renderCombo(kind){
- const input=$(kind),list=$(kind+'List'),q=input.value.trim().toLowerCase(),chosen=selectedFor(kind);
+ const input=$(kind),list=$(kind+'List'),q=input.value.trim().toLowerCase();
  const options=relationalOptions(kind).filter(x=>!q||x.toLowerCase().includes(q));
- list.innerHTML=options.length?options.map(x=>kind==='project'
- ?`<div class="combo-option" data-value="${x.replace(/"/g,'&quot;')}">${x}</div>`
- :`<div class="combo-option multi" data-value="${x.replace(/"/g,'&quot;')}"><input type="checkbox" ${chosen.some(v=>eq(v,x))?'checked':''}><span>${x}</span></div>`).join(''):'<div class="combo-empty">No matching options</div>';
+ list.innerHTML=options.length?options.map(x=>`<div class="combo-option" data-value="${x.replace(/"/g,'&quot;')}">${x}</div>`).join(''):'<div class="combo-empty">No related matches</div>';
  list.querySelectorAll('.combo-option').forEach(o=>o.onclick=e=>{
-   e.preventDefault();let v=o.dataset.value;
-   if(kind==='project'){$('project').value=v;$(kind+'Combo').classList.remove('open')}
-   else{let a=kind==='engineer'?selectedEngineers:selectedDrivers,idx=a.findIndex(x=>eq(x,v));if(idx>=0)a.splice(idx,1);else a.push(v);input.value='';drawChips(kind)}
-   refreshAllCombos();
+   e.preventDefault();input.value=o.dataset.value;$(kind+'Combo').classList.remove('open');sanitizeRelated(kind);refreshAllCombos();
  });
 }
-function refreshAllCombos(){drawChips('engineer');drawChips('driver');['engineer','driver','project'].forEach(renderCombo)}
+function sanitizeRelated(changed){
+ for(const kind of ['engineer','driver','project']){
+   if(kind===changed)continue;
+   const input=$(kind),v=input.value.trim();if(!v)continue;
+   if(!relationalOptions(kind).some(x=>eq(x,v)))input.value='';
+ }
+}
+function refreshAllCombos(){['engineer','driver','project'].forEach(renderCombo)}
 function setupCombo(kind){
  const input=$(kind),box=$(kind+'Combo');
- input.addEventListener('focus',()=>{if(kind==='project')input.select();box.classList.add('open');renderCombo(kind)});
- input.addEventListener('click',()=>{box.classList.add('open');renderCombo(kind)});
- input.addEventListener('input',()=>{box.classList.add('open');renderCombo(kind)});
+ const open=()=>{box.classList.add('open');renderCombo(kind)};
+ input.addEventListener('focus',open);input.addEventListener('click',open);input.addEventListener('input',open);
  input.addEventListener('keydown',e=>{if(e.key==='Escape'){box.classList.remove('open');input.blur()}});
 }
 ['engineer','driver','project'].forEach(setupCombo);
@@ -66,10 +78,7 @@ document.addEventListener('click',e=>{['engineer','driver','project'].forEach(k=
 async function load(){
  showBuffer('Applying filters...');try{
    // Fetch broad data for relational options, then filter client-side for multi selections.
-   data=await post('allowanceData',{filterMonth:$('month').value,filterEngineer:'',filterDriver:'',filterProject:$('project').value,filterStatus:$('status').value});
-   if(selectedEngineers.length)data.records=(data.records||[]).filter(r=>r.type!=='Engineer'||selectedEngineers.some(x=>eq(r.name,x)));
-   if(selectedDrivers.length)data.records=(data.records||[]).filter(r=>r.type!=='Driver'||selectedDrivers.some(x=>eq(r.name,x)));
-   // For a combined All view, also respect relational trip combinations for each record's projects/relations.
+   data=await post('allowanceData',{filterMonth:$('month').value,filterEngineer:$('engineer').value.trim(),filterDriver:$('driver').value.trim(),filterProject:$('project').value.trim(),filterStatus:$('status').value});
    refreshAllCombos();recalcVisibleSummary();render()
  }catch(e){toast(e.message)}finally{hideBuffer()}
 }
@@ -149,6 +158,6 @@ $('exportExcel').onclick=()=>{
   reader.readAsDataURL(blob);
  }catch(err){console.error(err);toast('Excel export failed: '+(err.message||err))}
 };
-$('apply').onclick=load;$('clear').onclick=()=>{selectedEngineers=[];selectedDrivers=[];$('engineer').value='';$('driver').value='';$('project').value='';$('status').value='Pending';refreshAllCombos();load()};document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');typeView=b.dataset.type;render()});
+$('apply').onclick=load;$('clear').onclick=()=>{$('engineer').value='';$('driver').value='';$('project').value='';$('status').value='';refreshAllCombos();load()};document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');typeView=b.dataset.type;render()});
 if(managementToken){$('name').value=managementName;post('allowanceData',{}).then(()=>auth(true)).catch(()=>{sessionStorage.removeItem('tmx_km_pm_token');sessionStorage.removeItem('tmx_km_pm_name');managementToken='';managementName='';auth(false)});}else auth(false);
 </script></body></html>
