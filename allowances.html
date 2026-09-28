@@ -31,7 +31,7 @@ function eq(a,b){return String(a||'').trim().toLowerCase()===String(b||'').trim(
 function filterState(){return {engineer:$('engineer').value.trim(),driver:$('driver').value.trim(),project:$('project').value.trim()}}
 function relationalOptions(kind){
  const q=filterState();
- const rows=(data.combos||[]).filter(c=>{
+ const rows=(filterSource.combinations||[]).filter(c=>{
    for(const k of ['engineer','driver','project']){
      if(k===kind||!q[k])continue;
      if(!eq(c[k],q[k]))return false;
@@ -40,7 +40,7 @@ function relationalOptions(kind){
  });
  if(kind==='engineer'){
    // MASTER SOURCE: Engineer Name list from Config Column A.
-   const cfg=uniq(data.engineers||[]);
+   const cfg=uniq(filterSource.engineers||[]);
    // With no Driver/Project selection, always show the complete Config Column A list.
    const hasRelation=!!q.driver||!!q.project;
    if(!hasRelation)return cfg;
@@ -51,10 +51,13 @@ function relationalOptions(kind){
  }
  if(kind==='driver'){
    const vals=uniq(rows.map(c=>c.driver).filter(x=>String(x).toLowerCase()!=='rent'));
-   const cfg=uniq((data.drivers||[]).filter(x=>String(x).toLowerCase()!=='rent'));
+   const cfg=uniq((filterSource.drivers||[]).filter(x=>String(x).toLowerCase()!=='rent'));
    return vals.length?cfg.filter(d=>vals.some(v=>eq(v,d))):cfg;
  }
- return uniq(rows.map(c=>c.project));
+ const vals=uniq(rows.map(c=>c.project));
+ const cfg=uniq(filterSource.projects||[]);
+ const hasRelation=!!q.engineer||!!q.driver;
+ return hasRelation?cfg.filter(p=>vals.some(v=>eq(v,p))):cfg;
 }
 function renderCombo(kind){
  const input=$(kind),list=$(kind+'List'),q=input.value.trim().toLowerCase();
@@ -82,7 +85,9 @@ function setupCombo(kind){
 document.addEventListener('click',e=>{['engineer','driver','project'].forEach(k=>{if(!$(k+'Combo').contains(e.target))$(k+'Combo').classList.remove('open')})});
 async function load(){
  showBuffer('Applying filters...');try{
-   // Fetch broad data for relational options, then filter client-side for multi selections.
+   // Filter lists are loaded independently from allowance records.
+   // Engineer master source is always Config Column A.
+   filterSource=await post('allowanceFilterOptions');
    data=await post('allowanceData',{filterMonth:$('month').value,filterEngineer:$('engineer').value.trim(),filterDriver:$('driver').value.trim(),filterProject:$('project').value.trim(),filterStatus:$('status').value});
    refreshAllCombos();recalcVisibleSummary();render()
  }catch(e){toast(e.message)}finally{hideBuffer()}
