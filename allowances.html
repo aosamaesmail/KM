@@ -39,10 +39,15 @@ function relationalOptions(kind){
    return true;
  });
  if(kind==='engineer'){
-   const vals=uniq(rows.map(c=>c.engineer));
-   // Config Column A remains the allowed engineer source.
+   // MASTER SOURCE: Engineer Name list from Config Column A.
    const cfg=uniq(data.engineers||[]);
-   return vals.length?cfg.filter(e=>vals.some(v=>eq(v,e))):cfg;
+   // With no Driver/Project selection, always show the complete Config Column A list.
+   const hasRelation=!!q.driver||!!q.project;
+   if(!hasRelation)return cfg;
+   // Once another filter is selected, keep Config A as the source and only narrow
+   // it to engineers that exist in matching KM combinations.
+   const allowed=uniq(rows.map(c=>c.engineer));
+   return cfg.filter(e=>allowed.some(v=>eq(v,e)));
  }
  if(kind==='driver'){
    const vals=uniq(rows.map(c=>c.driver).filter(x=>String(x).toLowerCase()!=='rent'));
