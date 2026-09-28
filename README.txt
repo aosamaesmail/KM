@@ -81,3 +81,10 @@ V58 applied to the user-supplied KM-main source:
 - PM/Admin and Finance Photo Audit: Edit KM, Deduct, Reject, bulk approval.
 - KM Audit sheet tracks PM and Finance approval separately.
 - Summary shows rows approved by both and exports XLSX Cover + In Details.
+
+V59:
+- Photo Audit Edit KM / Deduct / Reject are staged locally and do not reload the filtered audit.
+- Save Changes commits staged audit changes to Google Sheets in one batch.
+- Select All + Approve Selected first saves staged changes, then approves and removes approved rows from the current audit view.
+- Config column H Vehicle IDs are mapped to the Driver in column B on the same row.
+- Vehicle dropdown updates automatically when the Start Trip Driver changes.

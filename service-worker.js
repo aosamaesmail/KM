@@ -1,4 +1,4 @@
-const CACHE = 'telecomax-km-v58';
+const CACHE = 'telecomax-km-v59';
 const ASSETS = ['./index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
