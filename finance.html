@@ -140,6 +140,69 @@ function render(totalMatched){
   applyPhotos();
 }
 
+
+$('apply').onclick=loadTrips;
+$('refreshBtn').onclick=loadTrips;
+$('clear').onclick=()=>{
+  $('engineer').value='';$('driver').value='';$('project').value='';$('month').value='';
+  $('paidBy').value='';$('auditStatus').value='Pending';loadTrips();
+};
+
+let auditDialogResolve=null;
+function auditDialog(title,text,fieldsHtml){
+  const bg=$('auditDialogBg');
+  $('auditDialogTitle').textContent=title;
+  $('auditDialogText').textContent=text||'';
+  $('auditDialogFields').innerHTML=fieldsHtml||'';
+  bg.classList.add('open');
+  return new Promise(resolve=>auditDialogResolve=resolve);
+}
+function closeAuditDialog(value){
+  const bg=$('auditDialogBg'); if(bg) bg.classList.remove('open');
+  if(auditDialogResolve){const r=auditDialogResolve;auditDialogResolve=null;r(value)}
+}
+document.addEventListener('click',e=>{
+  if(e.target && e.target.id==='auditDialogCancel') closeAuditDialog(null);
+  if(e.target && e.target.id==='auditDialogConfirm'){
+    const vals={};
+    $('auditDialogFields').querySelectorAll('[data-dlg]').forEach(x=>vals[x.dataset.dlg]=x.value);
+    closeAuditDialog(vals);
+  }
+  if(e.target && e.target.id==='auditDialogBg') closeAuditDialog(null);
+});
+
+const stagedAudit={};
+function stagedCount(){return Object.keys(stagedAudit).length}
+function updatePendingLabel(){$('pendingChanges').textContent=stagedCount()?stagedCount()+' unsaved change(s)':'No unsaved changes'}
+function stageTrip(id,patch){stagedAudit[id]=Object.assign(stagedAudit[id]||{tripId:id},patch);updatePendingLabel();let c=auditCard(id);if(c)c.dataset.dirty='1'}
+function auditCard(id){return [...document.querySelectorAll('[data-audit-trip]')].find(x=>String(x.dataset.auditTrip)===String(id))||null}
+function markLocalStatus(id,status){
+  let c=auditCard(id);if(!c)return;
+  let b=[...c.querySelectorAll('.audit-actions b')][0];if(b)b.textContent='Finance: '+status;
+  let cb=c.querySelector('.audit-check');if(cb&&status==='Rejected'){cb.checked=false;cb.disabled=true}
+}
+async function saveStagedAudit(showToast=true){
+ const updates=Object.values(stagedAudit);
+ if(!updates.length){if(showToast)toast('No changes to save');return true}
+ try{
+   let r=await post('financeSaveAuditBatch',{updates});if(!r.ok)throw new Error(r.error||'Save failed');
+   Object.keys(stagedAudit).forEach(k=>delete stagedAudit[k]);
+   document.querySelectorAll('[data-dirty="1"]').forEach(c=>delete c.dataset.dirty);
+   updatePendingLabel();if(showToast)toast('Changes saved');return true
+ }catch(e){console.error(e);toast('Could not save changes: '+(e.message||'server error'));return false}
+}
+$('selectAllAudit').onclick=()=>document.querySelectorAll('.audit-check:not(:disabled)').forEach(x=>x.checked=true);
+$('saveAudit').onclick=()=>saveStagedAudit(true);
+$('approveAudit').onclick=async()=>{
+ let ids=[...document.querySelectorAll('.audit-check:checked:not(:disabled)')].map(x=>x.dataset.trip);
+ if(!ids.length)return toast('Select pending trips first');
+ let ok=await saveStagedAudit(false);if(!ok)return;
+ try{
+   let r=await post('financeSaveAuditBatch',{updates:[],approvals:ids});if(!r.ok)throw new Error(r.error||'Approval failed');
+   toast(ids.length+' trips approved');await loadTrips();
+ }catch(e){toast('Could not approve selected trips: '+(e.message||'server error'))}
+};
+
 function applyPhotos(){
   document.querySelectorAll('.audit-photo').forEach(img=>{
     img.onclick=()=>{

@@ -70,8 +70,11 @@ function auditDialog(title,text,fieldsHtml){
   return new Promise(resolve=>auditDialogResolve=resolve);
 }
 function closeAuditDialog(value){$('auditDialogBg').classList.remove('open');if(auditDialogResolve){const r=auditDialogResolve;auditDialogResolve=null;r(value)}}
-$('auditDialogCancel').onclick=()=>closeAuditDialog(null);$('auditDialogBg').onclick=e=>{if(e.target===$('auditDialogBg'))closeAuditDialog(null)};
-$('auditDialogConfirm').onclick=()=>{const vals={};$('auditDialogFields').querySelectorAll('[data-dlg]').forEach(x=>vals[x.dataset.dlg]=x.value);closeAuditDialog(vals)};
+document.addEventListener('click',e=>{
+  if(e.target&&e.target.id==='auditDialogCancel')closeAuditDialog(null);
+  if(e.target&&e.target.id==='auditDialogBg')closeAuditDialog(null);
+  if(e.target&&e.target.id==='auditDialogConfirm'){const vals={};$('auditDialogFields').querySelectorAll('[data-dlg]').forEach(x=>vals[x.dataset.dlg]=x.value);closeAuditDialog(vals)}
+});
 const stagedAudit={};
 function stagedCount(){return Object.keys(stagedAudit).length}
 function updatePendingLabel(){$('pendingChanges').textContent=stagedCount()?stagedCount()+' unsaved change(s)':'No unsaved changes'}
