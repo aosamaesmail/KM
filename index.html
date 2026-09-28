@@ -1776,6 +1776,7 @@ body #defaultDriver{
   </div>
 </div>
 
+<input id="rentGalleryInput" type="file" accept="image/*" style="display:none">
 <div class="modal-bg camera-modal" id="cameraModal" style="display:none;">
   <div class="modal">
     <button class="close" id="closeCamera">✕</button>
@@ -2330,8 +2331,13 @@ function getCurrentPhotoLocation(){
 }
 
 function stopCamera(){
-  if(cameraStream){ cameraStream.getTracks().forEach(t=>t.stop()); cameraStream=null; }
-  $('cameraPreview').srcObject=null;
+  if(cameraStream){ cameraStream.getTracks().forEach(t=>{try{t.stop()}catch(e){}}); cameraStream=null; }
+  const video=$('cameraPreview');
+  try{ video.pause(); }catch(e){}
+  video.srcObject=null;
+  video.removeAttribute('src');
+  video.load();
+  video.onloadedmetadata=null; video.oncanplay=null;
   $('cameraModal').style.display='none';
   activeCameraTarget=null;
 }
@@ -2398,13 +2404,42 @@ async function captureMobilePhoto(){
   }
 }
 
-$('startPhotoBtn').addEventListener('click',()=>openCamera('start','startPhotoBtn','startPhotoMissing',(d)=>startPhoto=d,(p)=>startPhotoLocation=p));
-$('finishPhotoBtn').addEventListener('click',()=>openCamera('finish','finishPhotoBtn','finishPhotoMissing',(d)=>finishPhoto=d,(p)=>finishPhotoLocation=p));
+function currentDriverAllowsGallery(){
+  const d=String($('driver')?.value||'').trim().toLowerCase();
+  return d==='rent' || d==='item transfer';
+}
+function choosePhotoSource(which,btnId,missingId,setter,locationSetter){
+  stopCamera();
+  const goCamera=()=>setTimeout(()=>openCamera(which,btnId,missingId,setter,locationSetter),120);
+  if(!currentDriverAllowsGallery()) return goCamera();
+  const useGallery=confirm('Rent / Item Transfer: Press OK to load a photo from Gallery, or Cancel to use Camera.');
+  if(!useGallery) return goCamera();
+  const input=$('rentGalleryInput');
+  input.value='';
+  input.onchange=async()=>{
+    const f=input.files&&input.files[0];if(!f)return;
+    if(!f.type.startsWith('image/'))return toast('Please choose an image.');
+    const reader=new FileReader();
+    reader.onload=async()=>{setter(reader.result);locationSetter(null);$(missingId).textContent='Photo loaded from gallery';$(missingId).style.display='block';$(missingId).style.color='var(--ok)';$(btnId).textContent='Retake / Replace';$(btnId).classList.add('retake');let im=document.getElementById(which+'Thumb');if(!im){im=document.createElement('img');im.id=which+'Thumb';const row=$(btnId).closest('.km-row');(row||$(btnId)).insertAdjacentElement('afterend',im)}im.src=reader.result;};
+    reader.readAsDataURL(f);
+  };
+  input.click();
+}
+$('startPhotoBtn').addEventListener('click',()=>choosePhotoSource('start','startPhotoBtn','startPhotoMissing',(d)=>startPhoto=d,(p)=>startPhotoLocation=p));
+$('finishPhotoBtn').addEventListener('click',()=>choosePhotoSource('finish','finishPhotoBtn','finishPhotoMissing',(d)=>finishPhoto=d,(p)=>finishPhotoLocation=p));
 $('capturePhotoBtn').addEventListener('click',captureMobilePhoto);
 $('cancelCameraBtn').addEventListener('click',stopCamera);
 $('closeCamera').addEventListener('click',stopCamera);
 $('cameraModal').addEventListener('click',e=>{if(e.target===$('cameraModal'))stopCamera();});
 
+function resetPhotoCaptureState(which){
+  stopCamera();
+  const isStart=which==='start',btn=$(isStart?'startPhotoBtn':'finishPhotoBtn'),miss=$(isStart?'startPhotoMissing':'finishPhotoMissing');
+  if(isStart){startPhoto=null;startPhotoLocation=null}else{finishPhoto=null;finishPhotoLocation=null}
+  if(btn){btn.disabled=false;btn.textContent='Take photo';btn.classList.remove('retake')}
+  if(miss){miss.textContent='Required — photo + GPS location';miss.style.color='var(--danger)'}
+  const im=document.getElementById(which+'Thumb');if(im)im.remove();
+}
 // ---------- open trips (started, not yet finished) ----------
 function getOpenTrips(){ try { return JSON.parse(localStorage.getItem('benzine_open_trips')) || []; } catch(e){ return []; } }
 function setOpenTrips(l){ localStorage.setItem('benzine_open_trips', JSON.stringify(l)); }

@@ -108,7 +108,7 @@ function render(totalMatched){
   $('amount').textContent=trips.reduce((a,t)=>a+num(t.amountSpent),0).toFixed(2)+' EGP';
   $('matched').textContent=totalMatched>trips.length?`(${trips.length} of ${totalMatched})`:`(${trips.length})`;
   if(!trips.length){$('tableWrap').innerHTML='<div class="empty">No trips match these filters.</div>';return}
-  const cards=trips.map(t=>`<article class="audit-card">
+  const cards=trips.map(t=>`<article class="audit-card" data-audit-trip="${esc(t.tripId)}">
     <div class="trip-summary">
       ${summary('Date',esc(t.date)+(t.day?'<br><span class="muted">'+esc(t.day)+'</span>':''))}
       ${summary('Engineer',esc(t.engineer||'—'))}
@@ -149,7 +149,7 @@ const stagedAudit={};
 function stagedCount(){return Object.keys(stagedAudit).length}
 function updatePendingLabel(){$('pendingChanges').textContent=stagedCount()?stagedCount()+' unsaved change(s)':'No unsaved changes'}
 function stageTrip(id,patch){stagedAudit[id]=Object.assign(stagedAudit[id]||{tripId:id},patch);updatePendingLabel();let c=auditCard(id);if(c)c.dataset.dirty='1'}
-function auditCard(id){return document.querySelector('[data-audit-trip="'+CSS.escape(String(id))+'"]')}
+function auditCard(id){return [...document.querySelectorAll('[data-audit-trip]')].find(x=>String(x.dataset.auditTrip)===String(id))||null}
 function markLocalStatus(id,status){let c=auditCard(id);if(!c)return;let b=[...c.querySelectorAll('.audit-actions b')][0];if(b)b.textContent='Finance: '+status;let cb=c.querySelector('.audit-check');if(cb&&status==='Rejected'){cb.checked=false;cb.disabled=true}}
 async function saveStagedAudit(showToast=true){
  const updates=Object.values(stagedAudit);if(!updates.length){if(showToast)toast('No changes to save');return true}
