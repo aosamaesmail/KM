@@ -1349,6 +1349,13 @@ body #defaultDriver{
   }
 }
 
+
+.photo-source-modal{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:10050;display:none;align-items:flex-end;justify-content:center;padding:18px;backdrop-filter:blur(5px)}
+.photo-source-modal.open{display:flex!important}
+.photo-source-box{width:min(100%,460px);background:linear-gradient(180deg,#111426,#090b18);border:1px solid rgba(255,255,255,.12);border-radius:24px;padding:20px;box-shadow:0 24px 70px rgba(0,0,0,.55),0 0 0 1px rgba(209,25,121,.08);color:#fff;margin-bottom:max(8px,env(safe-area-inset-bottom))}
+.photo-source-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:17px}.photo-source-kicker{font-size:11px;font-weight:900;letter-spacing:.16em;color:#ef4fa5;margin-bottom:5px}.photo-source-head h3{margin:0;font-size:22px}.photo-source-head p{margin:5px 0 0;color:#9298aa;font-size:14px}.photo-source-x{width:38px;height:38px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:#202231;color:#fff;font-size:26px;line-height:1;cursor:pointer}
+.photo-source-actions{display:grid;gap:11px}.photo-source-choice{width:100%;display:grid;grid-template-columns:48px 1fr 24px;align-items:center;gap:12px;text-align:left;padding:14px;border-radius:17px;border:1px solid rgba(255,255,255,.1);background:#171a28;color:#fff;cursor:pointer;min-height:76px}.photo-source-choice:active{transform:scale(.99);background:#202438}.photo-source-icon{display:grid;place-items:center;width:48px;height:48px;border-radius:14px;background:rgba(210,24,119,.16);font-size:24px}.photo-source-choice b{display:block;font-size:17px;margin-bottom:3px}.photo-source-choice small{display:block;color:#9ba1b2;font-size:13px}.photo-source-arrow{font-size:30px;color:#e33992;text-align:right}.photo-source-cancel{width:100%;margin-top:12px;padding:14px;border:0;border-radius:15px;background:#292c38;color:#fff;font-weight:800;font-size:15px;cursor:pointer}
+@media(min-width:700px){.photo-source-modal{align-items:center}.photo-source-box{margin-bottom:0}}
 </style>
 </head>
 <body>
@@ -1773,6 +1780,33 @@ body #defaultDriver{
     <h2 id="resultTitle" style="text-align:center;">Success</h2>
     <p id="resultMessage" style="text-align:center;color:var(--muted);"></p>
     <button type="button" class="save-btn" id="resultOkBtn">OK</button>
+  </div>
+</div>
+
+
+<div class="modal-bg photo-source-modal" id="photoSourceModal" style="display:none">
+  <div class="photo-source-box" role="dialog" aria-modal="true" aria-labelledby="photoSourceTitle">
+    <div class="photo-source-head">
+      <div>
+        <div class="photo-source-kicker">PHOTO</div>
+        <h3 id="photoSourceTitle">Choose Photo Source</h3>
+        <p>How would you like to add this photo?</p>
+      </div>
+      <button type="button" class="photo-source-x" id="photoSourceX" aria-label="Close">×</button>
+    </div>
+    <div class="photo-source-actions">
+      <button type="button" class="photo-source-choice" id="photoSourceCamera">
+        <span class="photo-source-icon">📷</span>
+        <span><b>Camera</b><small>Take a new photo now</small></span>
+        <span class="photo-source-arrow">›</span>
+      </button>
+      <button type="button" class="photo-source-choice" id="photoSourceGallery">
+        <span class="photo-source-icon">🖼️</span>
+        <span><b>Gallery</b><small>Choose an existing photo</small></span>
+        <span class="photo-source-arrow">›</span>
+      </button>
+    </div>
+    <button type="button" class="photo-source-cancel" id="photoSourceCancel">Cancel</button>
   </div>
 </div>
 
@@ -2408,23 +2442,65 @@ function currentDriverAllowsGallery(){
   const d=String($('driver')?.value||'').trim().toLowerCase();
   return d==='rent' || d==='item transfer';
 }
-function choosePhotoSource(which,btnId,missingId,setter,locationSetter){
-  stopCamera();
-  const goCamera=()=>setTimeout(()=>openCamera(which,btnId,missingId,setter,locationSetter),120);
-  if(!currentDriverAllowsGallery()) return goCamera();
-  const useGallery=confirm('Rent / Item Transfer: Press OK to load a photo from Gallery, or Cancel to use Camera.');
-  if(!useGallery) return goCamera();
+let pendingPhotoSource=null;
+function closePhotoSourceDialog(){
+  const m=$('photoSourceModal');
+  if(m){m.classList.remove('open');m.style.display='none'}
+  pendingPhotoSource=null;
+}
+function openPhotoSourceDialog(config){
+  pendingPhotoSource=config;
+  const m=$('photoSourceModal');
+  m.style.display='flex';
+  requestAnimationFrame(()=>m.classList.add('open'));
+}
+function openGalleryForPending(){
+  const cfg=pendingPhotoSource;if(!cfg)return;
+  closePhotoSourceDialog();
   const input=$('rentGalleryInput');
   input.value='';
-  input.onchange=async()=>{
+  input.onchange=()=>{
     const f=input.files&&input.files[0];if(!f)return;
     if(!f.type.startsWith('image/'))return toast('Please choose an image.');
     const reader=new FileReader();
-    reader.onload=async()=>{setter(reader.result);locationSetter(null);$(missingId).textContent='Photo loaded from gallery';$(missingId).style.display='block';$(missingId).style.color='var(--ok)';$(btnId).textContent='Retake / Replace';$(btnId).classList.add('retake');let im=document.getElementById(which+'Thumb');if(!im){im=document.createElement('img');im.id=which+'Thumb';const row=$(btnId).closest('.km-row');(row||$(btnId)).insertAdjacentElement('afterend',im)}im.src=reader.result;};
+    reader.onload=()=>{
+      cfg.setter(reader.result);
+      cfg.locationSetter(null);
+      $(cfg.missingId).textContent='Photo loaded from gallery';
+      $(cfg.missingId).style.display='block';
+      $(cfg.missingId).style.color='var(--ok)';
+      $(cfg.btnId).textContent='Retake / Replace';
+      $(cfg.btnId).classList.add('retake');
+      let im=document.getElementById(cfg.which+'Thumb');
+      if(!im){
+        im=document.createElement('img');
+        im.id=cfg.which+'Thumb';
+        const row=$(cfg.btnId).closest('.km-row');
+        (row||$(cfg.btnId)).insertAdjacentElement('afterend',im);
+      }
+      im.src=reader.result;
+    };
     reader.readAsDataURL(f);
   };
   input.click();
 }
+function choosePhotoSource(which,btnId,missingId,setter,locationSetter){
+  stopCamera();
+  const cfg={which,btnId,missingId,setter,locationSetter};
+  if(!currentDriverAllowsGallery()){
+    return setTimeout(()=>openCamera(which,btnId,missingId,setter,locationSetter),120);
+  }
+  openPhotoSourceDialog(cfg);
+}
+$('photoSourceCamera').onclick=()=>{
+  const cfg=pendingPhotoSource;if(!cfg)return;
+  closePhotoSourceDialog();
+  setTimeout(()=>openCamera(cfg.which,cfg.btnId,cfg.missingId,cfg.setter,cfg.locationSetter),120);
+};
+$('photoSourceGallery').onclick=openGalleryForPending;
+$('photoSourceCancel').onclick=closePhotoSourceDialog;
+$('photoSourceX').onclick=closePhotoSourceDialog;
+$('photoSourceModal').addEventListener('click',e=>{if(e.target===$('photoSourceModal'))closePhotoSourceDialog()});
 $('startPhotoBtn').addEventListener('click',()=>choosePhotoSource('start','startPhotoBtn','startPhotoMissing',(d)=>startPhoto=d,(p)=>startPhotoLocation=p));
 $('finishPhotoBtn').addEventListener('click',()=>choosePhotoSource('finish','finishPhotoBtn','finishPhotoMissing',(d)=>finishPhoto=d,(p)=>finishPhotoLocation=p));
 $('capturePhotoBtn').addEventListener('click',captureMobilePhoto);
