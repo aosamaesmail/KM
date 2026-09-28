@@ -2810,6 +2810,12 @@ async function flushQueue(){
       }
       upsertLogEntry(item.tripId, { engineer: item.engineer, display: item.display, status: item.action === 'finish' ? 'synced' : 'awaiting' });
     } catch (e) {
+      // A previous Start may already have been committed even if its response was lost.
+      // Confirm by Trip ID before keeping it in the retry queue.
+      if(item.action==='start' && await confirmTripCommitted(item.tripId,'start')){
+        upsertLogEntry(item.tripId,{engineer:item.engineer,display:item.display,status:'awaiting'});
+        continue;
+      }
       remaining.push(item);
       if (e.message === 'invalid-pin') {
         upsertLogEntry(item.tripId, { engineer: item.engineer, display: item.display, status: 'error' });
