@@ -7,7 +7,16 @@ body{overflow-x:hidden}header{padding:11px 12px}.brand{font-size:17px}main{paddi
 .sso-status{position:fixed;inset:0;z-index:999999;background:rgba(2,8,23,.92);display:flex;align-items:center;justify-content:center;padding:24px}
 .sso-status-box{max-width:430px;width:100%;padding:24px;border-radius:20px;background:#0b1020;border:1px solid rgba(255,255,255,.15);color:#fff;text-align:center}
 .sso-status-box b{display:block;font-size:20px;margin-bottom:8px}.sso-status-box span{color:#aab4c4}
-</style></head><body><header><div class="brand"><span>TELECOMAX</span> · Allowance Audit</div><button id="logout" class="btn ghost" style="display:none">Logout</button></header><main>
+</style><script>
+if(location.hash.indexOf('sso=')>=0){
+ document.documentElement.classList.add('portal-sso-pending');
+}
+</script>
+<style>
+html.portal-sso-pending body{visibility:hidden!important}
+html.portal-sso-pending body::before{content:'Signing you in…';visibility:visible!important;position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;background:#020817;color:#fff;font:700 20px Arial,sans-serif}
+</style>
+</head><body><header><div class="brand"><span>TELECOMAX</span> · Allowance Audit</div><button id="logout" class="btn ghost" style="display:none">Logout</button></header><main>
 <section id="login" class="card login"><h2>PM Login</h2><p class="note">Use your management Name + 6-digit PIN.</p><div class="field"><label>Name</label><input id="name" autocomplete="username" placeholder="Enter your name"></div><br><div class="field"><label>PIN</label><input id="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password" placeholder="6-digit PIN"></div><br><button id="loginBtn" class="btn primary">Login</button></section>
 <section id="app" style="display:none"><div class="card"><div class="section-title"><div><h2 style="margin:0">Monthly Allowance Audit</h2></div></div><br><div class="filters">
 <div class="field"><label>Month</label><input id="month" type="month"></div>
@@ -175,20 +184,26 @@ $('exportExcel').onclick=()=>{
 $('apply').onclick=load;$('clear').onclick=()=>{$('engineer').value='';$('driver').value='';$('project').value='';$('status').value='';refreshAllCombos();load()};document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');typeView=b.dataset.type;render()});
 if(managementToken){$('name').value=managementName;post('allowanceData',{}).then(()=>auth(true)).catch(()=>{sessionStorage.removeItem('tmx_km_pm_token');sessionStorage.removeItem('tmx_km_pm_name');managementToken='';managementName='';auth(false)});}else auth(false);
 </script><script>
-function portalSSOStatus_(title,detail){
+function portalSSOStatus_(title,detail){ document.documentElement.classList.remove('portal-sso-pending');
  let x=document.getElementById('portalSsoStatus');
  if(!x){x=document.createElement('div');x.id='portalSsoStatus';x.className='sso-status';document.body.appendChild(x)}
  x.innerHTML='<div class="sso-status-box"><b>'+title+'</b><span>'+detail+'</span></div>';
 }
 (async function portalAutoLogin(){
  const m=location.hash.match(/(?:^|[&#])sso=([^&]+)/); if(!m)return;
- const portalToken=decodeURIComponent(m[1]); portalSSOStatus_('Signing you in…','Using your Telecomax Operations session.'); history.replaceState(null,'',location.pathname+location.search);
+ const portalToken=decodeURIComponent(m[1]);
+ portalSSOStatus_('Signing you in…','Using your Telecomax Operations session.');
+ history.replaceState(null,'',location.pathname+location.search);
  try{
   const r=await fetch(URL,{method:'POST',body:JSON.stringify({action:'portalSSO',portalToken,portalRole:'PM'})});
-  const d=await r.json(); if(!d.ok||!d.token){portalSSOStatus_('Single Sign-On failed',d.error||'The module rejected the portal session.');return;}
+  const d=await r.json();
+  if(!d.ok||!d.token){portalSSOStatus_('Single Sign-On failed',d.error||'The KM module rejected the portal session.');return;}
   managementToken=d.token; managementName=d.name||'';
-  sessionStorage.setItem('tmx_km_pm_token',managementToken); sessionStorage.setItem('tmx_km_pm_name',managementName);
-  location.reload();
+  sessionStorage.setItem('tmx_km_pm_token',managementToken);
+  sessionStorage.setItem('tmx_km_pm_name',managementName);
+  const x=document.getElementById('portalSsoStatus'); if(x)x.remove();
+  $('name').value=managementName;
+  auth(true);
  }catch(e){portalSSOStatus_('Single Sign-On connection error',String(e&&e.message||e));console.error('Portal SSO failed',e)}
 })();
 </script>
