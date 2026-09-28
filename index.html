@@ -2720,7 +2720,10 @@ function recalcFinish(){
   const start = trip ? parseFloat(trip.startKm) : NaN;
   const finish = parseFloat($('finishKm').value);
   const rate = trip && isFinite(parseFloat(trip.rate)) ? parseFloat(trip.rate) : 0;
-  const normalLastForthBack = trip && isFinite(parseFloat(trip.lastForthBack)) ? parseFloat(trip.lastForthBack) : 0;
+  // Backend is the source of truth. Defensive 40 KM cap prevents any stale
+  // legacy/local value from ever displaying above the agreed F&B maximum.
+  const serverLastForthBack = trip && isFinite(parseFloat(trip.lastForthBack)) ? parseFloat(trip.lastForthBack) : 0;
+  const normalLastForthBack = Math.max(0, Math.min(40, serverLastForthBack));
   const lastForthBack = $('overNightStay').checked ? 0 : normalLastForthBack;
 
   // Today's Trip = Finish odometer - Start odometer.
