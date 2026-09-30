@@ -1370,6 +1370,21 @@ if(location.hash.indexOf('sso=')>=0){
 html.portal-sso-pending body{visibility:hidden!important}
 html.portal-sso-pending body::before{content:'Signing you in…';visibility:visible!important;position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;background:#020817;color:#fff;font:700 20px Arial,sans-serif}
 </style>
+
+<style id="taskLocationV8320">
+.task-location-card{margin:16px 0;padding:16px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(255,255,255,.035)}
+.task-location-head{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.task-location-title{font-weight:800;font-size:16px;margin-bottom:4px}
+.task-location-btn{width:auto!important;min-height:46px;padding:0 16px!important;border:1px solid rgba(236,0,140,.55)!important;background:#ec008c!important;color:#fff!important;border-radius:12px!important;font-weight:800!important}
+.task-location-btn:disabled{opacity:.55;cursor:not-allowed}
+.task-location-status{margin-top:12px;padding:11px 12px;border-radius:11px;background:#0b1725;border:1px solid #263b55;color:#b9c5d6;font-size:13px}
+.task-location-status.ok{color:#b8f5ce;border-color:rgba(43,181,115,.45);background:rgba(43,181,115,.08)}
+.task-location-list{display:grid;gap:8px;margin-top:10px}
+.task-location-item{display:flex;justify-content:space-between;gap:12px;padding:9px 11px;border-radius:10px;background:#0b1725;border:1px solid #263b55}
+.task-location-item strong{color:#fff}.task-location-item span{color:#9aa9bd;font-size:12px}
+@media(max-width:650px){.task-location-btn{width:100%!important}.task-location-head{display:block}.task-location-btn{margin-top:12px}}
+</style>
+
 </head>
 <body>
 
@@ -1496,15 +1511,7 @@ html.portal-sso-pending body::before{content:'Signing you in…';visibility:visi
           <input type="text" id="day" disabled>
         </div>
       </div>
-
-      <label data-i18n="Area *">Area *</label>
-      <div class="search-select" id="areaSearchWrap">
-        <input type="text" id="area" name="tmx_area_entry" placeholder="Search or select city" autocomplete="off" aria-autocomplete="list" data-lpignore="true" autocapitalize="words" autocorrect="off" spellcheck="false" required>
-        <div class="search-options" id="areaOptions"></div>
-      </div>
-      <div class="hint">Select a registered city from the Area List.</div>
-
-      <label data-i18n="Task *">Task *</label>
+<label data-i18n="Task *">Task *</label>
       <input type="text" id="task" name="tmx_task_entry" placeholder="e.g. Travel to site / complaint" autocomplete="off" aria-autocomplete="none" data-lpignore="true" autocapitalize="sentences" autocorrect="off" spellcheck="false" required>
 
       <label data-i18n="Start KM *">Start KM *</label>
@@ -1538,6 +1545,18 @@ html.portal-sso-pending body::before{content:'Signing you in…';visibility:visi
         </div>
       </div>
       <div class="photo-missing" id="finishPhotoMissing">Required — photo of the dashboard right now</div>
+
+      <div class="task-location-card" id="taskLocationCard">
+        <div class="task-location-head">
+          <div>
+            <div class="task-location-title">Task Location</div>
+            <div class="hint">When you reach a task destination, submit your current location. The governorate is detected automatically.</div>
+          </div>
+          <button type="button" class="task-location-btn" id="submitTaskLocationBtn">📍 Submit Task Location</button>
+        </div>
+        <div class="task-location-status" id="taskLocationStatus">Select an open trip, then submit the location when you reach the task destination.</div>
+        <div class="task-location-list" id="taskLocationList"></div>
+      </div>
 
       <div>
         <label data-i18n="Static">Static</label>
@@ -2268,7 +2287,7 @@ function populateSearchInput(inputEl, optionsEl, list, currentValue){
 }
 
 function populateVehicleList(list,currentValue){ populateSearchInput($('vehicle'),$('vehicleOptions'),list,currentValue); }
-function populateAreaList(list,currentValue){ populateSearchInput($('area'),$('areaOptions'),list,currentValue); }
+function populateAreaList(list,currentValue){ const a=$('area'),o=$('areaOptions'); if(a&&o)populateSearchInput(a,o,list,currentValue); }
 function syncVehicleForSelectedDriver(){
   const c=getCachedLists(),dk=String($('driver').value||'').trim().toLowerCase();
   const vehicles=(c.driverVehicles||{})[dk]||[];
@@ -2333,6 +2352,7 @@ function populateSimpleSelect(selectEl, list, currentValue, placeholder){
 
 
 function validAreaClient(){
+  if(!$('area'))return '';
   const typed=$('area').value.trim().toLowerCase(), list=(getCachedLists().areas||[]);
   return list.find(a=>String(a).trim().toLowerCase()===typed)||'';
 }
@@ -2628,7 +2648,7 @@ async function loadOpenTripsForFinish(){
   merged.forEach(t => {
     const o = document.createElement('option');
     o.value = t.tripId;
-    o.textContent = `${t.area||'—'} · ${t.date} (Start KM: ${t.startKm})`;
+    o.textContent = `${t.task||'Task'} · ${t.date} (Start KM: ${t.startKm})`;
     sel.appendChild(o);
   });
   $('noOpenTrips').style.display = merged.length ? 'none' : 'block';
@@ -2711,6 +2731,70 @@ checkOverdueTrips();
 setInterval(checkOverdueTrips, 5 * 60 * 1000); // re-check every 5 min while app is open
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkOverdueTrips(); });
 updateLockState();
+
+function taskLocationsForTrip(trip){
+  if(!trip)return [];
+  if(Array.isArray(trip.taskLocations))return trip.taskLocations;
+  try{return JSON.parse(trip.taskLocationsJson||'[]')||[]}catch(e){return []}
+}
+function renderTaskLocations(trip){
+  const list=$('taskLocationList'),status=$('taskLocationStatus'),btn=$('submitTaskLocationBtn');
+  if(!list||!status||!btn)return;
+  list.innerHTML='';
+  if(!trip){
+    btn.disabled=true;status.className='task-location-status';
+    status.textContent='Select an open trip, then submit the location when you reach the task destination.';
+    return;
+  }
+  btn.disabled=false;
+  const locations=taskLocationsForTrip(trip);
+  if(!locations.length){
+    status.className='task-location-status';
+    status.textContent='No task location submitted yet for this trip.';
+    return;
+  }
+  const latest=locations[locations.length-1];
+  status.className='task-location-status ok';
+  status.textContent='✓ Latest task location: '+(latest.governorate||'Detected')+(latest.submittedAt?' · '+new Date(latest.submittedAt).toLocaleString():'');
+  locations.forEach((x,i)=>{
+    const d=document.createElement('div');d.className='task-location-item';
+    d.innerHTML='<strong>'+escapeHtml(x.governorate||'Task Location')+'</strong><span>'+(x.submittedAt?new Date(x.submittedAt).toLocaleString():'')+'</span>';
+    list.appendChild(d);
+  });
+}
+async function submitCurrentTaskLocation(){
+  const tripId=$('openTripSelect').value;
+  const trip=openTripsCache.find(t=>String(t.tripId)===String(tripId));
+  if(!trip)return toast('Select which trip this task location belongs to');
+  if(!navigator.geolocation)return toast('Location is not supported on this phone/browser');
+  const btn=$('submitTaskLocationBtn'),status=$('taskLocationStatus');
+  btn.disabled=true;btn.textContent='Getting location…';
+  status.className='task-location-status';status.textContent='Getting your current GPS location…';
+  try{
+    const loc=await getCurrentPhotoLocation();
+    btn.textContent='Detecting governorate…';
+    status.textContent='GPS captured. Detecting governorate…';
+    const data=await trySend({action:'taskLocation',tripId,latitude:loc.latitude,longitude:loc.longitude,accuracy:loc.accuracy||'',submittedAt:new Date().toISOString()});
+    if(!data.ok)throw new Error(data.error||'location-submit-failed');
+    const item={governorate:data.governorate,latitude:loc.latitude,longitude:loc.longitude,accuracy:loc.accuracy||'',submittedAt:data.submittedAt||new Date().toISOString()};
+    trip.taskLocations=Array.isArray(data.taskLocations)?data.taskLocations:[...taskLocationsForTrip(trip),item];
+    trip.taskGovernorates=(data.taskGovernorates||trip.taskLocations.map(x=>x.governorate).filter(Boolean).join(', '));
+    // Keep the same trip updated in localStorage too, if it exists there.
+    const local=getOpenTrips(),idx=local.findIndex(t=>String(t.tripId)===String(tripId));
+    if(idx>=0){local[idx]={...local[idx],taskLocations:trip.taskLocations,taskGovernorates:trip.taskGovernorates};setOpenTrips(local)}
+    renderTaskLocations(trip);
+    toast('📍 Task location submitted: '+data.governorate);
+  }catch(err){
+    console.error(err);
+    status.className='task-location-status';
+    status.textContent='Location was not submitted. Check Location permission and internet connection, then try again.';
+    toast('📍 Could not submit task location. Please try again at the task destination.');
+  }finally{
+    btn.disabled=false;btn.textContent='📍 Submit Task Location';
+  }
+}
+$('submitTaskLocationBtn').addEventListener('click',submitCurrentTaskLocation);
+
 $('openTripSelect').addEventListener('change', () => {
   if($('openTripSelect').value) $('openTripSelect').dataset.preferredTripId=$('openTripSelect').value;
   const trip = openTripsCache.find(t => t.tripId === $('openTripSelect').value);
@@ -2720,6 +2804,7 @@ $('openTripSelect').addEventListener('change', () => {
   } else {
     $('tripSummary').style.display='none';
   }
+  renderTaskLocations(trip||null);
   recalcFinish();
 });
 
@@ -3396,9 +3481,6 @@ $('startForm').addEventListener('submit', async (e) => {
   const engineer = settings.engineer;
   const start = $('startKm').value;
   setTodayDateField();
-  if (!$('area').value.trim()) return toast('Area is required');
-  const canonicalArea=validAreaClient();
-  if (!canonicalArea) return toast('❌ Please select a valid Area from the registered Area List');
   if (!$('task').value.trim()) return toast('Task is required');
   if (!start) return toast('Start KM is required');
   if (!startPhoto) { $('startPhotoMissing').style.display='block'; return toast('Start KM photo is required'); }
@@ -3418,7 +3500,7 @@ $('startForm').addEventListener('submit', async (e) => {
   const trip = {
     tripId, engineer: canonicalEngineer, driver: canonicalDriver, vehicle: canonicalVehicle, projectName: settings.projectName || '',
     date: $('date').value, day: $('day').value,
-    area: canonicalArea, task: $('task').value.trim(),
+    area: '', task: $('task').value.trim(),
     startKm: parseFloat(start), startedAt: new Date().toISOString(),
     rate: 2.225,
     lastForthBack: 0,
@@ -3426,7 +3508,7 @@ $('startForm').addEventListener('submit', async (e) => {
     startLongitude: startPhotoLocation ? startPhotoLocation.longitude : '',
   };
   const payload = { action: 'start', ...trip, startPhoto, startLatitude: startPhotoLocation ? startPhotoLocation.latitude : '', startLongitude: startPhotoLocation ? startPhotoLocation.longitude : '' };
-  const display = `${trip.engineer} · ${trip.area||'—'} · Start ${trip.startKm}km`;
+  const display = `${trip.engineer} · ${trip.task||'Task'} · Start ${trip.startKm}km`;
 
   // Do not switch to Finish yet. The server must first calculate and return the
   // final Forth & Back value so the engineer never sees a stale/old value.
@@ -3452,7 +3534,7 @@ $('startForm').addEventListener('submit', async (e) => {
     }
     upsertLogEntry(tripId, { engineer, display, status: 'awaiting' });
     toast('✅ Trip started — submit Finish later today');
-    showResultDialog('success', `${trip.area} - ${trip.task} - ${trip.startKm} KM`);
+    showResultDialog('success', `${trip.task} - ${trip.startKm} KM`);
   } catch (err) {
     // A fetch/read error does not necessarily mean the write failed. Apps Script can
     // successfully append the row and the phone can still fail to receive/parse the reply.
@@ -3460,7 +3542,7 @@ $('startForm').addEventListener('submit', async (e) => {
     if(committed){
       upsertLogEntry(tripId,{engineer,display,status:'awaiting'});
       toast('✅ Trip started and confirmed in Google Sheets');
-      showResultDialog('success',`${trip.area} - ${trip.task} - ${trip.startKm} KM`);
+      showResultDialog('success',`${trip.task} - ${trip.startKm} KM`);
     } else {
     const classified = classifySendError(err);
     if (classified.kind === 'invalid-pin' || classified.kind === 'invalid-engineer-name' || classified.kind === 'invalid-driver-name') {
@@ -3499,7 +3581,7 @@ $('startForm').addEventListener('submit', async (e) => {
 });
 
 function resetStartForm(){
-  $('area').value=''; $('task').value=''; $('startKm').value='';
+  $('task').value=''; $('startKm').value='';
   startPhoto = null;
   startPhotoLocation = null;
   const thumb = document.getElementById('startThumb'); if (thumb) thumb.remove();
@@ -3536,7 +3618,7 @@ $('finishForm').addEventListener('submit', async (e) => {
     overNightStay: $('overNightStay').checked,
     finishPhoto, startLatitude: trip.startLatitude || '', startLongitude: trip.startLongitude || '', finishLatitude: finishPhotoLocation ? finishPhotoLocation.latitude : '', finishLongitude: finishPhotoLocation ? finishPhotoLocation.longitude : '', finishedAt: new Date().toISOString(),
   };
-  const display = `${trip.engineer} · ${trip.area||'—'} · ${$('totalOut').textContent}km total`;
+  const display = `${trip.engineer} · ${trip.task||'Task'} · ${$('totalOut').textContent}km total`;
   const engineerForLog = trip.engineer || settings.engineer;
 
   // remove from open list — engineer is done with it regardless of sync outcome
