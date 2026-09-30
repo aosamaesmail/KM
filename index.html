@@ -2758,8 +2758,11 @@ function renderTaskLocations(trip){
   status.textContent='✓ Latest task location: '+(latest.governorate||'Detected')+(latest.submittedAt?' · '+new Date(latest.submittedAt).toLocaleString():'');
   locations.forEach((x,i)=>{
     const d=document.createElement('div');d.className='task-location-item';
-    d.innerHTML='<strong>'+escapeHtml(x.governorate||'Task Location')+'</strong><span>'+(x.submittedAt?new Date(x.submittedAt).toLocaleString():'')+'</span>';
-    list.appendChild(d);
+    const gov=document.createElement('strong');
+    gov.textContent=x.governorate||'Task Location';
+    const when=document.createElement('span');
+    when.textContent=x.submittedAt?new Date(x.submittedAt).toLocaleString():'';
+    d.appendChild(gov);d.appendChild(when);list.appendChild(d);
   });
 }
 async function submitCurrentTaskLocation(){
@@ -2770,12 +2773,14 @@ async function submitCurrentTaskLocation(){
   const btn=$('submitTaskLocationBtn'),status=$('taskLocationStatus');
   btn.disabled=true;btn.textContent='Getting location…';
   status.className='task-location-status';status.textContent='Getting your current GPS location…';
+  let serverSaved=false;
   try{
     const loc=await getCurrentPhotoLocation();
     btn.textContent='Detecting governorate…';
     status.textContent='GPS captured. Detecting governorate…';
     const data=await trySend({action:'taskLocation',tripId,latitude:loc.latitude,longitude:loc.longitude,accuracy:loc.accuracy||'',submittedAt:new Date().toISOString()});
     if(!data.ok)throw new Error(data.error||'location-submit-failed');
+    serverSaved=true;
     const item={governorate:data.governorate,latitude:loc.latitude,longitude:loc.longitude,accuracy:loc.accuracy||'',submittedAt:data.submittedAt||new Date().toISOString()};
     trip.taskLocations=Array.isArray(data.taskLocations)?data.taskLocations:[...taskLocationsForTrip(trip),item];
     trip.taskGovernorates=(data.taskGovernorates||trip.taskLocations.map(x=>x.governorate).filter(Boolean).join(', '));
@@ -2786,9 +2791,15 @@ async function submitCurrentTaskLocation(){
     toast('📍 Task location submitted: '+data.governorate);
   }catch(err){
     console.error(err);
-    status.className='task-location-status';
-    status.textContent='Location was not submitted. Check Location permission and internet connection, then try again.';
-    toast('📍 Could not submit task location. Please try again at the task destination.');
+    if(serverSaved){
+      status.className='task-location-status ok';
+      status.textContent='✓ Task location was submitted successfully. Refreshing the trip will show the saved location.';
+      toast('📍 Task location submitted successfully.');
+    }else{
+      status.className='task-location-status';
+      status.textContent='Location was not submitted. Check Location permission and internet connection, then try again.';
+      toast('📍 Could not submit task location. Please try again at the task destination.');
+    }
   }finally{
     btn.disabled=false;btn.textContent='📍 Submit Task Location';
   }
