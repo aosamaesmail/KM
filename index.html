@@ -1368,7 +1368,7 @@ if(location.hash.indexOf('sso=')>=0){
 </script>
 <style>
 html.portal-sso-pending body{visibility:hidden!important}
-html.portal-sso-pending body::before{content:'Signing you in…';visibility:visible!important;position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;background:#020817;color:#fff;font:700 20px Arial,sans-serif}
+html.portal-sso-pending body::before{content:'';visibility:visible!important;position:fixed;inset:0;z-index:2147483647;display:block;background:#020817}
 </style>
 
 <style id="taskLocationV8320">
@@ -3829,7 +3829,7 @@ function portalSSOStatus_(title,detail){ document.documentElement.classList.remo
 }
 (async function portalAutoLogin(){
  const m=location.hash.match(/(?:^|[&#])sso=([^&]+)/); if(!m)return;
- const portalToken=decodeURIComponent(m[1]); portalSSOStatus_('Signing you in…','Using your Telecomax Operations session.'); history.replaceState(null,'',location.pathname+location.search);
+ const portalToken=decodeURIComponent(m[1]); history.replaceState(null,'',location.pathname+location.search);
  try{
   const r=await fetch(DEFAULT_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'portalSSO',portalToken,portalRole:'Engineer'})});
   const d=await r.json(); if(!d.ok||!d.engineerToken){portalSSOStatus_('Single Sign-On failed',d.error||'The KM module rejected the portal session.');return;}
