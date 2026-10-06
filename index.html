@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><script id="v8330Boot">(function(){if(sessionStorage.getItem("tmx_km_engineer_token")||location.hash.indexOf("sso=")>=0)document.documentElement.classList.add("tmx-trip-state-check")})();</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>Telecomax KM Tracker</title>
@@ -1385,7 +1385,7 @@ html.portal-sso-pending body::before{content:'';visibility:visible!important;pos
 @media(max-width:650px){.task-location-btn{width:100%!important}.task-location-head{display:block}.task-location-btn{margin-top:12px}}
 </style>
 
-</head>
+<style id="v8330NoFlash">html.tmx-trip-state-check #startSection,html.tmx-trip-state-check #finishSection,html.tmx-trip-state-check #tabStartBtn,html.tmx-trip-state-check #tabFinishBtn{visibility:hidden!important}</style></head>
 <body>
 
 <div id="engineerLoginBuffer" class="login-buffer-overlay" aria-hidden="true">
@@ -2221,7 +2221,8 @@ function localOpenTripsForCurrentUser(){
 let deferFinishNavigation = false;
 
 async function syncOpenTripStateFromServer(){
-  if(!settings.engineer || !engineerSessionToken){ updateLockState(); return false; }
+  if(!settings.engineer || !engineerSessionToken){document.documentElement.classList.remove('tmx-trip-state-check');updateLockState();return false;}
+  document.documentElement.classList.add('tmx-trip-state-check');
   try{
     const data=await trySend({action:'openTrips'});
     const serverTrips=Array.isArray(data.trips)?data.trips:[];
@@ -2233,13 +2234,16 @@ async function syncOpenTripStateFromServer(){
     if(serverTrips.length){
       if($('startSection').classList.contains('active')) showTab('finish');
       await loadOpenTripsForFinish();
+      document.documentElement.classList.remove('tmx-trip-state-check');
       return true;
     }
     if($('finishSection').classList.contains('active')) showTab('start');
+    document.documentElement.classList.remove('tmx-trip-state-check');
     return false;
   }catch(e){
     // If offline, retain the existing local-device fallback.
     updateLockState();
+    document.documentElement.classList.remove('tmx-trip-state-check');
     return localOpenTripsForCurrentUser().length>0;
   }
 }
