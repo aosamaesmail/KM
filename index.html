@@ -2080,6 +2080,14 @@ $('switchUserBtn').onclick = () => { $('settingsModal').style.display='flex'; };
 $('loginBtn').onclick = async () => {
   const loggedIn = !!(settings.engineer && engineerSessionToken);
   if (loggedIn){
+    // Unified engineer logout: end KM session and the Portal session, then return to Portal login.
+    try{
+      sessionStorage.clear();
+      localStorage.removeItem('tmx_portal_user_persist');
+      localStorage.removeItem('tmx_portal_user');
+    }catch(_e){}
+    location.replace('https://tmxportal.vercel.app/?logout=1');
+    return;
     delete settings.engineer; delete settings.pin; delete settings.projectName; delete settings.defaultDriver;
     engineerSessionToken=''; engineerSessionName=''; sessionStorage.removeItem('tmx_km_engineer_token'); sessionStorage.removeItem('tmx_km_engineer_name');
     financeAuthed = false; financeManagementToken = ''; financeManagementName = '';
@@ -3922,7 +3930,7 @@ function portalSSOStatus_(title,detail){ document.documentElement.classList.remo
  function isLogoutTarget(el){
    const b=el&&el.closest?el.closest('button,a'):null;if(!b)return false;
    const id=String(b.id||'').toLowerCase(),txt=String(b.textContent||'').trim().toLowerCase();
-   return id==='logout'||id==='logoutbtn'||id==='navadmlogout'||id==='menulogoutbtn';
+   return id==='logout'||id==='logoutbtn'||id==='navadmlogout'||id==='menulogoutbtn'||id==='loginbtn' && !!(settings.engineer && engineerSessionToken);
  }
  document.addEventListener('click',function(e){
    if(!isLogoutTarget(e.target))return;
@@ -3937,6 +3945,8 @@ function portalSSOStatus_(title,detail){ document.documentElement.classList.remo
 (function(){
   async function run(){
     try{
+      const requestedView=new URLSearchParams(location.search).get('view');
+      if(requestedView==='history') return; // History route owns the screen; do not switch to Start/Finish.
       if(typeof syncOpenTripStateFromServer==='function') await syncOpenTripStateFromServer();
     }catch(e){ console.warn('Open trip sync skipped',e); }
   }
