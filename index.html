@@ -1550,7 +1550,7 @@ html.portal-sso-pending body::before{content:'';visibility:visible!important;pos
         <div class="task-location-head">
           <div>
             <div class="task-location-title">Task Location</div>
-            <div class="hint">When you reach a task destination, submit your current location. The governorate is detected automatically.</div>
+            <div class="hint">When you reach a task destination, submit your current location. The governorate and city are detected automatically.</div>
           </div>
           <button type="button" class="task-location-btn" id="submitTaskLocationBtn">📍 Submit Task Location</button>
         </div>
@@ -2755,11 +2755,11 @@ function renderTaskLocations(trip){
   }
   const latest=locations[locations.length-1];
   status.className='task-location-status ok';
-  status.textContent='✓ Latest task location: '+(latest.governorate||'Detected')+(latest.submittedAt?' · '+new Date(latest.submittedAt).toLocaleString():'');
+  status.textContent='✓ Latest task location: '+([latest.governorate,latest.city].filter(Boolean).join(' / ')||'Detected')+(latest.submittedAt?' · '+new Date(latest.submittedAt).toLocaleString():'');
   locations.forEach((x,i)=>{
     const d=document.createElement('div');d.className='task-location-item';
     const gov=document.createElement('strong');
-    gov.textContent=x.governorate||'Task Location';
+    gov.textContent=[x.governorate,x.city].filter(Boolean).join(' / ')||'Task Location';
     const when=document.createElement('span');
     when.textContent=x.submittedAt?new Date(x.submittedAt).toLocaleString():'';
     d.appendChild(gov);d.appendChild(when);list.appendChild(d);
@@ -2776,19 +2776,19 @@ async function submitCurrentTaskLocation(){
   let serverSaved=false;
   try{
     const loc=await getCurrentPhotoLocation();
-    btn.textContent='Detecting governorate…';
-    status.textContent='GPS captured. Detecting governorate…';
+    btn.textContent='Detecting location…';
+    status.textContent='GPS captured. Detecting governorate and city…';
     const data=await trySend({action:'taskLocation',tripId,latitude:loc.latitude,longitude:loc.longitude,accuracy:loc.accuracy||'',submittedAt:new Date().toISOString()});
     if(!data.ok)throw new Error(data.error||'location-submit-failed');
     serverSaved=true;
-    const item={governorate:data.governorate,latitude:loc.latitude,longitude:loc.longitude,accuracy:loc.accuracy||'',submittedAt:data.submittedAt||new Date().toISOString()};
+    const item={governorate:data.governorate,city:data.city||'',latitude:loc.latitude,longitude:loc.longitude,accuracy:loc.accuracy||'',submittedAt:data.submittedAt||new Date().toISOString()};
     trip.taskLocations=Array.isArray(data.taskLocations)?data.taskLocations:[...taskLocationsForTrip(trip),item];
     trip.taskGovernorates=(data.taskGovernorates||trip.taskLocations.map(x=>x.governorate).filter(Boolean).join(', '));
     // Keep the same trip updated in localStorage too, if it exists there.
     const local=getOpenTrips(),idx=local.findIndex(t=>String(t.tripId)===String(tripId));
     if(idx>=0){local[idx]={...local[idx],taskLocations:trip.taskLocations,taskGovernorates:trip.taskGovernorates};setOpenTrips(local)}
     renderTaskLocations(trip);
-    toast('📍 Task location submitted: '+data.governorate);
+    toast('📍 Task location submitted: '+([data.governorate,data.city].filter(Boolean).join(' / ')));
   }catch(err){
     console.error(err);
     if(serverSaved){
