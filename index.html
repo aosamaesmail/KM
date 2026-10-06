@@ -1534,7 +1534,7 @@ html.portal-sso-pending body::before{content:'';visibility:visible!important;pos
       <select id="openTripSelect" required>
         <option value="">— Select an open trip —</option>
       </select>
-      <div class="empty" id="noOpenTrips" style="display:none;">No open trips on this phone. Start a trip first.</div>
+      <div class="empty" id="noOpenTrips" style="display:none;">No open trips found. Start a trip first.</div>
       <div class="trip-summary" id="tripSummary" style="display:none;"></div>
 
       <label data-i18n="Finish KM *">Finish KM *</label>
@@ -2219,6 +2219,30 @@ function localOpenTripsForCurrentUser(){
 }
 
 let deferFinishNavigation = false;
+
+async function syncOpenTripStateFromServer(){
+  if(!settings.engineer || !engineerSessionToken){ updateLockState(); return false; }
+  try{
+    const data=await trySend({action:'openTrips'});
+    const serverTrips=Array.isArray(data.trips)?data.trips:[];
+    const mine=(settings.engineer||'').trim().toLowerCase();
+    const otherLocal=getOpenTrips().filter(x=>(x.engineer||'').trim().toLowerCase()!==mine);
+    // Keep the server as the source of truth for this engineer on every device.
+    setOpenTrips([...otherLocal,...serverTrips]);
+    updateLockState();
+    if(serverTrips.length){
+      if($('startSection').classList.contains('active')) showTab('finish');
+      await loadOpenTripsForFinish();
+      return true;
+    }
+    if($('finishSection').classList.contains('active')) showTab('start');
+    return false;
+  }catch(e){
+    // If offline, retain the existing local-device fallback.
+    updateLockState();
+    return localOpenTripsForCurrentUser().length>0;
+  }
+}
 
 function updateLockState(){
   const loggedIn = !!(settings.engineer && engineerSessionToken);
@@ -3858,5 +3882,19 @@ function portalSSOStatus_(title,detail){ document.documentElement.classList.remo
  },true);
 })();
 </script>
+
+<script id="v8329CrossDeviceOpenTripSync">
+(function(){
+  async function run(){
+    try{
+      if(typeof syncOpenTripStateFromServer==='function') await syncOpenTripStateFromServer();
+    }catch(e){ console.warn('Open trip sync skipped',e); }
+  }
+  window.addEventListener('load',()=>setTimeout(run,350));
+  window.addEventListener('pageshow',()=>setTimeout(run,150));
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(run,100);});
+})();
+</script>
+
 </body>
 </html>
