@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><script id="v8330Boot">(function(){if(sessionStorage.getItem("tmx_km_engineer_token")||location.hash.indexOf("sso=")>=0)document.documentElement.classList.add("tmx-trip-state-check")})();</script>
+<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>Telecomax KM Tracker</title>
@@ -1385,7 +1385,27 @@ html.portal-sso-pending body::before{content:'';visibility:visible!important;pos
 @media(max-width:650px){.task-location-btn{width:100%!important}.task-location-head{display:block}.task-location-btn{margin-top:12px}}
 </style>
 
-<style id="v8330NoFlash">html.tmx-trip-state-check #startSection,html.tmx-trip-state-check #finishSection,html.tmx-trip-state-check #tabStartBtn,html.tmx-trip-state-check #tabFinishBtn{visibility:hidden!important}</style></head>
+
+<style id="v8331TripStateLoader">
+#tripStateLoader{
+  display:none;align-items:center;justify-content:center;min-height:180px;
+  padding:24px;text-align:center
+}
+#tripStateLoader.active{display:flex}
+#tripStateLoader .box{
+  display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:14px;
+  background:var(--card,#0b1220);border:1px solid var(--border,#243047);
+  color:var(--text,#fff);font-weight:700
+}
+#tripStateLoader .spin{
+  width:18px;height:18px;border:2px solid rgba(255,255,255,.25);
+  border-top-color:currentColor;border-radius:50%;animation:tmxSpin .7s linear infinite
+}
+@keyframes tmxSpin{to{transform:rotate(360deg)}}
+body.tmx-checking-trip #startSection,
+body.tmx-checking-trip #finishSection{display:none!important}
+</style>
+</head>
 <body>
 
 <div id="engineerLoginBuffer" class="login-buffer-overlay" aria-hidden="true">
@@ -1484,7 +1504,11 @@ html.portal-sso-pending body::before{content:'';visibility:visible!important;pos
   </div>
   <div class="lock-note" id="lockNote" style="display:none;"></div>
 
-  <!-- START SECTION -->
+  <div id="tripStateLoader" aria-live="polite">
+  <div class="box"><span class="spin"></span><span>Checking active trip…</span></div>
+</div>
+
+<!-- START SECTION -->
   <section class="section active" id="startSection">
     <form class="card" id="startForm" autocomplete="off">
       <label data-i18n="Engineer">Engineer</label>
@@ -2221,30 +2245,38 @@ function localOpenTripsForCurrentUser(){
 let deferFinishNavigation = false;
 
 async function syncOpenTripStateFromServer(){
-  if(!settings.engineer || !engineerSessionToken){document.documentElement.classList.remove('tmx-trip-state-check');updateLockState();return false;}
-  document.documentElement.classList.add('tmx-trip-state-check');
+  if(!settings.engineer || !engineerSessionToken){ updateLockState(); return false; }
+  const loader=$('tripStateLoader');
+  document.body.classList.add('tmx-checking-trip');
+  if(loader) loader.classList.add('active');
   try{
     const data=await trySend({action:'openTrips'});
     const serverTrips=Array.isArray(data.trips)?data.trips:[];
     const mine=(settings.engineer||'').trim().toLowerCase();
     const otherLocal=getOpenTrips().filter(x=>(x.engineer||'').trim().toLowerCase()!==mine);
-    // Keep the server as the source of truth for this engineer on every device.
     setOpenTrips([...otherLocal,...serverTrips]);
-    updateLockState();
+
     if(serverTrips.length){
-      if($('startSection').classList.contains('active')) showTab('finish');
+      // Select the correct tab before revealing the trip workspace.
+      showTab('finish', true);
       await loadOpenTripsForFinish();
-      document.documentElement.classList.remove('tmx-trip-state-check');
+      updateLockState();
       return true;
     }
-    if($('finishSection').classList.contains('active')) showTab('start');
-    document.documentElement.classList.remove('tmx-trip-state-check');
+
+    showTab('start');
+    updateLockState();
     return false;
   }catch(e){
-    // If offline, retain the existing local-device fallback.
+    // Offline/unreachable: use this device's cached state without blocking the rest of the app.
     updateLockState();
-    document.documentElement.classList.remove('tmx-trip-state-check');
-    return localOpenTripsForCurrentUser().length>0;
+    const hasLocal=localOpenTripsForCurrentUser().length>0;
+    if(hasLocal) showTab('finish');
+    else showTab('start');
+    return hasLocal;
+  }finally{
+    document.body.classList.remove('tmx-checking-trip');
+    if(loader) loader.classList.remove('active');
   }
 }
 
